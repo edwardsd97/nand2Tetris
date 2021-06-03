@@ -31,9 +31,21 @@ class VMTranslator
             Console.WriteLine("VM Translating directory: " + path);
             vmFiles = Directory.GetFiles(path, "*.vm");
 
+            /*
             // Only write the bootstrap code if Sys.vm is present
-            if ( File.Exists(path + "/Sys.vm" ) )
-                writer.WriteInit();
+            foreach (string file in vmFiles)
+            {
+                string name = FilePathToName(file).ToLower();
+                if (name == "sys")
+                {
+                    writer.WriteInit();
+                    break;
+                }
+            }
+            */
+
+            // Write bootstrap code for any directory translate
+            writer.WriteInit();
         }
         else
         {
@@ -287,6 +299,9 @@ class CodeWriter
     protected int mCallIndex = 0;
     protected bool mUsingSysInit = false;
 
+    protected bool mComments = false;
+    protected bool mVerbose = false;
+
     // FIXME - improve this to handle the same thing for any segment when classUnique is true
     protected int mStaticMax = 0; // max static index while processing a single class
     protected int mStaticOffset = 0; // static index offset while processing a single class
@@ -307,9 +322,9 @@ class CodeWriter
         if ( !mUsingSysInit )
         {
             WriteComment("INFINITE LOOP");
-            mFile.WriteLine("(_END)");
-            mFile.WriteLine("@_END");
-            mFile.WriteLine("0;JMP");
+            FileWriteLine("(_END)");
+            FileWriteLine("@_END");
+            FileWriteLine("0;JMP");
         }
 
         mFile.Close();
@@ -369,15 +384,26 @@ class CodeWriter
         mVMFileName = vmFileName;
     }
 
+    public void FileWriteLine(string line)
+    {
+        mFile.WriteLine(line);
+
+        if ( mVerbose )
+        {
+            Console.WriteLine(line);
+        }
+    }
+
     public void WriteInit()
     {
         WriteComment("Bootstrap Code");
+        Console.WriteLine("  " + "Bootstrap Code" );
 
         // Set SP to 256
-        mFile.WriteLine("@256"); // @256
-        mFile.WriteLine("D=A"); // @256
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("M=D"); // @SP
+        FileWriteLine("@256"); // @256
+        FileWriteLine("D=A"); // @256
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("M=D"); // @SP
 
         // call Sys.init
         this.SetVMFileName("Boot");
@@ -391,28 +417,26 @@ class CodeWriter
     {
         // Compare two values using the provided jumpTest
         //  ( JEQ, JLT, JGT, ... )
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("M=M-1"); // M=M-1
-        mFile.WriteLine("A=M"); // A=M
-        mFile.WriteLine("D=M"); // D=M
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("M=M-1"); // M=M-1
-        mFile.WriteLine("A=M"); // A=M
-        mFile.WriteLine("D=M-D"); // D=M-D
-        mFile.WriteLine("@_COMPARE_TRUE"+ mCompareIndex);
-        mFile.WriteLine("D;" + jumpTest ); // D;<jumpTest>
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("A=M"); // A=M
-        mFile.WriteLine("M=0"); // M=0
-        mFile.WriteLine("@_COMPARE_FINISHED" + mCompareIndex);
-        mFile.WriteLine("0;JMP");
-        mFile.WriteLine("(_COMPARE_TRUE" + mCompareIndex + ")");
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("A=M"); // A=M
-        mFile.WriteLine("M=-1"); // M=-1
-        mFile.WriteLine("(_COMPARE_FINISHED" + mCompareIndex + ")" );
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("M=M+1"); // M=M+1
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("AM=M-1"); // AM=M-1
+        FileWriteLine("D=M"); // D=M
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("AM=M-1"); // AM=M-1
+        FileWriteLine("D=M-D"); // D=M-D
+        FileWriteLine("@_COMPARE_TRUE"+ mCompareIndex);
+        FileWriteLine("D;" + jumpTest ); // D;<jumpTest>
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("A=M"); // A=M
+        FileWriteLine("M=0"); // M=0
+        FileWriteLine("@_COMPARE_FINISHED" + mCompareIndex);
+        FileWriteLine("0;JMP");
+        FileWriteLine("(_COMPARE_TRUE" + mCompareIndex + ")");
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("A=M"); // A=M
+        FileWriteLine("M=-1"); // M=-1
+        FileWriteLine("(_COMPARE_FINISHED" + mCompareIndex + ")" );
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("M=M+1"); // M=M+1
 
         mCompareIndex++;
     }
@@ -420,66 +444,62 @@ class CodeWriter
     protected void WriteMathXY(string operation)
     {
         // operation is operated on M in terms of M and D
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("M=M-1"); // M=M-1
-        mFile.WriteLine("A=M"); // A=M
-        mFile.WriteLine("D=M"); // D=M
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("M=M-1"); // M=M-1
-        mFile.WriteLine("A=M"); // A=M
-        mFile.WriteLine("M=" + operation); // D=<operation>
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("M=M+1"); // M=M+1
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("AM=M-1"); // AM=M-1
+        FileWriteLine("D=M"); // D=M
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("AM=M-1"); // AM=M-1
+        FileWriteLine("M=" + operation); // D=<operation>
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("M=M+1"); // M=M+1
     }
 
     protected void WriteMathX(string operation)
     {
         // operation is operated on M in terms of M
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("M=M-1"); // M=M-1
-        mFile.WriteLine("A=M"); // A=M
-        mFile.WriteLine("M=" + operation); // M=<operation>
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("M=M+1"); // M=M+1
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("AM=M-1"); // AM=M-1
+        FileWriteLine("M=" + operation); // M=<operation>
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("M=M+1"); // M=M+1
     }
 
     public void WriteLabel(string label)
     {
-        mFile.WriteLine("(" + label + ")" ); // (<label>)
+        FileWriteLine("(" + label + ")" ); // (<label>)
     }
 
     public void WriteGoto(string label)
     {
-        mFile.WriteLine("@" + label);   // @<label>
-        mFile.WriteLine("0;JMP");       // 0;JUMP
+        FileWriteLine("@" + label);   // @<label>
+        FileWriteLine("0;JMP");       // 0;JUMP
     }
 
     public void WriteIf(string label)
     {
         // If pop stack != 0
-        mFile.WriteLine("@SP");         // @SP
-        mFile.WriteLine("M=M-1");       // M=M-1
-        mFile.WriteLine("A=M");         // A=M
-        mFile.WriteLine("D=M");         // D=M
-        mFile.WriteLine("@" + label);   // @<label>
-        mFile.WriteLine("D;JNE");       // 0;JNE
+        FileWriteLine("@SP");         // @SP
+        FileWriteLine("AM=M-1");      // AM=M-1
+        FileWriteLine("D=M");         // D=M
+        FileWriteLine("@" + label);   // @<label>
+        FileWriteLine("D;JNE");       // 0;JNE
     }
 
     public void WriteFunction(string functionName, int localCount )
     {
-        mFile.WriteLine("(" + functionName + ")"); // (functionName)
+        FileWriteLine("(" + functionName + ")"); // (functionName)
 
         if (localCount > 0)
         {
             // repeat nVars times:
-            mFile.WriteLine("@SP"); // @SP
-            mFile.WriteLine("A=M"); // A=M
+            FileWriteLine("@SP"); // @SP
+            FileWriteLine("A=M"); // A=M
             for (int i = 0; i < localCount; i++)
             {
                 // push 0
-                mFile.WriteLine("M=0"); // M=0
-                mFile.WriteLine("@SP"); // @SP
-                mFile.WriteLine("AM=M+1"); // AM=M+1
+                FileWriteLine("M=0"); // M=0
+                FileWriteLine("@SP"); // @SP
+                FileWriteLine("AM=M+1"); // AM=M+1
             }
         }
     }
@@ -489,136 +509,136 @@ class CodeWriter
         string returnAddress = mVMFileName + "." + functionName + "$ret." + mCallIndex++;
 
         // push returnAddress (label below)
-        mFile.WriteLine("@" + returnAddress); // @functionName$ret.N
-        mFile.WriteLine("D=A"); // D=A
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("A=M"); // A=M
-        mFile.WriteLine("M=D"); // M=D
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("M=M+1"); // M=M+1
+        FileWriteLine("@" + returnAddress); // @functionName$ret.N
+        FileWriteLine("D=A"); // D=A
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("A=M"); // A=M
+        FileWriteLine("M=D"); // M=D
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("M=M+1"); // M=M+1
 
         // push LCL pointer value
-        mFile.WriteLine("@LCL"); // @LCL
-        mFile.WriteLine("D=M"); // D=A
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("A=M"); // A=M
-        mFile.WriteLine("M=D"); // M=D
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("M=M+1"); // M=M+1
+        FileWriteLine("@LCL"); // @LCL
+        FileWriteLine("D=M"); // D=A
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("A=M"); // A=M
+        FileWriteLine("M=D"); // M=D
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("M=M+1"); // M=M+1
 
         // push ARG pointer value
-        mFile.WriteLine("@ARG"); // @ARG
-        mFile.WriteLine("D=M"); // D=A
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("A=M"); // A=M
-        mFile.WriteLine("M=D"); // M=D
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("M=M+1"); // M=M+1
+        FileWriteLine("@ARG"); // @ARG
+        FileWriteLine("D=M"); // D=A
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("A=M"); // A=M
+        FileWriteLine("M=D"); // M=D
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("M=M+1"); // M=M+1
 
         // push THIS pointer value
-        mFile.WriteLine("@THIS"); // @THIS
-        mFile.WriteLine("D=M"); // D=A
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("A=M"); // A=M
-        mFile.WriteLine("M=D"); // M=D
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("M=M+1"); // M=M+1
+        FileWriteLine("@THIS"); // @THIS
+        FileWriteLine("D=M"); // D=A
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("A=M"); // A=M
+        FileWriteLine("M=D"); // M=D
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("M=M+1"); // M=M+1
 
         // push THAT pointer value
-        mFile.WriteLine("@THAT"); // @THAT
-        mFile.WriteLine("D=M"); // D=A
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("A=M"); // A=M
-        mFile.WriteLine("M=D"); // M=D
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("M=M+1"); // M=M+1
+        FileWriteLine("@THAT"); // @THAT
+        FileWriteLine("D=M"); // D=A
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("A=M"); // A=M
+        FileWriteLine("M=D"); // M=D
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("M=M+1"); // M=M+1
 
         // ARG = SP-5-nArgs
         int backSteps = 5 + argumentCount - 1; // -1 to account for D=M-1
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("D=M-1"); // D=M
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("D=M-1"); // D=M
         for ( int i = 0; i < backSteps; i++ )
-            mFile.WriteLine("D=D-1"); // D=D-1
-        mFile.WriteLine("@ARG"); // @ARG
-        mFile.WriteLine("M=D"); // M=D
+            FileWriteLine("D=D-1"); // D=D-1
+        FileWriteLine("@ARG"); // @ARG
+        FileWriteLine("M=D"); // M=D
 
         // LCL = SP
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("D=M"); // D=M
-        mFile.WriteLine("@LCL"); // @LCL
-        mFile.WriteLine("M=D"); // M=D
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("D=M"); // D=M
+        FileWriteLine("@LCL"); // @LCL
+        FileWriteLine("M=D"); // M=D
 
         // goto functionName
         WriteGoto(functionName);
 
         // (returnAddress)
-        mFile.WriteLine("(" + returnAddress + ")" );
+        FileWriteLine("(" + returnAddress + ")" );
     }
 
     public void WriteReturn()
     {
         // endFrame <R13> = LCL 
-        mFile.WriteLine("@LCL"); // @LCL
-        mFile.WriteLine("D=M"); // D=M
-        mFile.WriteLine("@R13"); // @R13
-        mFile.WriteLine("M=D"); // M=D
+        FileWriteLine("@LCL"); // @LCL
+        FileWriteLine("D=M"); // D=M
+        FileWriteLine("@R13"); // @R13
+        FileWriteLine("M=D"); // M=D
 
         // retAddr <R14> = *(endFrame-5)
         for( int i = 0; i < 5; i++ )
-            mFile.WriteLine("D=D-1"); // D=D-1
-        mFile.WriteLine("A=D"); // A=D
-        mFile.WriteLine("D=M"); // D=M
-        mFile.WriteLine("@R14"); // @R14
-        mFile.WriteLine("M=D"); // M=D
+            FileWriteLine("D=D-1"); // D=D-1
+        FileWriteLine("A=D"); // A=D
+        FileWriteLine("D=M"); // D=M
+        FileWriteLine("@R14"); // @R14
+        FileWriteLine("M=D"); // M=D
 
         // *ARG = pop()
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("A=M-1"); // A=M-1
-        mFile.WriteLine("D=M"); // D=M
-        mFile.WriteLine("@ARG"); // @ARG
-        mFile.WriteLine("A=M"); // A=M
-        mFile.WriteLine("M=D"); // M=D
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("M=M-1"); // M=M-1
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("A=M-1"); // A=M-1
+        FileWriteLine("D=M"); // D=M
+        FileWriteLine("@ARG"); // @ARG
+        FileWriteLine("A=M"); // A=M
+        FileWriteLine("M=D"); // M=D
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("M=M-1"); // M=M-1
 
         // SP=ARG+1
-        mFile.WriteLine("@ARG"); // @ARG
-        mFile.WriteLine("D=M+1"); // D=M+1
-        mFile.WriteLine("@SP"); // @SP
-        mFile.WriteLine("M=D"); // M=D
+        FileWriteLine("@ARG"); // @ARG
+        FileWriteLine("D=M+1"); // D=M+1
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("M=D"); // M=D
 
         // THAT = *(endFrame-1)
-        mFile.WriteLine("@R13"); // @R13
-        mFile.WriteLine("AM=M-1"); // AM=M-1
-        mFile.WriteLine("D=M"); // D=M
-        mFile.WriteLine("@THAT"); // @THAT
-        mFile.WriteLine("M=D"); // D=M
+        FileWriteLine("@R13"); // @R13
+        FileWriteLine("AM=M-1"); // AM=M-1
+        FileWriteLine("D=M"); // D=M
+        FileWriteLine("@THAT"); // @THAT
+        FileWriteLine("M=D"); // D=M
 
         // THIS = *(endFrame-2)
-        mFile.WriteLine("@R13"); // @R13
-        mFile.WriteLine("AM=M-1"); // AM=M-1
-        mFile.WriteLine("D=M"); // D=M
-        mFile.WriteLine("@THIS"); // @THIS
-        mFile.WriteLine("M=D"); // D=M
+        FileWriteLine("@R13"); // @R13
+        FileWriteLine("AM=M-1"); // AM=M-1
+        FileWriteLine("D=M"); // D=M
+        FileWriteLine("@THIS"); // @THIS
+        FileWriteLine("M=D"); // D=M
 
         // ARG = *(endFrame-3)
-        mFile.WriteLine("@R13"); // @R13
-        mFile.WriteLine("AM=M-1"); // AM=M-1
-        mFile.WriteLine("D=M"); // D=M
-        mFile.WriteLine("@ARG"); // @ARG
-        mFile.WriteLine("M=D"); // D=M
+        FileWriteLine("@R13"); // @R13
+        FileWriteLine("AM=M-1"); // AM=M-1
+        FileWriteLine("D=M"); // D=M
+        FileWriteLine("@ARG"); // @ARG
+        FileWriteLine("M=D"); // D=M
 
         // LCL = *(endFrame-4)
-        mFile.WriteLine("@R13"); // @R13
-        mFile.WriteLine("AM=M-1"); // AM=M-1
-        mFile.WriteLine("D=M"); // D=M
-        mFile.WriteLine("@LCL"); // @LCL
-        mFile.WriteLine("M=D"); // D=M
+        FileWriteLine("@R13"); // @R13
+        FileWriteLine("AM=M-1"); // AM=M-1
+        FileWriteLine("D=M"); // D=M
+        FileWriteLine("@LCL"); // @LCL
+        FileWriteLine("M=D"); // D=M
 
         // goto retAddr <R14>
-        mFile.WriteLine("@R14"); // @R14
-        mFile.WriteLine("A=M"); // A=M
-        mFile.WriteLine("0;JMP"); // 0;JMP
+        FileWriteLine("@R14"); // @R14
+        FileWriteLine("A=M"); // A=M
+        FileWriteLine("0;JMP"); // 0;JMP
     }
 
     public void WriteArithmetic(string command)
@@ -682,61 +702,63 @@ class CodeWriter
         switch (command)
         {
             case CommandType.C_PUSH:
-                mFile.WriteLine("@" + index); // @index
-                mFile.WriteLine("D=A"); // D=A
+                FileWriteLine("@" + index); // @index
+                FileWriteLine("D=A"); // D=A
                 if ( !isConstant )
                 {
-                    mFile.WriteLine("@" + address); // @segment pointer
+                    FileWriteLine("@" + address); // @segment pointer
                     if ( !isPointer )
                     {
-                        mFile.WriteLine("A=D+A"); // A=D+A
+                        FileWriteLine("A=D+A"); // A=D+A
                     }
                     else 
                     {
-                        mFile.WriteLine("A=D+M"); // A=D+M
+                        FileWriteLine("A=D+M"); // A=D+M
                     }
-                    mFile.WriteLine("D=M"); // D=M
+                    FileWriteLine("D=M"); // D=M
                 }
-                mFile.WriteLine("@SP"); // @SP
-                mFile.WriteLine("A=M"); // A=M
-                mFile.WriteLine("M=D"); // M=D
-                mFile.WriteLine("@SP"); // @SP
-                mFile.WriteLine("M=M+1"); // M=M+1
+                FileWriteLine("@SP"); // @SP
+                FileWriteLine("M=M+1"); // M=M+1
+                FileWriteLine("A=M-1"); // A=M
+                FileWriteLine("M=D"); // M=D
                 break;
 
             case CommandType.C_POP:
                 // Store target address at current stackpointer
-                mFile.WriteLine("@" + index); // @index
-                mFile.WriteLine("D=A"); // D=A
-                mFile.WriteLine("@" + address ); // @segment pointer
+                FileWriteLine("@" + index); // @index
+                FileWriteLine("D=A"); // D=A
+                FileWriteLine("@" + address ); // @segment pointer
                 if ( !isPointer )
                 {
-                    mFile.WriteLine("D=D+A"); // A=D+A
+                    FileWriteLine("D=D+A"); // A=D+A
                 }
                 else
                 {
-                    mFile.WriteLine("D=D+M"); // A=D+M
+                    FileWriteLine("D=D+M"); // A=D+M
                 }
-                mFile.WriteLine("@SP"); // @SP
-                mFile.WriteLine("A=M"); // M=D
-                mFile.WriteLine("M=D"); // M=D
+                FileWriteLine("@SP"); // @SP
+                FileWriteLine("A=M"); // M=D
+                FileWriteLine("M=D"); // M=D
 
                 // Fetch stack pointer - 1 value
-                mFile.WriteLine("@SP"); // @SP
-                mFile.WriteLine("M=M-1"); // M=M-1
-                mFile.WriteLine("A=M"); // A=M
-                mFile.WriteLine("D=M"); // D=M
+                FileWriteLine("@SP"); // @SP
+                FileWriteLine("M=M-1"); // M=M-1
+                FileWriteLine("A=M"); // A=M
+                FileWriteLine("D=M"); // D=M
 
                 // Write it to stored address
-                mFile.WriteLine("A=A+1"); // A=A+1
-                mFile.WriteLine("A=M"); // A=M
-                mFile.WriteLine("M=D"); // M=D
+                FileWriteLine("A=A+1"); // A=A+1
+                FileWriteLine("A=M"); // A=M
+                FileWriteLine("M=D"); // M=D
                 break;
         }
     }
 
     public void WriteComment(string comment)
     {
-       // mFile.WriteLine("// " + comment + " //" );
+        if ( mComments )
+        {
+            FileWriteLine("// " + comment + " //");
+        }
     }
 }
