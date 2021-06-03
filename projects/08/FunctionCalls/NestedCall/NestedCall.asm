@@ -613,6 +613,3 @@ M=D
 @R14
 A=M
 0;JMP
-(_END)
-@_END
-0;JMP

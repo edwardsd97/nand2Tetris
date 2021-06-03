@@ -436,6 +436,3 @@ M=D
 (WHILE)
 @WHILE
 0;JMP
-(_END)
-@_END
-0;JMP

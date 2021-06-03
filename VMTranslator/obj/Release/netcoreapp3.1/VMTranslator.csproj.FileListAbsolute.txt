@@ -1,0 +1,12 @@
+C:\Projects\nand2Tetris\VMTranslator\bin\Release\netcoreapp3.1\VMTranslator.exe
+C:\Projects\nand2Tetris\VMTranslator\bin\Release\netcoreapp3.1\VMTranslator.deps.json
+C:\Projects\nand2Tetris\VMTranslator\bin\Release\netcoreapp3.1\VMTranslator.runtimeconfig.json
+C:\Projects\nand2Tetris\VMTranslator\bin\Release\netcoreapp3.1\VMTranslator.runtimeconfig.dev.json
+C:\Projects\nand2Tetris\VMTranslator\bin\Release\netcoreapp3.1\VMTranslator.dll
+C:\Projects\nand2Tetris\VMTranslator\bin\Release\netcoreapp3.1\VMTranslator.pdb
+C:\Projects\nand2Tetris\VMTranslator\obj\Release\netcoreapp3.1\VMTranslator.AssemblyInfoInputs.cache
+C:\Projects\nand2Tetris\VMTranslator\obj\Release\netcoreapp3.1\VMTranslator.AssemblyInfo.cs
+C:\Projects\nand2Tetris\VMTranslator\obj\Release\netcoreapp3.1\VMTranslator.csproj.CoreCompileInputs.cache
+C:\Projects\nand2Tetris\VMTranslator\obj\Release\netcoreapp3.1\VMTranslator.dll
+C:\Projects\nand2Tetris\VMTranslator\obj\Release\netcoreapp3.1\VMTranslator.pdb
+C:\Projects\nand2Tetris\VMTranslator\obj\Release\netcoreapp3.1\VMTranslator.genruntimeconfig.cache

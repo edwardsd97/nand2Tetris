@@ -119,8 +119,6 @@ class VMTranslator
             // Single file .asm is outfile file
             return SwitchExtension(fileOrDirectory, "asm");
         }
-
-        return "";
     }
 
     public static string SwitchExtension(string file, string extension)
@@ -287,6 +285,9 @@ class CodeWriter
 
     protected int mCompareIndex = 0;
     protected int mCallIndex = 0;
+    protected bool mUsingSysInit = false;
+
+    // FIXME - improve this to handle the same thing for any segment when classUnique is true
     protected int mStaticMax = 0; // max static index while processing a single class
     protected int mStaticOffset = 0; // static index offset while processing a single class
 
@@ -299,16 +300,17 @@ class CodeWriter
 
     ~CodeWriter()
     {
-        Close();
     }
 
     public void Close()
     {
-        WriteComment("INFINITE LOOP");
-
-        mFile.WriteLine("(_END)");
-        mFile.WriteLine("@_END");
-        mFile.WriteLine("0;JMP");
+        if ( !mUsingSysInit )
+        {
+            WriteComment("INFINITE LOOP");
+            mFile.WriteLine("(_END)");
+            mFile.WriteLine("@_END");
+            mFile.WriteLine("0;JMP");
+        }
 
         mFile.Close();
     }
@@ -340,6 +342,7 @@ class CodeWriter
             {
                 if ((bool)segments[i + 4])
                 {
+                    // FIXME - improve this to handle the same thing for any segment when classUnique is true
                     // index is unique per file
                     mStaticMax = Math.Max( mStaticMax, index + 1 );
                     index += mStaticOffset;
@@ -380,6 +383,8 @@ class CodeWriter
         this.SetVMFileName("Boot");
         WriteComment("call Sys.init 0");
         WriteCall("Sys.init", 0);
+
+        mUsingSysInit = true;
     }
 
     protected void WriteCompare( string jumpTest )
