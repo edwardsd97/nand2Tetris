@@ -742,8 +742,7 @@ class CodeWriter
 
                 // Fetch stack pointer - 1 value
                 FileWriteLine("@SP"); // @SP
-                FileWriteLine("M=M-1"); // M=M-1
-                FileWriteLine("A=M"); // A=M
+                FileWriteLine("AM=M-1"); // AM=M-1
                 FileWriteLine("D=M"); // D=M
 
                 // Write it to stored address

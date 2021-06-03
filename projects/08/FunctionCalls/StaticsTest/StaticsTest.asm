@@ -70,8 +70,7 @@ D=D+A
 A=M
 M=D
 @SP
-M=M-1
-A=M
+AM=M-1
 D=M
 A=A+1
 A=M
@@ -93,8 +92,7 @@ D=D+A
 A=M
 M=D
 @SP
-M=M-1
-A=M
+AM=M-1
 D=M
 A=A+1
 A=M
@@ -246,8 +244,7 @@ D=D+A
 A=M
 M=D
 @SP
-M=M-1
-A=M
+AM=M-1
 D=M
 A=A+1
 A=M
@@ -269,8 +266,7 @@ D=D+A
 A=M
 M=D
 @SP
-M=M-1
-A=M
+AM=M-1
 D=M
 A=A+1
 A=M
@@ -477,8 +473,7 @@ D=D+A
 A=M
 M=D
 @SP
-M=M-1
-A=M
+AM=M-1
 D=M
 A=A+1
 A=M
@@ -555,8 +550,7 @@ D=D+A
 A=M
 M=D
 @SP
-M=M-1
-A=M
+AM=M-1
 D=M
 A=A+1
 A=M
