@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "fpYut6J+VNGWciMoV+7SmKoSN6Vcj4PtPdzcZAR/rTDbOVtG0Z978hFVG68whfp8oUDLKruH//4plhFj0nLjqA==",
+  "dgSpecHash": "WMMJhR1efBExG0VZDme7Ga8fKqJXeTPTgx9JoaKOk1fPbmPgcjJkplKeNuiOOl/MSxtDkGM7OrUgMUv+77uxxA==",
   "success": true,
-  "projectFilePath": "C:\\Projects\\nand2tetris\\VMTranslator\\VMTranslator.csproj",
+  "projectFilePath": "C:\\Projects\\nand2Tetris\\VMTranslator\\VMTranslator.csproj",
   "expectedPackageFiles": [],
   "logs": []
 }

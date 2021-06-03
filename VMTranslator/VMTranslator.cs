@@ -284,8 +284,11 @@ class CodeWriter
     public System.IO.StreamWriter mFile;
     public string mVMFileName;
     public string mError;
+
     protected int mCompareIndex = 0;
     protected int mCallIndex = 0;
+    protected int mStaticMax = 0; // max static index while processing a single class
+    protected int mStaticOffset = 0; // static index offset while processing a single class
 
     public CodeWriter(string fileName)
     {
@@ -310,7 +313,7 @@ class CodeWriter
         mFile.Close();
     }
 
-    public void SegmentInfo( string segment, out string address, out bool isPointer, out bool isConstant )
+    public void SegmentInfo( string segment, ref int index, out string address, out bool isPointer, out bool isConstant )
     {
         segment = segment.ToLower();
 
@@ -320,22 +323,29 @@ class CodeWriter
 
         object[] segments =
         {
-            // segment  address         isPointer   isConstant
-            "local",    "LCL",  /*1*/   true,       false,
-            "argument", "ARG",  /*2*/   true,       false,
-            "this",     "THIS", /*3*/   true,       false,
-            "that",     "THAT", /*4*/   true,       false,
-            "temp",     "5",            false,      false,
-            "static",   "16",           false,      false,
-            "constant", "0",            false,      true,
-            "pointer",  "THIS", /*3*/   false,      false,  // this / that
+            // segment  address         isPointer   isConstant  classUnique
+            "local",    "LCL",  /*1*/   true,       false,      false,
+            "argument", "ARG",  /*2*/   true,       false,      false,
+            "this",     "THIS", /*3*/   true,       false,      false,
+            "that",     "THAT", /*4*/   true,       false,      false,
+            "temp",     5,              false,      false,      false,
+            "static",   16,             false,      false,      true,
+            "constant", 0,              false,      true,       false,
+            "pointer",  "THIS", /*3*/   false,      false,      false,
         };
 
-        for (int i = 0; i < segments.Length; i = i + 4)
+        for (int i = 0; i < segments.Length; i = i + 5)
         {
             if (segment == (string)segments[i])
             {
-                address = (string)segments[i + 1];
+                if ((bool)segments[i + 4])
+                {
+                    // index is unique per file
+                    mStaticMax = Math.Max( mStaticMax, index + 1 );
+                    index += mStaticOffset;
+                }
+
+                address = "" + segments[i + 1];
                 isPointer = (bool)segments[i + 2];
                 isConstant = (bool)segments[i + 3];
                 return;
@@ -347,6 +357,12 @@ class CodeWriter
 
     public void SetVMFileName(string vmFileName)
     {
+        if (mVMFileName != vmFileName)
+        {
+            mStaticOffset += mStaticMax;
+            mStaticMax = 0;
+        }
+
         mVMFileName = vmFileName;
     }
 
@@ -448,7 +464,6 @@ class CodeWriter
     {
         mFile.WriteLine("(" + functionName + ")"); // (functionName)
 
-        /*
         if (localCount > 0)
         {
             // repeat nVars times:
@@ -462,18 +477,6 @@ class CodeWriter
                 mFile.WriteLine("AM=M+1"); // AM=M+1
             }
         }
-        */
-
-        for (int i = 0; i < localCount; i++)
-        {
-            // push 0
-            mFile.WriteLine("@SP"); // @SP
-            mFile.WriteLine("A=M"); // A=M
-            mFile.WriteLine("M=0"); // M=0
-            mFile.WriteLine("@SP"); // @SP
-            mFile.WriteLine("M=M+1"); // M=M+1
-        }
-
     }
 
     public void WriteCall(string functionName, int argumentCount)
@@ -669,7 +672,7 @@ class CodeWriter
         bool isConstant = false;
         string address = "0";
 
-        SegmentInfo(segment, out address, out isPointer, out isConstant);
+        SegmentInfo(segment, ref index, out address, out isPointer, out isConstant);
 
         switch (command)
         {

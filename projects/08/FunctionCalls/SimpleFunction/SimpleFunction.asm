@@ -3,12 +3,10 @@
 A=M
 M=0
 @SP
-M=M+1
-@SP
-A=M
+AM=M+1
 M=0
 @SP
-M=M+1
+AM=M+1
 @0
 D=A
 @LCL
