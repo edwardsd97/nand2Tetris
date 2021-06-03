@@ -340,7 +340,7 @@ class CodeWriter
 
         object[] segments =
         {
-            // segment  address         isPointer   isConstant  classUnique
+            // segment  address         isPointer   isConstant  fileUnique
             "local",    "LCL",  /*1*/   true,       false,      false,
             "argument", "ARG",  /*2*/   true,       false,      false,
             "this",     "THIS", /*3*/   true,       false,      false,
@@ -357,7 +357,7 @@ class CodeWriter
             {
                 if ((bool)segments[i + 4])
                 {
-                    // FIXME - improve this to handle the same thing for any segment when classUnique is true
+                    // FIXME - improve this to handle the same thing for any segment when fileUnique is true
                     // index is unique per file
                     mStaticMax = Math.Max( mStaticMax, index + 1 );
                     index += mStaticOffset;
