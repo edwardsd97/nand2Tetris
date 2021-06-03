@@ -1,0 +1,50 @@
+{
+  "FileVersion": 2,
+  "Id": "1d81a274-37fe-4a05-8f5e-5f88080cf7a7",
+  "Items": [
+    {
+      "Id": "43f0f565-404a-4d3e-b37d-27177fc863b4",
+      "Command": "C:\\Projects\\nand2tetris\\projects\\08\\FunctionCalls\\StaticsTest"
+    },
+    {
+      "Id": "059731b4-6391-4e78-a442-abefad2a43bd",
+      "Command": "C:\\Projects\\nand2tetris\\projects\\08\\FunctionCalls\\NestedCall"
+    },
+    {
+      "Id": "f1b41bfa-19ab-4289-bdc9-141e0d56a705",
+      "Command": "C:\\Projects\\nand2tetris\\projects\\08\\FunctionCalls\\FibonacciElement"
+    },
+    {
+      "Id": "abc6437d-a6f2-4666-85df-2a62be1faf95",
+      "Command": "C:\\Projects\\nand2tetris\\projects\\08\\FunctionCalls\\SimpleFunction"
+    },
+    {
+      "Id": "8fbd34a1-db2b-463e-826b-3c09adf0f692",
+      "Command": "C:\\Projects\\nand2tetris\\projects\\08\\ProgramFlow\\FibonacciSeries"
+    },
+    {
+      "Id": "e5702a40-ef77-45ae-9bc2-98806ae840bc",
+      "Command": "C:\\Projects\\nand2tetris\\projects\\08\\ProgramFlow\\BasicLoop"
+    },
+    {
+      "Id": "f581f486-578e-414a-9bf0-4ec76b8bfa49",
+      "Command": "C:\\Projects\\nand2tetris\\projects\\07\\StackArithmetic\\StackTest\\StackTest.vm"
+    },
+    {
+      "Id": "546497ca-47b4-4e62-b754-0424b48717eb",
+      "Command": "C:\\Projects\\nand2tetris\\projects\\07\\StackArithmetic\\SimpleAdd\\SimpleAdd.vm"
+    },
+    {
+      "Id": "1281c937-48d4-460c-942f-1c84c08af163",
+      "Command": "C:\\Projects\\nand2tetris\\projects\\07\\MemoryAccess\\StaticTest\\StaticTest.vm"
+    },
+    {
+      "Id": "69c25076-b1ef-4022-a5fb-99e1a22259bb",
+      "Command": "C:\\Projects\\nand2tetris\\projects\\07\\MemoryAccess\\PointerTest\\PointerTest.vm"
+    },
+    {
+      "Id": "7add1fb8-dae7-4c3f-b6b8-f6b764f5b374",
+      "Command": "C:\\Projects\\nand2tetris\\projects\\07\\MemoryAccess\\BasicTest\\BasicTest.vm"
+    }
+  ]
+}
