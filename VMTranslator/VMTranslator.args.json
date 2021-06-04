@@ -45,6 +45,14 @@
     {
       "Id": "7add1fb8-dae7-4c3f-b6b8-f6b764f5b374",
       "Command": "C:\\Projects\\nand2tetris\\projects\\07\\MemoryAccess\\BasicTest\\BasicTest.vm"
+    },
+    {
+      "Id": "566826dd-e276-4c6e-8e51-3915e6ef9608",
+      "Command": "-v"
+    },
+    {
+      "Id": "c6253518-687d-432b-8c1f-7c4939e29990",
+      "Command": "-c"
     }
   ]
 }

@@ -6,14 +6,26 @@ class VMTranslator
 {
     static void Main(string[] args)
     {
-        if (args.Length == 0)
+        ArrayList paths = new ArrayList();
+
+        foreach (string arg in args)
+        {
+            string lwrArg = arg.ToLower();
+            if (lwrArg == "-c")
+                CodeWriter.mComments = true;
+            else if (lwrArg == "-v")
+                CodeWriter.mVerbose = true;
+            else paths.Add(arg);
+        }
+
+        if (paths.Count == 0)
         {
             Console.WriteLine("No filename or directory provided.");
         }
 
-        for (int i = 0; i < args.Length; i++)
+        for (int i = 0; i < paths.Count; i++)
         {
-            ProcessPath(args[i]);
+            ProcessPath((string) paths[i]);
         }
     }
 
@@ -31,7 +43,6 @@ class VMTranslator
             Console.WriteLine("VM Translating directory: " + path);
             vmFiles = Directory.GetFiles(path, "*.vm");
 
-            /*
             // Only write the bootstrap code if Sys.vm is present
             foreach (string file in vmFiles)
             {
@@ -42,10 +53,6 @@ class VMTranslator
                     break;
                 }
             }
-            */
-
-            // Write bootstrap code for any directory translate
-            writer.WriteInit();
         }
         else
         {
@@ -299,8 +306,21 @@ class CodeWriter
     protected int mCallIndex = 0;
     protected bool mUsingSysInit = false;
 
-    protected bool mComments = false;
-    protected bool mVerbose = false;
+    protected static object[] mSegments = 
+    { 
+        // segment  address         isPointer   isConstant  fileUnique
+        "local",    "LCL",  /*1*/   1,          0,          0,
+        "argument", "ARG",  /*2*/   1,          0,          0,
+        "this",     "THIS", /*3*/   1,          0,          0,
+        "that",     "THAT", /*4*/   1,          0,          0,
+        "temp",     5,              0,          0,          0,
+        "static",   16,             0,          0,          1,
+        "constant", 0,              0,          1,          0,
+        "pointer",  "THIS", /*3*/   0,          0,          0,
+    };
+
+    static public bool mComments = false;
+    static public bool mVerbose = false;
 
     // FIXME - improve this to handle the same thing for any segment when classUnique is true
     protected int mStaticMax = 0; // max static index while processing a single class
@@ -338,24 +358,11 @@ class CodeWriter
         isPointer = false;
         isConstant = false;
 
-        object[] segments =
+        for (int i = 0; i < mSegments.Length; i = i + 5)
         {
-            // segment  address         isPointer   isConstant  fileUnique
-            "local",    "LCL",  /*1*/   true,       false,      false,
-            "argument", "ARG",  /*2*/   true,       false,      false,
-            "this",     "THIS", /*3*/   true,       false,      false,
-            "that",     "THAT", /*4*/   true,       false,      false,
-            "temp",     5,              false,      false,      false,
-            "static",   16,             false,      false,      true,
-            "constant", 0,              false,      true,       false,
-            "pointer",  "THIS", /*3*/   false,      false,      false,
-        };
-
-        for (int i = 0; i < segments.Length; i = i + 5)
-        {
-            if (segment == (string)segments[i])
+            if (segment == (string)mSegments[i])
             {
-                if ((bool)segments[i + 4])
+                if ( (int)mSegments[i + 4] != 0 )
                 {
                     // FIXME - improve this to handle the same thing for any segment when fileUnique is true
                     // index is unique per file
@@ -363,9 +370,9 @@ class CodeWriter
                     index += mStaticOffset;
                 }
 
-                address = "" + segments[i + 1];
-                isPointer = (bool)segments[i + 2];
-                isConstant = (bool)segments[i + 3];
+                address = "" + mSegments[i + 1];
+                isPointer = (int)mSegments[i + 2] != 0;
+                isConstant = (int)mSegments[i + 3] != 0;
                 return;
             }
         }
@@ -724,6 +731,13 @@ class CodeWriter
                 break;
 
             case CommandType.C_POP:
+
+                // TODO: Optimize as follows
+                // put addr = 7 + RAM[LCL] into D  // 4 lines of code
+                // add the top of the stack to D  so that D holds val + addr (and //decrease stack pointer in the process // 3 lines of code
+                //  A = val + addr - val so A = addr  // 1 line of code
+                // RAM[addr] = val + addr - addr = val // 1 line of code
+
                 // Store target address at current stackpointer
                 FileWriteLine("@" + index); // @index
                 FileWriteLine("D=A"); // D=A
