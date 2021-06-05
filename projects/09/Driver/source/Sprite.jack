@@ -3,6 +3,7 @@ class Sprite
 {
     field int x, y; // screen coordinate
 
+    // FIXME : A SpriteLib.Enum would be nice
     field int type; // 0 - car 
                     // 1 - line
                     // 2 - oil slick
@@ -12,6 +13,9 @@ class Sprite
 
     field int visible; // Visible or not
 
+    field int centerX; // abs distance from center x the sprite is allowed to be
+    field int centerY; // abs distance from center y the sprite is allowed to be
+
     constructor Sprite new( int typeIn )
     {
         let type = typeIn;
@@ -19,7 +23,90 @@ class Sprite
         let y = 0;
         let visible = -1;
 
+        // -1 used to denote undefined here
+        let centerX = -1;
+        let centerY = -1;
+
         return this;
+    }
+
+    method void clamp()
+    {
+        do clampX();
+        do clampY();
+        return;
+    }
+
+    method void clampX()
+    {
+        var int left;
+        var int right;
+
+        let left = 0;
+        let right = 512 - 16;
+
+        if ( ( centerX > -1 ) )
+        {
+            let left = 256 - centerX;
+            let right = ( 256 + centerX ) - 16;
+        }
+
+        if ( x < left )
+        {
+            let x = left;
+        }
+
+        if ( x > right )
+        {
+            let x = right;
+        }
+
+        return;
+    }
+
+    method void clampY()
+    {
+        var int top;
+        var int bottom;
+
+        let top = 0;
+        let bottom = 256 - 16;
+
+        if ( ( centerY > -1 ) )
+        {
+            let top = 128 - centerY;
+            let bottom = ( 128 + centerY ) - 16;
+        }
+
+        if ( y < top )
+        {
+            let y = top;
+        }
+
+        if ( y > bottom )
+        {
+            let y = bottom;
+        }
+
+        return;
+    }
+
+    method void setType( int typeIn )
+    {
+        let type = typeIn;
+        return;
+    }
+
+    method void setCenterX( int xFromCenter )
+    {
+        let centerX = xFromCenter;
+        return;
+    }
+
+    method void setCenterY( int yFromCenter )
+    {
+        let centerY = yFromCenter;
+        return;
     }
 
     method int getX()
@@ -35,12 +122,14 @@ class Sprite
     method void setX( int xIn )
     {
         let x = xIn;
+        do clampX();
         return;
     }
 
     method void setY( int yIn )
     {
         let y = yIn;
+        do clampY();
         return;
     }
 
@@ -48,6 +137,7 @@ class Sprite
     {
         let x = xIn;
         let y = yIn;
+        do clamp();
         return;
     }
 
@@ -56,6 +146,28 @@ class Sprite
         let velX = xIn;
         let velY = yIn;
         return;
+    }
+
+    method void setVelocityX( int xIn )
+    {
+        let velX = xIn;
+        return;
+    }
+
+    method int getVelocityX()
+    {
+        return velX;
+    }
+
+    method void setVelocityY( int yIn )
+    {
+        let velY = yIn;
+        return;
+    }
+
+    method int getVelocityY()
+    {
+        return velY;
     }
 
     method void setVisible( int visibleIn )
@@ -115,11 +227,33 @@ class Sprite
         return -1;
     }
 
+    method void moveX( int xDelta )
+    {
+        let x = x + xDelta;
+        do clampX();
+        return;
+    }
+
+    method void moveY( int yDelta )
+    {
+        let y = y + yDelta;
+        do clampY();
+        return;
+    }
+
     method void update()
     {
         // FIXME - extend this by updating based on time rather than whatever update rate is being maintained
-        let x = x + velX;
-        let y = y + velY;
+        if ( ~(velX = 0) )
+        {
+            do moveX( velX );
+        }
+
+        if ( ~(velY = 0) )
+        {
+            do moveY( velY );
+        }
+
         return;
     }
 
@@ -132,17 +266,17 @@ class Sprite
 
         if ( ( type = 0 ) ) // car
         {
-           do SpriteLib.drawCar( SpriteLib.getLocation( x, y ) );
+           do SpriteLib.drawCar( x, y );
         }
         
         if ( ( type = 1 ) ) // line
         {
-           do SpriteLib.drawLine( SpriteLib.getLocation( x, y ) );
+           do SpriteLib.drawLine( x, y );
         }
         
         if ( ( type = 2 ) ) // oil slick
         {
-           do SpriteLib.drawOilSlick( SpriteLib.getLocation( x, y ) );
+           do SpriteLib.drawOilSlick( x, y );
         }
 
         return;
@@ -150,7 +284,13 @@ class Sprite
 
     method void clear()
     {
-        do SpriteLib.clear( SpriteLib.getLocation( x, y ) );
+        if ( ~visible )
+        {
+            return;        
+        }
+
+        do SpriteLib.clear( x, y );
+
         return;
     }
 

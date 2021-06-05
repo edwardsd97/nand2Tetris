@@ -1,15 +1,23 @@
-function Game.new 0
-push constant 7
+function Game.new 1
+push constant 8
 call Memory.alloc 1
 pop pointer 0
-push constant 7
+push constant 0
+pop this 7
+push constant 6
 pop this 1
 push this 1
 call Array.new 1
 pop this 0
 push constant 0
-pop this 2
-push this 2
+pop local 0
+label WHILE_EXP0
+push local 0
+push this 1
+lt
+not
+if-goto WHILE_END0
+push local 0
 push this 0
 add
 push constant 0
@@ -18,78 +26,102 @@ pop temp 0
 pop pointer 1
 push temp 0
 pop that 0
+push local 0
 push constant 1
+add
+pop local 0
+goto WHILE_EXP0
+label WHILE_END0
+push this 1
+push constant 1
+sub
+pop this 2
+push constant 0
 pop this 4
-push constant 4
+push constant 3
 pop this 3
-push this 4
-push this 0
-add
-push constant 1
-call Sprite.new 1
-pop temp 0
-pop pointer 1
-push temp 0
-pop that 0
-push this 4
-push constant 1
-add
-push this 0
-add
-push constant 1
-call Sprite.new 1
-pop temp 0
-pop pointer 1
-push temp 0
-pop that 0
-push this 4
-push constant 2
-add
-push this 0
-add
-push constant 1
-call Sprite.new 1
-pop temp 0
-pop pointer 1
-push temp 0
-pop that 0
-push this 4
-push constant 4
-add
-push this 0
-add
-push constant 1
-call Sprite.new 1
-pop temp 0
-pop pointer 1
-push temp 0
-pop that 0
-push constant 5
+push constant 3
 pop this 6
 push constant 2
 pop this 5
-push this 6
-push this 0
-add
-push constant 0
-call Sprite.new 1
-pop temp 0
-pop pointer 1
-push temp 0
-pop that 0
-push this 6
-push constant 1
-add
-push this 0
-add
-push constant 2
-call Sprite.new 1
-pop temp 0
-pop pointer 1
-push temp 0
-pop that 0
 push pointer 0
 call Game.init 1
+pop temp 0
+push constant 2
+push constant 2
+call Output.moveCursor 2
+pop temp 0
+push constant 23
+call String.new 1
+push constant 65
+call String.appendChar 2
+push constant 114
+call String.appendChar 2
+push constant 114
+call String.appendChar 2
+push constant 111
+call String.appendChar 2
+push constant 119
+call String.appendChar 2
+push constant 115
+call String.appendChar 2
+push constant 58
+call String.appendChar 2
+push constant 32
+call String.appendChar 2
+push constant 65
+call String.appendChar 2
+push constant 118
+call String.appendChar 2
+push constant 111
+call String.appendChar 2
+push constant 105
+call String.appendChar 2
+push constant 100
+call String.appendChar 2
+push constant 32
+call String.appendChar 2
+push constant 79
+call String.appendChar 2
+push constant 98
+call String.appendChar 2
+push constant 115
+call String.appendChar 2
+push constant 116
+call String.appendChar 2
+push constant 97
+call String.appendChar 2
+push constant 99
+call String.appendChar 2
+push constant 108
+call String.appendChar 2
+push constant 101
+call String.appendChar 2
+push constant 115
+call String.appendChar 2
+call Output.printString 1
+pop temp 0
+push constant 3
+push constant 2
+call Output.moveCursor 2
+pop temp 0
+push constant 7
+call String.new 1
+push constant 81
+call String.appendChar 2
+push constant 58
+call String.appendChar 2
+push constant 32
+call String.appendChar 2
+push constant 81
+call String.appendChar 2
+push constant 117
+call String.appendChar 2
+push constant 105
+call String.appendChar 2
+push constant 116
+call String.appendChar 2
+call Output.printString 1
 pop temp 0
 push pointer 0
 return
@@ -99,14 +131,24 @@ pop pointer 0
 push constant 0
 pop local 0
 label WHILE_EXP0
-push constant 0
+push local 0
 not
 not
 if-goto WHILE_END0
+call Keyboard.keyPressed 0
+push constant 81
+eq
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
+push constant 0
+not
+pop local 0
+label IF_FALSE0
 push pointer 0
 call Game.frame 1
 pop temp 0
-push constant 1
+push constant 10
 call Sys.wait 1
 pop temp 0
 goto WHILE_EXP0
@@ -278,17 +320,25 @@ pop pointer 1
 push that 0
 pop local 0
 push local 0
+push constant 0
+call Sprite.setType 2
+pop temp 0
+push local 0
 push constant 256
 push constant 8
 sub
-push constant 128
-push constant 16
+push constant 256
+push constant 64
 sub
 call Sprite.setXY 3
 pop temp 0
+push local 0
+push constant 64
+call Sprite.setCenterX 2
+pop temp 0
 push constant 0
 return
-function Game.carUpdate 2
+function Game.carUpdate 5
 push argument 0
 pop pointer 0
 push this 2
@@ -296,34 +346,75 @@ push this 0
 add
 pop pointer 1
 push that 0
-pop local 1
+pop local 2
 push constant 0
 pop local 0
+call Keyboard.keyPressed 0
+pop local 4
+push local 4
 push constant 130
-call Keyboard.keyPressed 1
+eq
 if-goto IF_TRUE0
 goto IF_FALSE0
 label IF_TRUE0
 push local 0
-push constant 1
+push constant 2
 sub
 pop local 0
 label IF_FALSE0
+push local 4
 push constant 132
-call Keyboard.keyPressed 1
+eq
 if-goto IF_TRUE1
 goto IF_FALSE1
 label IF_TRUE1
 push local 0
-push constant 1
+push constant 2
 add
 pop local 0
 label IF_FALSE1
-push local 1
+push local 2
 push local 0
-push constant 0
-call Sprite.setVelocity 3
+call Sprite.setVelocityX 2
 pop temp 0
+push constant 0
+pop local 1
+label WHILE_EXP0
+push local 1
+push this 5
+lt
+not
+if-goto WHILE_END0
+push this 6
+push local 1
+add
+push this 0
+add
+pop pointer 1
+push that 0
+pop local 3
+push local 3
+push local 2
+call Sprite.touching 2
+if-goto IF_TRUE2
+goto IF_FALSE2
+label IF_TRUE2
+push this 7
+push constant 1
+add
+pop this 7
+push pointer 0
+call Game.init 1
+pop temp 0
+push constant 0
+return
+label IF_FALSE2
+push local 1
+push constant 1
+add
+pop local 1
+goto WHILE_EXP0
+label WHILE_END0
 push constant 0
 return
 function Game.linesInit 2
@@ -346,19 +437,23 @@ pop pointer 1
 push that 0
 pop local 1
 push local 1
+push constant 1
+call Sprite.setType 2
+pop temp 0
+push local 1
 push constant 256
 push constant 8
 sub
 push local 0
 push constant 64
 call Math.multiply 2
-push constant 64
+push constant 32
 add
 call Sprite.setXY 3
 pop temp 0
 push local 1
 push constant 0
-push constant 5
+push constant 2
 call Sprite.setVelocity 3
 pop temp 0
 push local 0
@@ -393,14 +488,14 @@ call Sprite.getY 1
 pop local 0
 push local 0
 push constant 256
-gt
-push constant 64
+push constant 17
 sub
+gt
 if-goto IF_TRUE0
 goto IF_FALSE0
 label IF_TRUE0
 push local 2
-push constant 64
+push constant 32
 call Sprite.setY 2
 pop temp 0
 label IF_FALSE0
@@ -433,23 +528,23 @@ push that 0
 pop local 1
 push local 1
 push constant 256
-push constant 64
+push constant 32
 sub
-push constant 128
+push constant 16
+sub
+push constant 64
 push local 0
 call Math.multiply 2
 add
-push constant 0
+push constant 64
+push local 0
+call Math.multiply 2
 call Sprite.setXY 3
 pop temp 0
 push local 1
 push constant 0
-push constant 5
+push constant 2
 call Sprite.setVelocity 3
-pop temp 0
-push local 1
-push constant 0
-call Sprite.setVisible 2
 pop temp 0
 push local 0
 push constant 1
@@ -457,9 +552,33 @@ add
 pop local 0
 goto WHILE_EXP0
 label WHILE_END0
+push this 6
+push constant 0
+add
+push this 0
+add
+pop pointer 1
+push that 0
+pop local 1
+push local 1
+push constant 2
+call Sprite.setType 2
+pop temp 0
+push this 6
+push constant 1
+add
+push this 0
+add
+pop pointer 1
+push that 0
+pop local 1
+push local 1
+push constant 0
+call Sprite.setType 2
+pop temp 0
 push constant 0
 return
-function Game.obstaclesUpdate 2
+function Game.obstaclesUpdate 4
 push argument 0
 pop pointer 0
 push constant 0
@@ -477,7 +596,44 @@ push this 0
 add
 pop pointer 1
 push that 0
+pop local 3
+push local 3
+call Sprite.getY 1
 pop local 1
+push local 1
+push constant 256
+push constant 17
+sub
+gt
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
+push local 3
+call Sprite.getX 1
+push constant 32
+add
+pop local 2
+push local 2
+push constant 256
+push constant 64
+add
+push constant 16
+sub
+gt
+if-goto IF_TRUE1
+goto IF_FALSE1
+label IF_TRUE1
+push constant 256
+push constant 64
+sub
+pop local 2
+label IF_FALSE1
+push local 3
+push local 2
+push constant 32
+call Sprite.setXY 3
+pop temp 0
+label IF_FALSE0
 push local 0
 push constant 1
 add

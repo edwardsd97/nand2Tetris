@@ -1,5 +1,5 @@
 function Sprite.new 0
-push constant 6
+push constant 8
 call Memory.alloc 1
 pop pointer 0
 push argument 0
@@ -11,7 +11,139 @@ pop this 1
 push constant 1
 neg
 pop this 5
+push constant 1
+neg
+pop this 6
+push constant 1
+neg
+pop this 7
 push pointer 0
+return
+function Sprite.clamp 0
+push argument 0
+pop pointer 0
+push pointer 0
+call Sprite.clampX 1
+pop temp 0
+push pointer 0
+call Sprite.clampY 1
+pop temp 0
+push constant 0
+return
+function Sprite.clampX 2
+push argument 0
+pop pointer 0
+push constant 0
+pop local 0
+push constant 512
+push constant 16
+sub
+pop local 1
+push this 6
+push constant 1
+neg
+gt
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
+push constant 256
+push this 6
+sub
+pop local 0
+push constant 256
+push this 6
+add
+push constant 16
+sub
+pop local 1
+label IF_FALSE0
+push this 0
+push local 0
+lt
+if-goto IF_TRUE1
+goto IF_FALSE1
+label IF_TRUE1
+push local 0
+pop this 0
+label IF_FALSE1
+push this 0
+push local 1
+gt
+if-goto IF_TRUE2
+goto IF_FALSE2
+label IF_TRUE2
+push local 1
+pop this 0
+label IF_FALSE2
+push constant 0
+return
+function Sprite.clampY 2
+push argument 0
+pop pointer 0
+push constant 0
+pop local 0
+push constant 256
+push constant 16
+sub
+pop local 1
+push this 7
+push constant 1
+neg
+gt
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
+push constant 128
+push this 7
+sub
+pop local 0
+push constant 128
+push this 7
+add
+push constant 16
+sub
+pop local 1
+label IF_FALSE0
+push this 1
+push local 0
+lt
+if-goto IF_TRUE1
+goto IF_FALSE1
+label IF_TRUE1
+push local 0
+pop this 1
+label IF_FALSE1
+push this 1
+push local 1
+gt
+if-goto IF_TRUE2
+goto IF_FALSE2
+label IF_TRUE2
+push local 1
+pop this 1
+label IF_FALSE2
+push constant 0
+return
+function Sprite.setType 0
+push argument 0
+pop pointer 0
+push argument 1
+pop this 2
+push constant 0
+return
+function Sprite.setCenterX 0
+push argument 0
+pop pointer 0
+push argument 1
+pop this 6
+push constant 0
+return
+function Sprite.setCenterY 0
+push argument 0
+pop pointer 0
+push argument 1
+pop this 7
+push constant 0
 return
 function Sprite.getX 0
 push argument 0
@@ -28,6 +160,9 @@ push argument 0
 pop pointer 0
 push argument 1
 pop this 0
+push pointer 0
+call Sprite.clampX 1
+pop temp 0
 push constant 0
 return
 function Sprite.setY 0
@@ -35,6 +170,9 @@ push argument 0
 pop pointer 0
 push argument 1
 pop this 1
+push pointer 0
+call Sprite.clampY 1
+pop temp 0
 push constant 0
 return
 function Sprite.setXY 0
@@ -44,6 +182,9 @@ push argument 1
 pop this 0
 push argument 2
 pop this 1
+push pointer 0
+call Sprite.clamp 1
+pop temp 0
 push constant 0
 return
 function Sprite.setVelocity 0
@@ -54,6 +195,30 @@ pop this 3
 push argument 2
 pop this 4
 push constant 0
+return
+function Sprite.setVelocityX 0
+push argument 0
+pop pointer 0
+push argument 1
+pop this 3
+push constant 0
+return
+function Sprite.getVelocityX 0
+push argument 0
+pop pointer 0
+push this 3
+return
+function Sprite.setVelocityY 0
+push argument 0
+pop pointer 0
+push argument 1
+pop this 4
+push constant 0
+return
+function Sprite.getVelocityY 0
+push argument 0
+pop pointer 0
+push this 4
 return
 function Sprite.setVisible 0
 push argument 0
@@ -155,17 +320,57 @@ label IF_FALSE5
 push constant 1
 neg
 return
-function Sprite.update 0
+function Sprite.moveX 0
 push argument 0
 pop pointer 0
 push this 0
-push this 3
+push argument 1
 add
 pop this 0
+push pointer 0
+call Sprite.clampX 1
+pop temp 0
+push constant 0
+return
+function Sprite.moveY 0
+push argument 0
+pop pointer 0
 push this 1
-push this 4
+push argument 1
 add
 pop this 1
+push pointer 0
+call Sprite.clampY 1
+pop temp 0
+push constant 0
+return
+function Sprite.update 0
+push argument 0
+pop pointer 0
+push this 3
+push constant 0
+eq
+not
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
+push pointer 0
+push this 3
+call Sprite.moveX 2
+pop temp 0
+label IF_FALSE0
+push this 4
+push constant 0
+eq
+not
+if-goto IF_TRUE1
+goto IF_FALSE1
+label IF_TRUE1
+push pointer 0
+push this 4
+call Sprite.moveY 2
+pop temp 0
+label IF_FALSE1
 push constant 0
 return
 function Sprite.draw 0
@@ -187,8 +392,7 @@ goto IF_FALSE1
 label IF_TRUE1
 push this 0
 push this 1
-call SpriteLib.getLocation 2
-call SpriteLib.drawCar 1
+call SpriteLib.drawCar 2
 pop temp 0
 label IF_FALSE1
 push this 2
@@ -199,8 +403,7 @@ goto IF_FALSE2
 label IF_TRUE2
 push this 0
 push this 1
-call SpriteLib.getLocation 2
-call SpriteLib.drawLine 1
+call SpriteLib.drawLine 2
 pop temp 0
 label IF_FALSE2
 push this 2
@@ -211,8 +414,7 @@ goto IF_FALSE3
 label IF_TRUE3
 push this 0
 push this 1
-call SpriteLib.getLocation 2
-call SpriteLib.drawOilSlick 1
+call SpriteLib.drawOilSlick 2
 pop temp 0
 label IF_FALSE3
 push constant 0
@@ -220,10 +422,17 @@ return
 function Sprite.clear 0
 push argument 0
 pop pointer 0
+push this 5
+not
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
+push constant 0
+return
+label IF_FALSE0
 push this 0
 push this 1
-call SpriteLib.getLocation 2
-call SpriteLib.clear 1
+call SpriteLib.clear 2
 pop temp 0
 push constant 0
 return
