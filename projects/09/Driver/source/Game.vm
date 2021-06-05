@@ -1,0 +1,488 @@
+function Game.new 0
+push constant 7
+call Memory.alloc 1
+pop pointer 0
+push constant 7
+pop this 1
+push this 1
+call Array.new 1
+pop this 0
+push constant 0
+pop this 2
+push this 2
+push this 0
+add
+push constant 0
+call Sprite.new 1
+pop temp 0
+pop pointer 1
+push temp 0
+pop that 0
+push constant 1
+pop this 4
+push constant 4
+pop this 3
+push this 4
+push this 0
+add
+push constant 1
+call Sprite.new 1
+pop temp 0
+pop pointer 1
+push temp 0
+pop that 0
+push this 4
+push constant 1
+add
+push this 0
+add
+push constant 1
+call Sprite.new 1
+pop temp 0
+pop pointer 1
+push temp 0
+pop that 0
+push this 4
+push constant 2
+add
+push this 0
+add
+push constant 1
+call Sprite.new 1
+pop temp 0
+pop pointer 1
+push temp 0
+pop that 0
+push this 4
+push constant 4
+add
+push this 0
+add
+push constant 1
+call Sprite.new 1
+pop temp 0
+pop pointer 1
+push temp 0
+pop that 0
+push constant 5
+pop this 6
+push constant 2
+pop this 5
+push this 6
+push this 0
+add
+push constant 0
+call Sprite.new 1
+pop temp 0
+pop pointer 1
+push temp 0
+pop that 0
+push this 6
+push constant 1
+add
+push this 0
+add
+push constant 2
+call Sprite.new 1
+pop temp 0
+pop pointer 1
+push temp 0
+pop that 0
+push pointer 0
+call Game.init 1
+pop temp 0
+push pointer 0
+return
+function Game.run 1
+push argument 0
+pop pointer 0
+push constant 0
+pop local 0
+label WHILE_EXP0
+push constant 0
+not
+not
+if-goto WHILE_END0
+push pointer 0
+call Game.frame 1
+pop temp 0
+push constant 1
+call Sys.wait 1
+pop temp 0
+goto WHILE_EXP0
+label WHILE_END0
+push constant 0
+return
+function Game.frame 0
+push argument 0
+pop pointer 0
+push pointer 0
+call Game.clear 1
+pop temp 0
+push pointer 0
+call Game.update 1
+pop temp 0
+push pointer 0
+call Game.draw 1
+pop temp 0
+push constant 0
+return
+function Game.init 0
+push argument 0
+pop pointer 0
+push pointer 0
+call Game.carInit 1
+pop temp 0
+push pointer 0
+call Game.linesInit 1
+pop temp 0
+push pointer 0
+call Game.obstaclesInit 1
+pop temp 0
+push constant 0
+return
+function Game.clear 2
+push argument 0
+pop pointer 0
+push constant 0
+pop local 0
+label WHILE_EXP0
+push local 0
+push this 1
+lt
+not
+if-goto WHILE_END0
+push local 0
+push this 0
+add
+pop pointer 1
+push that 0
+pop local 1
+push local 1
+call Sprite.clear 1
+pop temp 0
+push local 0
+push constant 1
+add
+pop local 0
+goto WHILE_EXP0
+label WHILE_END0
+push constant 0
+return
+function Game.update 2
+push argument 0
+pop pointer 0
+push pointer 0
+call Game.carUpdate 1
+pop temp 0
+push pointer 0
+call Game.linesUpdate 1
+pop temp 0
+push pointer 0
+call Game.obstaclesUpdate 1
+pop temp 0
+push constant 0
+pop local 0
+label WHILE_EXP0
+push local 0
+push this 1
+lt
+not
+if-goto WHILE_END0
+push local 0
+push this 0
+add
+pop pointer 1
+push that 0
+pop local 1
+push local 1
+call Sprite.update 1
+pop temp 0
+push local 0
+push constant 1
+add
+pop local 0
+goto WHILE_EXP0
+label WHILE_END0
+push constant 0
+return
+function Game.draw 2
+push argument 0
+pop pointer 0
+push constant 0
+pop local 0
+label WHILE_EXP0
+push local 0
+push this 1
+lt
+not
+if-goto WHILE_END0
+push local 0
+push this 0
+add
+pop pointer 1
+push that 0
+pop local 1
+push local 1
+call Sprite.draw 1
+pop temp 0
+push local 0
+push constant 1
+add
+pop local 0
+goto WHILE_EXP0
+label WHILE_END0
+push constant 0
+return
+function Game.dispose 2
+push argument 0
+pop pointer 0
+push constant 0
+pop local 0
+label WHILE_EXP0
+push local 0
+push this 1
+lt
+not
+if-goto WHILE_END0
+push local 0
+push this 0
+add
+pop pointer 1
+push that 0
+pop local 1
+push local 1
+call Sprite.dispose 1
+pop temp 0
+push local 0
+push constant 1
+add
+pop local 0
+goto WHILE_EXP0
+label WHILE_END0
+push this 0
+call Array.dispose 1
+pop temp 0
+push pointer 0
+call Memory.deAlloc 1
+pop temp 0
+push constant 0
+return
+function Game.carInit 1
+push argument 0
+pop pointer 0
+push this 2
+push this 0
+add
+pop pointer 1
+push that 0
+pop local 0
+push local 0
+push constant 256
+push constant 8
+sub
+push constant 128
+push constant 16
+sub
+call Sprite.setXY 3
+pop temp 0
+push constant 0
+return
+function Game.carUpdate 2
+push argument 0
+pop pointer 0
+push this 2
+push this 0
+add
+pop pointer 1
+push that 0
+pop local 1
+push constant 0
+pop local 0
+push constant 130
+call Keyboard.keyPressed 1
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
+push local 0
+push constant 1
+sub
+pop local 0
+label IF_FALSE0
+push constant 132
+call Keyboard.keyPressed 1
+if-goto IF_TRUE1
+goto IF_FALSE1
+label IF_TRUE1
+push local 0
+push constant 1
+add
+pop local 0
+label IF_FALSE1
+push local 1
+push local 0
+push constant 0
+call Sprite.setVelocity 3
+pop temp 0
+push constant 0
+return
+function Game.linesInit 2
+push argument 0
+pop pointer 0
+push constant 0
+pop local 0
+label WHILE_EXP0
+push local 0
+push this 3
+lt
+not
+if-goto WHILE_END0
+push this 4
+push local 0
+add
+push this 0
+add
+pop pointer 1
+push that 0
+pop local 1
+push local 1
+push constant 256
+push constant 8
+sub
+push local 0
+push constant 64
+call Math.multiply 2
+push constant 64
+add
+call Sprite.setXY 3
+pop temp 0
+push local 1
+push constant 0
+push constant 5
+call Sprite.setVelocity 3
+pop temp 0
+push local 0
+push constant 1
+add
+pop local 0
+goto WHILE_EXP0
+label WHILE_END0
+push constant 0
+return
+function Game.linesUpdate 3
+push argument 0
+pop pointer 0
+push constant 0
+pop local 1
+label WHILE_EXP0
+push local 1
+push this 3
+lt
+not
+if-goto WHILE_END0
+push this 4
+push local 1
+add
+push this 0
+add
+pop pointer 1
+push that 0
+pop local 2
+push local 2
+call Sprite.getY 1
+pop local 0
+push local 0
+push constant 256
+gt
+push constant 64
+sub
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
+push local 2
+push constant 64
+call Sprite.setY 2
+pop temp 0
+label IF_FALSE0
+push local 1
+push constant 1
+add
+pop local 1
+goto WHILE_EXP0
+label WHILE_END0
+push constant 0
+return
+function Game.obstaclesInit 2
+push argument 0
+pop pointer 0
+push constant 0
+pop local 0
+label WHILE_EXP0
+push local 0
+push this 5
+lt
+not
+if-goto WHILE_END0
+push this 6
+push local 0
+add
+push this 0
+add
+pop pointer 1
+push that 0
+pop local 1
+push local 1
+push constant 256
+push constant 64
+sub
+push constant 128
+push local 0
+call Math.multiply 2
+add
+push constant 0
+call Sprite.setXY 3
+pop temp 0
+push local 1
+push constant 0
+push constant 5
+call Sprite.setVelocity 3
+pop temp 0
+push local 1
+push constant 0
+call Sprite.setVisible 2
+pop temp 0
+push local 0
+push constant 1
+add
+pop local 0
+goto WHILE_EXP0
+label WHILE_END0
+push constant 0
+return
+function Game.obstaclesUpdate 2
+push argument 0
+pop pointer 0
+push constant 0
+pop local 0
+label WHILE_EXP0
+push local 0
+push this 5
+lt
+not
+if-goto WHILE_END0
+push this 6
+push local 0
+add
+push this 0
+add
+pop pointer 1
+push that 0
+pop local 1
+push local 0
+push constant 1
+add
+pop local 0
+goto WHILE_EXP0
+label WHILE_END0
+push constant 0
+return

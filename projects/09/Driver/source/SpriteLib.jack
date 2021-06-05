@@ -1,0 +1,118 @@
+
+/** Static class SpriteLib: holds "data" for drawing each kind of sprite */
+class SpriteLib
+{
+    static int memAddress;
+
+    /** getLocation: gets video memory location for given screen position */
+    function int getLocation( int x, int y )
+    {
+        var int loc;
+        let loc = (y * 512) + x;
+        return loc;
+    }
+
+    /** drawCar: Draws the car to video memory*/
+    function void drawCar(int location) 
+    {        
+        let memAddress = 16384+location;
+
+        /* Generated with Bitmap editor */
+        do Memory.poke(memAddress+0, 0);
+        do Memory.poke(memAddress+32, 2016);
+        do Memory.poke(memAddress+64, 2064);
+        do Memory.poke(memAddress+96, 6168);
+        do Memory.poke(memAddress+128, 6168);
+        do Memory.poke(memAddress+160, 7128);
+        do Memory.poke(memAddress+192, 3120);
+        do Memory.poke(memAddress+224, 2064);
+        do Memory.poke(memAddress+256, 2064);
+        do Memory.poke(memAddress+288, 2064);
+        do Memory.poke(memAddress+320, 7224);
+        do Memory.poke(memAddress+352, 7128);
+        do Memory.poke(memAddress+384, 6168);
+        do Memory.poke(memAddress+416, 2064);
+        do Memory.poke(memAddress+448, 2016);
+        do Memory.poke(memAddress+480, 0);
+
+        return;
+    }
+
+    /** drawLine: Draws a road line to video memory*/
+    function void drawLine(int location) 
+    {
+        let memAddress = 16384+location;
+
+        /* Generated with Bitmap editor */
+        let memAddress = 16384+location;
+        do Memory.poke(memAddress+0, 0);
+        do Memory.poke(memAddress+32, 0);
+        do Memory.poke(memAddress+64, 0);
+        do Memory.poke(memAddress+96, 0);
+        do Memory.poke(memAddress+128, 128);
+        do Memory.poke(memAddress+160, 128);
+        do Memory.poke(memAddress+192, 128);
+        do Memory.poke(memAddress+224, 128);
+        do Memory.poke(memAddress+256, 128);
+        do Memory.poke(memAddress+288, 128);
+        do Memory.poke(memAddress+320, 128);
+        do Memory.poke(memAddress+352, 128);
+        do Memory.poke(memAddress+384, 0);
+        do Memory.poke(memAddress+416, 0);
+        do Memory.poke(memAddress+448, 0);
+        do Memory.poke(memAddress+480, 0);
+
+        return;
+    }
+
+    /** drawObstacle: Draws an oil slick to video memory*/
+    function void drawOilSlick( int location ) 
+    {
+        let memAddress = 16384+location;
+
+        /* Generated with Bitmap editor */
+        do Memory.poke(memAddress+0, 0);
+        do Memory.poke(memAddress+32, 0);
+        do Memory.poke(memAddress+64, 0);
+        do Memory.poke(memAddress+96, 992);
+        do Memory.poke(memAddress+128, 4088);
+        do Memory.poke(memAddress+160, 4080);
+        do Memory.poke(memAddress+192, 4088);
+        do Memory.poke(memAddress+224, 3068);
+        do Memory.poke(memAddress+256, 3576);
+        do Memory.poke(memAddress+288, 3832);
+        do Memory.poke(memAddress+320, 8184);
+        do Memory.poke(memAddress+352, 7164);
+        do Memory.poke(memAddress+384, 4088);
+        do Memory.poke(memAddress+416, 448);
+        do Memory.poke(memAddress+448, 0);
+        do Memory.poke(memAddress+480, 0);
+
+        return;
+    }
+
+    /** clear: Clears the sprite from video memory */
+    function void clear(int location) 
+    {
+        let memAddress = 16384+location;
+
+        do Memory.poke(memAddress+0, 0);
+        do Memory.poke(memAddress+32, 0);
+        do Memory.poke(memAddress+64, 0);
+        do Memory.poke(memAddress+96, 0);
+        do Memory.poke(memAddress+128, 0);
+        do Memory.poke(memAddress+160, 0);
+        do Memory.poke(memAddress+192, 0);
+        do Memory.poke(memAddress+224, 0);
+        do Memory.poke(memAddress+256, 0);
+        do Memory.poke(memAddress+288, 0);
+        do Memory.poke(memAddress+320, 0);
+        do Memory.poke(memAddress+352, 0);
+        do Memory.poke(memAddress+384, 0);
+        do Memory.poke(memAddress+416, 0);
+        do Memory.poke(memAddress+448, 0);
+        do Memory.poke(memAddress+480, 0);
+        return;
+    }
+
+}

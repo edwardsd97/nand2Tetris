@@ -1,0 +1,249 @@
+
+class Game
+{
+    field Array sprites;
+    
+    field int spriteCount;
+
+    field int spriteCar;
+    
+    field int spriteLines;
+    field int spriteLineFirst;
+
+    field int spriteObstacles;
+    field int spriteObstacleFirst;
+
+    constructor Game new()
+    {
+        let spriteCount = 7;
+
+        let sprites = Array.new( spriteCount );
+        
+        let spriteCar = 0;
+        let sprites[spriteCar] = Sprite.new( 0 ); // car
+
+        let spriteLineFirst = 1;
+        let spriteLines = 4;
+        let sprites[spriteLineFirst] = Sprite.new( 1 ); // line
+        let sprites[spriteLineFirst+1] = Sprite.new( 1 ); // line
+        let sprites[spriteLineFirst+2] = Sprite.new( 1 ); // line
+        let sprites[spriteLineFirst+4] = Sprite.new( 1 ); // line
+
+        let spriteObstacleFirst = 5;
+        let spriteObstacles = 2;
+        let sprites[spriteObstacleFirst] = Sprite.new( 0 ); // car
+        let sprites[spriteObstacleFirst+1] = Sprite.new( 2 ); // oil slick
+
+        do init();
+
+        return this;
+    }
+
+    /** Runs the game until quit */
+    method void run()
+    {
+        var int quit;
+
+        let quit = 0;
+
+        while( true )
+        {
+            do frame();
+            do Sys.wait( 1 );
+        }
+
+        return;
+    }
+
+    /** Updates a single game frame */
+    method void frame()
+    {
+        do clear();
+        do update();
+        do draw();
+
+        return;
+    }
+
+    method void init()
+    {
+        do carInit();
+        do linesInit();
+        do obstaclesInit();
+
+        return;
+    }
+
+    method void clear()
+    {
+        var int i;
+        var Sprite sprite;
+
+        let i = 0;
+        while ( i < spriteCount )
+        {
+            let sprite = sprites[i];
+            do sprite.clear();
+            let i = i + 1;
+        }
+        return;
+    }
+
+    method void update()
+    {
+        var int i;
+        var Sprite sprite;
+
+        do carUpdate();
+        do linesUpdate();
+        do obstaclesUpdate();
+
+        // update all sprites
+        let i = 0;
+        while ( i < spriteCount )
+        {
+            let sprite = sprites[i];
+            do sprite.update();
+            let i = i + 1;
+        }
+        return;
+    }
+
+    method void draw()
+    {
+        var int i;
+        var Sprite sprite;
+
+        // draw all sprites
+        let i = 0;
+        while ( i < spriteCount )
+        {
+            let sprite = sprites[i];
+            do sprite.draw();
+            let i = i + 1;
+        }
+        return;
+    }
+
+    method void dispose()
+    {
+        var int i;
+        var Sprite sprite;
+
+        let i = 0;
+        while ( i < spriteCount )
+        {
+            let sprite = sprites[i];
+            do sprite.dispose();
+            let i = i + 1;
+        }
+        do sprites.dispose();
+        do Memory.deAlloc( this );
+        return;
+    }
+
+    method void carInit()
+    {
+        var Sprite sprite;
+        let sprite = sprites[spriteCar];
+        do sprite.setXY( 256 - 8, 128 - 16 );
+        return;
+    }
+
+    method void carUpdate()
+    {
+        var int xVel;
+        var Sprite sprite;
+
+        let sprite = sprites[spriteCar];
+        let xVel = 0;
+
+        if ( Keyboard.keyPressed(130) )
+        {
+            // moving left
+            let xVel = xVel - 1;
+        }
+
+        if ( Keyboard.keyPressed(132) )
+        {
+            // moving right
+            let xVel = xVel + 1;
+        }
+
+        do sprite.setVelocity( xVel, 0 );
+
+        return;
+    }
+
+    method void linesInit()
+    {
+        var int i;
+        var Sprite sprite;
+
+        let i = 0;
+        while ( i < spriteLines )
+        {
+            let sprite = sprites[spriteLineFirst + i];
+            do sprite.setXY( 256 - 8, ( i * 64 ) + 64);
+            do sprite.setVelocity( 0, 5 );
+            let i = i + 1;
+        }
+        return;
+    }
+
+    method void linesUpdate()
+    {
+        var int y;
+        var int i;
+        var Sprite sprite;
+
+        let i = 0;
+
+        // Keep the lines scrolling down the screen constantly
+        while ( i < spriteLines )
+        {
+            let sprite = sprites[spriteLineFirst + i];
+            let y = sprite.getY();
+
+            if ( y > 256 - 64 )
+            {
+                do sprite.setY( 64 );
+            }
+
+            let i = i + 1;
+        }
+        return;
+    }
+
+    method void obstaclesInit()
+    {
+        var int i;
+        var Sprite sprite;
+
+        let i = 0;
+        while ( i < spriteObstacles )
+        {
+            let sprite = sprites[spriteObstacleFirst + i];
+            do sprite.setXY( 256 - 64 + ( 128 * i ), 0 );
+            do sprite.setVelocity( 0, 5 );
+            do sprite.setVisible( 0 );
+            let i = i + 1;
+        }
+        return;
+   }
+
+    method void obstaclesUpdate()
+    {
+        var int i;
+        var Sprite sprite;
+
+        let i = 0;
+        while ( i < spriteObstacles )
+        {
+            let sprite = sprites[spriteObstacleFirst + i];
+           // FIXME - obstacles are hidden for now
+            let i = i + 1;
+        }
+        return;
+   }
+}

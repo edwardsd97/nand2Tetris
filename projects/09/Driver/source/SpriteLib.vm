@@ -1,0 +1,425 @@
+function SpriteLib.getLocation 1
+push argument 1
+push constant 512
+call Math.multiply 2
+push argument 0
+add
+pop local 0
+push local 0
+return
+function SpriteLib.drawCar 0
+push constant 16384
+push argument 0
+add
+pop static 0
+push static 0
+push constant 0
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 32
+add
+push constant 2016
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 64
+add
+push constant 2064
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 96
+add
+push constant 6168
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 128
+add
+push constant 6168
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 160
+add
+push constant 7128
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 192
+add
+push constant 3120
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 224
+add
+push constant 2064
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 256
+add
+push constant 2064
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 288
+add
+push constant 2064
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 320
+add
+push constant 7224
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 352
+add
+push constant 7128
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 384
+add
+push constant 6168
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 416
+add
+push constant 2064
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 448
+add
+push constant 2016
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 480
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push constant 0
+return
+function SpriteLib.drawLine 0
+push constant 16384
+push argument 0
+add
+pop static 0
+push constant 16384
+push argument 0
+add
+pop static 0
+push static 0
+push constant 0
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 32
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 64
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 96
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 128
+add
+push constant 128
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 160
+add
+push constant 128
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 192
+add
+push constant 128
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 224
+add
+push constant 128
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 256
+add
+push constant 128
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 288
+add
+push constant 128
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 320
+add
+push constant 128
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 352
+add
+push constant 128
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 384
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 416
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 448
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 480
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push constant 0
+return
+function SpriteLib.drawOilSlick 0
+push constant 16384
+push argument 0
+add
+pop static 0
+push static 0
+push constant 0
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 32
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 64
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 96
+add
+push constant 992
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 128
+add
+push constant 4088
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 160
+add
+push constant 4080
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 192
+add
+push constant 4088
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 224
+add
+push constant 3068
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 256
+add
+push constant 3576
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 288
+add
+push constant 3832
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 320
+add
+push constant 8184
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 352
+add
+push constant 7164
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 384
+add
+push constant 4088
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 416
+add
+push constant 448
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 448
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 480
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push constant 0
+return
+function SpriteLib.clear 0
+push constant 16384
+push argument 0
+add
+pop static 0
+push static 0
+push constant 0
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 32
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 64
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 96
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 128
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 160
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 192
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 224
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 256
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 288
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 320
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 352
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 384
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 416
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 448
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push static 0
+push constant 480
+add
+push constant 0
+call Memory.poke 2
+pop temp 0
+push constant 0
+return

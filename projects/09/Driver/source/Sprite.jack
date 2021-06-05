@@ -1,0 +1,162 @@
+
+class Sprite
+{
+    field int x, y; // screen coordinate
+
+    field int type; // 0 - car 
+                    // 1 - line
+                    // 2 - oil slick
+
+    field int velX; // X Velocity
+    field int velY; // Y Velocity
+
+    field int visible; // Visible or not
+
+    constructor Sprite new( int typeIn )
+    {
+        let type = typeIn;
+        let x = 0;
+        let y = 0;
+        let visible = -1;
+
+        return this;
+    }
+
+    method int getX()
+    {
+        return x;
+    }
+
+    method int getY()
+    {
+        return y;
+    }
+
+    method void setX( int xIn )
+    {
+        let x = xIn;
+        return;
+    }
+
+    method void setY( int yIn )
+    {
+        let y = yIn;
+        return;
+    }
+
+    method void setXY( int xIn, int yIn )
+    {
+        let x = xIn;
+        let y = yIn;
+        return;
+    }
+
+    method void setVelocity( int xIn, int yIn )
+    {
+        let velX = xIn;
+        let velY = yIn;
+        return;
+    }
+
+    method void setVisible( int visibleIn )
+    {
+        let visible = visibleIn;
+        if ( visible )
+        {
+            let visible = -1;
+        }
+        return;
+    }
+
+    method int getVisible()
+    {
+        return visible;
+    }
+
+    method int touching( Sprite other )
+    {
+        var int diffX;
+        var int diffY;
+        var int isVisible;
+
+        let isVisible = getVisible();
+        if ( ~isVisible )
+        {
+            return 0;
+        }
+
+        let isVisible = other.getVisible();
+        if ( ~isVisible )
+        {
+            return 0;
+        }
+
+        let diffX = x - other.getX();
+        if ( diffX < 0 )
+        {
+            let diffX = diffX * -1;
+        }
+        if ( diffX > 14 )
+        {
+            return 0;
+        }
+
+        let diffY = y - other.getY();
+        if ( diffY < 0 )
+        {
+            let diffY = diffY * -1;
+        }
+        if ( diffY > 14 )
+        {
+            return 0;
+        }
+
+        // FIXME - extend this by doing a per pixel comparison
+        return -1;
+    }
+
+    method void update()
+    {
+        // FIXME - extend this by updating based on time rather than whatever update rate is being maintained
+        let x = x + velX;
+        let y = y + velY;
+        return;
+    }
+
+    method void draw()
+    {
+        if ( ~visible )
+        {
+            return;        
+        }
+
+        if ( ( type = 0 ) ) // car
+        {
+           do SpriteLib.drawCar( SpriteLib.getLocation( x, y ) );
+        }
+        
+        if ( ( type = 1 ) ) // line
+        {
+           do SpriteLib.drawLine( SpriteLib.getLocation( x, y ) );
+        }
+        
+        if ( ( type = 2 ) ) // oil slick
+        {
+           do SpriteLib.drawOilSlick( SpriteLib.getLocation( x, y ) );
+        }
+
+        return;
+    }
+
+    method void clear()
+    {
+        do SpriteLib.clear( SpriteLib.getLocation( x, y ) );
+        return;
+    }
+
+    method void dispose()
+    {
+        do Memory.deAlloc( this );
+        return;
+    }
+}

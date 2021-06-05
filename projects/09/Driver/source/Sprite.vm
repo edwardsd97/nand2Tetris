@@ -1,0 +1,237 @@
+function Sprite.new 0
+push constant 6
+call Memory.alloc 1
+pop pointer 0
+push argument 0
+pop this 2
+push constant 0
+pop this 0
+push constant 0
+pop this 1
+push constant 1
+neg
+pop this 5
+push pointer 0
+return
+function Sprite.getX 0
+push argument 0
+pop pointer 0
+push this 0
+return
+function Sprite.getY 0
+push argument 0
+pop pointer 0
+push this 1
+return
+function Sprite.setX 0
+push argument 0
+pop pointer 0
+push argument 1
+pop this 0
+push constant 0
+return
+function Sprite.setY 0
+push argument 0
+pop pointer 0
+push argument 1
+pop this 1
+push constant 0
+return
+function Sprite.setXY 0
+push argument 0
+pop pointer 0
+push argument 1
+pop this 0
+push argument 2
+pop this 1
+push constant 0
+return
+function Sprite.setVelocity 0
+push argument 0
+pop pointer 0
+push argument 1
+pop this 3
+push argument 2
+pop this 4
+push constant 0
+return
+function Sprite.setVisible 0
+push argument 0
+pop pointer 0
+push argument 1
+pop this 5
+push this 5
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
+push constant 1
+neg
+pop this 5
+label IF_FALSE0
+push constant 0
+return
+function Sprite.getVisible 0
+push argument 0
+pop pointer 0
+push this 5
+return
+function Sprite.touching 3
+push argument 0
+pop pointer 0
+push pointer 0
+call Sprite.getVisible 1
+pop local 2
+push local 2
+not
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
+push constant 0
+return
+label IF_FALSE0
+push argument 1
+call Sprite.getVisible 1
+pop local 2
+push local 2
+not
+if-goto IF_TRUE1
+goto IF_FALSE1
+label IF_TRUE1
+push constant 0
+return
+label IF_FALSE1
+push this 0
+push argument 1
+call Sprite.getX 1
+sub
+pop local 0
+push local 0
+push constant 0
+lt
+if-goto IF_TRUE2
+goto IF_FALSE2
+label IF_TRUE2
+push local 0
+push constant 1
+neg
+call Math.multiply 2
+pop local 0
+label IF_FALSE2
+push local 0
+push constant 14
+gt
+if-goto IF_TRUE3
+goto IF_FALSE3
+label IF_TRUE3
+push constant 0
+return
+label IF_FALSE3
+push this 1
+push argument 1
+call Sprite.getY 1
+sub
+pop local 1
+push local 1
+push constant 0
+lt
+if-goto IF_TRUE4
+goto IF_FALSE4
+label IF_TRUE4
+push local 1
+push constant 1
+neg
+call Math.multiply 2
+pop local 1
+label IF_FALSE4
+push local 1
+push constant 14
+gt
+if-goto IF_TRUE5
+goto IF_FALSE5
+label IF_TRUE5
+push constant 0
+return
+label IF_FALSE5
+push constant 1
+neg
+return
+function Sprite.update 0
+push argument 0
+pop pointer 0
+push this 0
+push this 3
+add
+pop this 0
+push this 1
+push this 4
+add
+pop this 1
+push constant 0
+return
+function Sprite.draw 0
+push argument 0
+pop pointer 0
+push this 5
+not
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
+push constant 0
+return
+label IF_FALSE0
+push this 2
+push constant 0
+eq
+if-goto IF_TRUE1
+goto IF_FALSE1
+label IF_TRUE1
+push this 0
+push this 1
+call SpriteLib.getLocation 2
+call SpriteLib.drawCar 1
+pop temp 0
+label IF_FALSE1
+push this 2
+push constant 1
+eq
+if-goto IF_TRUE2
+goto IF_FALSE2
+label IF_TRUE2
+push this 0
+push this 1
+call SpriteLib.getLocation 2
+call SpriteLib.drawLine 1
+pop temp 0
+label IF_FALSE2
+push this 2
+push constant 2
+eq
+if-goto IF_TRUE3
+goto IF_FALSE3
+label IF_TRUE3
+push this 0
+push this 1
+call SpriteLib.getLocation 2
+call SpriteLib.drawOilSlick 1
+pop temp 0
+label IF_FALSE3
+push constant 0
+return
+function Sprite.clear 0
+push argument 0
+pop pointer 0
+push this 0
+push this 1
+call SpriteLib.getLocation 2
+call SpriteLib.clear 1
+pop temp 0
+push constant 0
+return
+function Sprite.dispose 0
+push argument 0
+pop pointer 0
+push pointer 0
+call Memory.deAlloc 1
+pop temp 0
+push constant 0
+return
