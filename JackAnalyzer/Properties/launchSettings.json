@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "JackAnalyzer": {
+      "commandName": "Project",
+      "commandLineArgs": "C:\\Projects\\nand2Tetris\\projects\\10\\ArrayTest"
+    }
+  }
+}

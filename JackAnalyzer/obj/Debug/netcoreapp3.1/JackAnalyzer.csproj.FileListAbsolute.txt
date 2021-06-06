@@ -1,0 +1,13 @@
+C:\Projects\nand2Tetris\JackAnalyzer\bin\Debug\netcoreapp3.1\JackAnalyzer.exe
+C:\Projects\nand2Tetris\JackAnalyzer\bin\Debug\netcoreapp3.1\JackAnalyzer.deps.json
+C:\Projects\nand2Tetris\JackAnalyzer\bin\Debug\netcoreapp3.1\JackAnalyzer.runtimeconfig.json
+C:\Projects\nand2Tetris\JackAnalyzer\bin\Debug\netcoreapp3.1\JackAnalyzer.runtimeconfig.dev.json
+C:\Projects\nand2Tetris\JackAnalyzer\bin\Debug\netcoreapp3.1\JackAnalyzer.dll
+C:\Projects\nand2Tetris\JackAnalyzer\bin\Debug\netcoreapp3.1\JackAnalyzer.pdb
+C:\Projects\nand2Tetris\JackAnalyzer\obj\Debug\netcoreapp3.1\JackAnalyzer.csprojAssemblyReference.cache
+C:\Projects\nand2Tetris\JackAnalyzer\obj\Debug\netcoreapp3.1\JackAnalyzer.AssemblyInfoInputs.cache
+C:\Projects\nand2Tetris\JackAnalyzer\obj\Debug\netcoreapp3.1\JackAnalyzer.AssemblyInfo.cs
+C:\Projects\nand2Tetris\JackAnalyzer\obj\Debug\netcoreapp3.1\JackAnalyzer.csproj.CoreCompileInputs.cache
+C:\Projects\nand2Tetris\JackAnalyzer\obj\Debug\netcoreapp3.1\JackAnalyzer.dll
+C:\Projects\nand2Tetris\JackAnalyzer\obj\Debug\netcoreapp3.1\JackAnalyzer.pdb
+C:\Projects\nand2Tetris\JackAnalyzer\obj\Debug\netcoreapp3.1\JackAnalyzer.genruntimeconfig.cache
