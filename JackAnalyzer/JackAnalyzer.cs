@@ -591,7 +591,7 @@ class Grammar
     static bool mInitialized;
     static Dictionary<string, int> mNodeDic;
 
-    public enum Gram { NONE, ZERO_OR_MORE, OR, OPTIONAL };
+    public enum Gram { NONE, ZERO_OR_MORE, OR, OPTIONAL, READ_AHEAD };
 
     public enum Enclose { NEVER, NOT_EMPTY, ALWAYS };
 
@@ -685,6 +685,9 @@ class Grammar
         // arrayIndex: '[' expression ']'
         "arrayIndex", Enclose.NEVER, '[', "expression", ']', 0,
 
+        // arrayValue: varName '[' expression ']'
+        "arrayValue", Enclose.NEVER, Gram.READ_AHEAD, Type.IDENTIFIER, '[', "expression", ']', 0,
+
         // elseClause: 'else' '{' statements '}'
         "elseClause", Enclose.NEVER, Keyword.ELSE, '{', "statements", '}', 0,
 
@@ -715,14 +718,20 @@ class Grammar
         // expression: term (op term)*
         "expression", Enclose.NOT_EMPTY, "term", Gram.ZERO_OR_MORE, "opTerm", 0,
 
+        // expressionParenth: '(' expression ')
+        "expressionParenth", Enclose.NEVER, '(', "expression", ')', 0,
+
         // term: 
-        "term", Enclose.NOT_EMPTY, Gram.OR, 4, Type.STRING_CONST, Type.INT_CONST, "keywordConstant", Type.IDENTIFIER, 0,
+        "term", Enclose.NOT_EMPTY, Gram.OR, 8, "expressionParenth", "unaryTerm", Type.STRING_CONST, Type.INT_CONST, "keywordConstant", "subroutineCall", "arrayValue", Type.IDENTIFIER, 0,
+
+        // unaryTerm: unaryOp term
+        "unaryTerm", Enclose.NEVER, "unaryOp", "term", 0,
 
         // subroutineObject: ( className | varName ) '.'
-        "subroutineObject", Enclose.NEVER, Type.IDENTIFIER, '.', 0,
+        "subroutineObject", Enclose.NEVER, Gram.READ_AHEAD, Type.IDENTIFIER, '.', 0,
 
         // subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')
-        "subroutineCall", Enclose.NEVER, Gram.OPTIONAL, "subroutineObject", Type.IDENTIFIER, '(', "expressionList", ')', 0,
+        "subroutineCall", Enclose.NEVER, Gram.OPTIONAL, "subroutineObject", Gram.READ_AHEAD, Type.IDENTIFIER, '(', "expressionList", ')', 0,
 
         // expressionList: ( expression (',' expression)* )?
         "expressionList", Enclose.ALWAYS, Gram.OPTIONAL, "expression", Gram.ZERO_OR_MORE, "expressionAdd", 0, 
@@ -772,16 +781,22 @@ class CompilationEngine
         Console.WriteLine("ERROR:");
     }
 
-    public void QueueLineAdd( string line )
+    public void QueueLineAdd( string line, bool doIndent = true)
     {
-        mQueueLine.Add(line);
+        string indent = "";
+        for (int i = 0; doIndent && i < mIndent; i++)
+            indent = indent + " ";
+        mQueueLine.Add(indent + line);
     }
 
-    public void QueueLineRemove(string line)
+    public void QueueLineRemove(string line, bool doIndent = true)
     {
+        string indent = "";
+        for (int i = 0; doIndent && i < mIndent; i++)
+            indent = indent + " ";
         for (int i = 0; i < mQueueLine.Count; i++)
         {
-            if ((string)mQueueLine[i] == line)
+            if ((string)mQueueLine[i] == indent + line)
             {
                 mQueueLine.RemoveAt(i);
                 return;
@@ -789,18 +804,18 @@ class CompilationEngine
         }
     }
 
-    public void WriteLine(string line)
+    public void WriteLine(string line, bool doIndent = true )
     {
         if (mQueueLine.Count > 0)
         {
             ArrayList queue = mQueueLine;
             mQueueLine = new ArrayList();
             foreach ( string qline in queue )
-                WriteLine(qline);
+                WriteLine(qline, false );
         }
 
         string indent = "";
-        for (int i = 0; i < mIndent; i++)
+        for (int i = 0; doIndent && i < mIndent; i++)
             indent = indent + " ";
         if( JackAnalyzer.mVerbose )
             Console.WriteLine(indent + line);
@@ -864,9 +879,15 @@ class CompilationEngine
     {
         bool done = false;
 
+        int readAheadNode = -1;
+        int readAheadToken = -1;
+
         while (!done)
         {
             JackToken token = mTokens.Get();
+
+            if (nodeName == "term" && token.identifier == "length" )
+                done = done;
 
             System.Type type = nodes[node].GetType();
 
@@ -876,12 +897,14 @@ class CompilationEngine
                 {
                     if (!optional)
                         Error();
+                    if (readAheadToken >= 0)
+                        mTokens.mTokenCurrent = readAheadToken;
                     return false;
                 }
 
-                WriteLine(token.GetXMLString());
+                if (readAheadNode < 0 )
+                    WriteLine(token.GetXMLString());
                 token = mTokens.Advance();
-                optional = false;
             }
             else if (type == typeof(Keyword))
             {
@@ -889,12 +912,14 @@ class CompilationEngine
                 {
                     if (!optional)
                         Error();
+                    if (readAheadToken >= 0)
+                        mTokens.mTokenCurrent = readAheadToken;
                     return false;
                 }
 
-                WriteLine(token.GetXMLString());
+                if (readAheadNode < 0)
+                    WriteLine(token.GetXMLString());
                 token = mTokens.Advance();
-                optional = false;
             }
             else if (type == typeof(char))
             {
@@ -902,12 +927,14 @@ class CompilationEngine
                 {
                     if ( !optional )
                         Error();
+                    if ( readAheadToken >= 0 )
+                        mTokens.mTokenCurrent = readAheadToken;
                     return false;
                 }
 
-                WriteLine(token.GetXMLString());
+                if (readAheadNode < 0)
+                    WriteLine(token.GetXMLString());
                 token = mTokens.Advance();
-                optional = false;
             }
             else if (type == typeof(Grammar.Gram))
             {
@@ -917,24 +944,25 @@ class CompilationEngine
                 {
                     case Grammar.Gram.OPTIONAL:
                         optionalEnd = node + 1;
+                        node++;
                         break;
 
                     case Grammar.Gram.OR:
                         node++;
                         optionalEnd = node + (int)nodes[node];
+                        node++;
                         break;
 
                     case Grammar.Gram.ZERO_OR_MORE:
                         optionalEnd = -1;
+                        node++;
                         break;
                 }
-
-                node++;
 
                 switch (gram)
                 {
                     case Grammar.Gram.OR:
-                        while( !CompileGrammar( nodeName, nodes, node, node <= optionalEnd, node + 1) )
+                        while ( !CompileGrammar( nodeName, nodes, node, node <= optionalEnd, node + 1) )
                         {
                             node++;
 
@@ -942,6 +970,8 @@ class CompilationEngine
                             {
                                 if ( !optional )
                                     Error();
+                                if (readAheadToken >= 0)
+                                    mTokens.mTokenCurrent = readAheadToken;
                                 return false;
                             }
                         }
@@ -958,6 +988,11 @@ class CompilationEngine
                             // do nothing
                         }
                         break;
+
+                    case Grammar.Gram.READ_AHEAD:
+                        readAheadNode = node + 3;
+                        readAheadToken = mTokens.mTokenCurrent;
+                        break;
                 }
 
                 gram = Grammar.Gram.NONE;
@@ -968,10 +1003,10 @@ class CompilationEngine
                 {
                     if ( !optional )
                         Error();
+                    if (readAheadToken >= 0)
+                        mTokens.mTokenCurrent = readAheadToken;
                     return false;
                 }
-
-                optional = false;
             }
             else if (type == typeof(int) && (int)nodes[node] == 0)
             {
@@ -983,6 +1018,15 @@ class CompilationEngine
             if ( !done && earlyTerminate > 0 && node >= earlyTerminate )
             {
                 done = true;
+            }
+
+            if ( readAheadNode > 0 && node >= readAheadNode )
+            {
+                // Rewind and write it for real now
+                mTokens.mTokenCurrent = readAheadToken;
+                node = readAheadNode - 2;
+                readAheadNode = -1;
+                readAheadToken = -1;
             }
         }
 
