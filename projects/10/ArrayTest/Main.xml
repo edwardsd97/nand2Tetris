@@ -1,0 +1,16 @@
+<class>
+<keyword> class </keyword>
+<identifier> Main </identifier>
+<symbol> { </symbol>
+  <classVarDec>
+  </classVarDec>
+    <subroutineDec>
+    <keyword> function </keyword>
+    <keyword> void </keyword>
+    <identifier> main </identifier>
+    <symbol> ( </symbol>
+      <parameterList>
+        <parameter>
+          <type>
+          </type>
+          </parameter>

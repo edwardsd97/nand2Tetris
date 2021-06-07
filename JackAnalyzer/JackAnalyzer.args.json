@@ -3,8 +3,20 @@
   "Id": "a0bd2987-177a-4c3f-bad1-f338190d08ee",
   "Items": [
     {
+      "Id": "36a1e7cc-6ad0-4baf-a688-0608a1361596",
+      "Command": "C:\\Projects\\nand2Tetris\\projects\\10\\ExpressionLessSquare"
+    },
+    {
       "Id": "204fbbef-ff10-4505-a3c8-05985fe98d89",
       "Command": "C:\\Projects\\nand2Tetris\\projects\\10\\ArrayTest"
+    },
+    {
+      "Id": "e27a086a-bbd3-4508-9991-1cacb4fc52d2",
+      "Command": "-v"
+    },
+    {
+      "Id": "d26d24cb-008e-437e-af68-073f718d7fec",
+      "Command": "-c"
     }
   ]
 }
