@@ -3,6 +3,14 @@
   "Id": "a0bd2987-177a-4c3f-bad1-f338190d08ee",
   "Items": [
     {
+      "Id": "914febc0-1084-4bd8-9a25-2b0608efeebc",
+      "Command": "C:\\Projects\\nand2Tetris\\projects\\10\\Square\\SquareGame.Jack"
+    },
+    {
+      "Id": "0ad5c505-a903-4336-8959-a5d1877755d8",
+      "Command": ""
+    },
+    {
       "Id": "c1dbd065-2a3d-4008-bfc9-033922c4f06b",
       "Command": "C:\\Projects\\nand2Tetris\\projects\\10\\Square"
     },

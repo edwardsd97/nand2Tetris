@@ -37,7 +37,7 @@ class JackAnalyzer
             FileAttributes attrib = File.GetAttributes((string)paths[i]);
             if (attrib.HasFlag(FileAttributes.Directory))
             {
-                string[] files = Directory.GetFiles((string)paths[i], "*.Jack");
+                string[] files = Directory.GetFiles((string)paths[i], "*.jack");
                 foreach (string file in files)
                 {
                     paths.Add(file);
@@ -49,6 +49,7 @@ class JackAnalyzer
         // Process the files
         for (int i = 0; i < paths.Count; i++)
         {
+            Console.WriteLine("Compiling...." + (string)paths[i] );
             ProcessFile((string)paths[i]);
         }
     }
@@ -433,12 +434,12 @@ class JackTokenizer : IEnumerable
             char c = mLineStr[mLineChar];
 
             // Check for comments
-            if (mLineChar < mLineStr.Length - 1)
+            if (mLineChar < mLineStr.Length - 1 || mCommentTerminateWait )
             {
                 if (mCommentTerminateWait)
                 {
                     // Waiting for terminating "*/"
-                    if (mLineStr[mLineChar] == '*' && mLineStr[mLineChar + 1] == '/')
+                    if (mLineStr[mLineChar] == '*' && mLineChar < mLineStr.Length - 1 && mLineStr[mLineChar + 1] == '/')
                     {
                         mLineChar = mLineChar + 2;
                         if ( mLineChar >= mLineStr.Length )
@@ -885,9 +886,6 @@ class CompilationEngine
         while (!done)
         {
             JackToken token = mTokens.Get();
-
-            if (nodeName == "term" && token.identifier == "length" )
-                done = done;
 
             System.Type type = nodes[node].GetType();
 

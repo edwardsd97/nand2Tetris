@@ -1,13 +1,4 @@
 <tokens>
-<symbol> * </symbol>
-<symbol> . </symbol>
-<identifier> d </identifier>
-<symbol> . </symbol>
-<identifier> e </identifier>
-<symbol> . </symbol>
-<symbol> . </symbol>
-<identifier> t </identifier>
-<symbol> . </symbol>
 <keyword> class </keyword>
 <identifier> SquareGame </identifier>
 <symbol> { </symbol>
