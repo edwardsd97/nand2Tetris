@@ -1,0 +1,100 @@
+class Circle{
+    field int x,y;
+    field int radius;
+    constructor Circle new(int a1,int a2,int rad){
+        let x = a1;
+        let y = a2;
+        let radius = rad;
+        do draw();
+        return this;
+    }
+
+    method void dispose(){
+        // disallocates the memory
+        do Memory.deAlloc(this);
+        return ;
+    }
+
+    method void draw(){
+        do Screen.setColor(true);
+        do Screen.drawCircle(x,y,radius);
+        return ;
+    }
+
+    method void erase(){
+        do Screen.setColor(false);
+        do Screen.drawCircle(x,y,radius);
+        return ;
+    }
+
+    method void increase(){
+        // checking if both x and y coordinate plus radius is within the bounds because we cannot draw a circle greater than the screen size
+        if ((((x+radius+2 < 510)&(x-radius-2 > 0))&((y+radius+2 < 254)&(y-radius-2 > 0)))){
+            do erase();
+            let radius = radius + 2;
+            
+            do draw();
+        }
+        return ;
+    }
+
+    method void decrease(){
+        // checking if radius is greater than 2 because if it is less than 2 then our circle after decreasing will have negative radius which is practically infeasible
+        if (radius>2){
+            // erases the inital figure by applying a white patch of same shape of previous which makes the whole screen white
+            do erase();
+            let radius = radius - 2;
+            // draws a black circle with radius = radius - 2
+            do draw();
+        }
+        return ;
+    }
+
+    method void moveup(){
+        // checking for y cordinate + radius doesnt overshoot the given screen space
+        if ((y+radius-2<254) & (y-radius-1> 0)){
+            do Screen.setColor(false); 
+            do Screen.drawCircle(x,y,radius);
+            let y = y-2;
+            do Screen.setColor(true);
+            do Screen.drawCircle(x,y,radius);
+        }
+        return ;
+    }
+    
+    method void movedown(){
+        // checking for y cordinate + radius doesnt overshoot the given screen space
+        if ((y+radius+2<254) & (y-radius+1 > 0)){
+            do Screen.setColor(false);
+            do Screen.drawCircle(x,y,radius);
+            let y = y+2;
+            do Screen.setColor(true);
+            do Screen.drawCircle(x,y,radius);
+        }
+        return ;
+    }
+
+    method void moveleft(){
+        // checking for x cordinate + radius doesnt overshoot the given screen space
+        if ((x+radius-2<510) & (x-radius-1>0)){
+            do Screen.setColor(false);
+            do Screen.drawCircle(x,y,radius);
+            let x = x-2;
+            do Screen.setColor(true);
+            do Screen.drawCircle(x,y,radius);
+        }
+        return ;
+    }
+
+    method void moveright(){
+        // checking for x cordinate + radius doesnt overshoot the given screen space
+        if ((x+radius+2<510) & (x-radius+1 > 0)){
+            do Screen.setColor(false);
+            do Screen.drawCircle(x,y,radius);
+            let x = x+2;
+            do Screen.setColor(true);
+            do Screen.drawCircle(x,y,radius);
+        }
+        return ;
+    }
+}

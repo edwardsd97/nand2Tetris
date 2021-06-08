@@ -1,0 +1,80 @@
+class CircleGame{
+    field Circle circle;
+    field int direction;
+
+    constructor CircleGame new(){
+        let circle = Circle.new(256,128,20);
+        let direction = 0;
+        return this;
+    }
+
+    method void dispose(){
+        do circle.dispose();
+        do Memory.deAlloc(this);
+        return ;
+    }
+    
+
+    method void moveCircle(){
+        if (direction = 1){
+            do circle.moveup();
+        }
+        if (direction = 2){
+            do circle.movedown();
+        }
+        if (direction = 3){
+            do circle.moveleft();
+        }
+        if (direction = 4){
+            do circle.moveright();
+        }
+        if (direction = 88){
+            do circle.increase();
+        }
+        if (direction = 90){
+            do circle.decrease();
+        }
+        do Sys.wait(25);
+        return ;
+    }
+
+    method void run(){
+        var char key;
+        var boolean e1;
+        let e1 = false;
+
+        while (~e1){
+            while(key = 0){
+                let key = Keyboard.keyPressed();
+
+            }
+            if (key = 81){
+                let e1 = true;
+            }
+            if (key = 90){
+                let direction = 90;
+            }
+            if (key = 88){
+                let direction = 88;
+            }
+            if (key = 131){
+                let direction = 1;
+            }
+            if (key = 133){
+                let direction = 2;
+            }
+            if (key = 130){
+                let direction = 3;
+            }
+            if (key = 132){
+                let direction = 4;
+            }
+
+            while (~(key = 0)){
+                let key = Keyboard.keyPressed();
+                do moveCircle();
+            }
+        }
+        return ;
+    }
+}

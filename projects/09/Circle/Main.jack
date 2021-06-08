@@ -1,0 +1,11 @@
+// i designed a game where if you press right arrow circle moves right and if you press left arrow it moves left and accordingly
+// if you press "q" it will exit and if you press "x" the circle radius will decrease and if you press "z" the circle radius increases
+class Main{
+    function void main () {
+        var CircleGame game;
+        let game = CircleGame.new();
+        do game.run();
+        do game.dispose();
+        return ;
+    }
+}

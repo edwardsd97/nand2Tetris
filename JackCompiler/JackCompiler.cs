@@ -3,9 +3,7 @@ using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 
-// Project 10 passed
-
-class JackAnalyzer
+class JackCompiler
 {
     static public bool mComments = false;
     static public bool mVerbose = false;
@@ -20,13 +18,13 @@ class JackAnalyzer
         {
             string lwrArg = arg.ToLower();
             if (lwrArg == "-c")
-                JackAnalyzer.mComments = true;
+                JackCompiler.mComments = true;
             else if (lwrArg == "-v")
-                JackAnalyzer.mVerbose = true;
+                JackCompiler.mVerbose = true;
             else if (lwrArg == "-t")
-                JackAnalyzer.mDumpTokenFile = true;
+                JackCompiler.mDumpTokenFile = true;
             else if (lwrArg == "-x")
-                JackAnalyzer.mDumpXmlFile = true;
+                JackCompiler.mDumpXmlFile = true;
             else
                 paths.Add(arg);
         }
@@ -55,14 +53,14 @@ class JackAnalyzer
         // Process the files
         for (int i = 0; i < paths.Count; i++)
         {
-            Console.WriteLine("Compiling... " + (string)paths[i] );
+            Console.WriteLine("Compiling... " + (string)paths[i]);
             ProcessFile((string)paths[i]);
         }
     }
 
     static void ProcessFile(string path)
     {
-        JackTokenizer tokenizer = new JackTokenizer( path );
+        Tokenizer tokenizer = new Tokenizer(path);
 
         // Read all tokens into memory
         while (tokenizer.HasMoreTokens())
@@ -71,21 +69,21 @@ class JackAnalyzer
         }
         tokenizer.Close();
 
-        if ( JackAnalyzer.mDumpTokenFile )
+        if (JackCompiler.mDumpTokenFile)
         {
             // Dump the tokens to token xml file
             StreamWriter writer = new StreamWriter(GetOutTokenfile(path));
             writer.AutoFlush = true;
             writer.WriteLine("<tokens>");
-            foreach (JackToken token in tokenizer)
+            foreach (Token token in tokenizer)
             {
-                writer.WriteLine( token.GetXMLString() );
+                writer.WriteLine(token.GetXMLString());
             }
             writer.WriteLine("</tokens>");
         }
 
         // Compile the tokens into output file
-        CompilationEngine compiler = new CompilationEngine(tokenizer, GetOutXMLfile(path) );
+        CompilationEngine compiler = new CompilationEngine(tokenizer, GetOutXMLfile(path));
         compiler.CompileClass();
     }
 
@@ -128,26 +126,129 @@ class JackAnalyzer
     }
 }
 
-// Enum types //
-public enum Type
+class SymbolTable
 {
-    NONE,
-    KEYWORD, SYMBOL, IDENTIFIER, INT_CONST, STRING_CONST
-};
+    static List<SymbolScope> mScopes = new List<SymbolScope>();
+    static SymbolTable mTheTable = new SymbolTable();
 
-public enum Keyword
-{
-    NONE,
-    CLASS, METHOD, FUNCTION, CONSTRUCTOR,
-    INT, BOOL, CHAR, VOID,
-    VAR, STATIC, FIELD, LET,
-    DO, IF, ELSE, WHILE,
-    RETURN, TRUE, FALSE, NULL,
-    THIS
-};
+    public class Symbol
+    {
+        public string   mVarName;   // varName
+        public Kind     mKind;      // STATIC, FIELD, ARG, VAR
+        public string   mType;      // int, boolean, char, ClassName
+        public int      mOffset;     // segment offset
+    }
 
-class JackToken
+    class SymbolScope
+    {
+        public Dictionary<string, Symbol> mSymbols = new Dictionary<string, Symbol>();
+        public string mName;
+        public SymbolScope(string name)
+        {
+            mName = name;
+        }
+    };
+
+    public enum Kind
+    {
+        NONE, STATIC, FIELD, ARG, VAR
+    }
+
+    public static void Scope( string name )
+    {
+        SymbolScope scope = new SymbolScope(name);
+        mScopes.Add(scope);
+    }
+
+    public static void ScopePop()
+    {
+        if( mScopes.Count > 0 )
+        {
+            mScopes.RemoveAt(mScopes.Count - 1);
+        }
+    }
+
+    public static void Define(string varName, string type, Kind kind)
+    {
+        if (mScopes.Count == 0)
+            return;
+
+        Symbol newVar = new Symbol();
+        newVar.mKind = kind;
+        newVar.mType = type;
+        newVar.mVarName = varName;
+        newVar.mOffset = 0;
+
+        foreach (Symbol symbol in mScopes[mScopes.Count - 1].mSymbols.Values)
+        {
+            if (symbol.mKind == newVar.mKind)
+            {
+                newVar.mOffset = newVar.mOffset + 1;
+            }
+        }
+
+        mScopes[mScopes.Count - 1].mSymbols.Add(varName, newVar);
+    }
+
+    public static Symbol Find( string varName )
+    {
+        // Walk backwards from most recently added scope backward to oldest looking for the symbol
+        Symbol result = null;
+        int iScope = mScopes.Count - 1;
+
+        while (result == null && iScope >= 0)
+        {
+            mScopes[iScope].mSymbols.TryGetValue(varName, out result);
+            iScope--;
+        }
+
+        return result;
+    }
+
+    public static Kind KindOf(string varName)
+    {
+        Symbol symbol = SymbolTable.Find( varName );
+        if (symbol != null)
+            return symbol.mKind;
+        return Kind.NONE;
+    }
+
+    public static string TypeOf(string varName)
+    {
+        Symbol symbol = SymbolTable.Find(varName);
+        if (symbol != null)
+            return symbol.mType;
+        return "";
+    }
+
+    public static int OffsetOf(string varName)
+    {
+        Symbol symbol = SymbolTable.Find(varName);
+        if (symbol != null)
+            return symbol.mOffset;
+        return 0;
+    }
+}
+
+class Token
 {
+    public enum Type
+    {
+        NONE,
+        KEYWORD, SYMBOL, IDENTIFIER, INT_CONST, STRING_CONST
+    };
+
+    public enum Keyword
+    {
+        NONE,
+        CLASS, METHOD, FUNCTION, CONSTRUCTOR,
+        INT, BOOL, CHAR, VOID,
+        VAR, STATIC, FIELD, LET,
+        DO, IF, ELSE, WHILE,
+        RETURN, TRUE, FALSE, NULL,
+        THIS
+    };
+
     // Static data and members //
     private static bool mInitialized = false;
     private static Dictionary<string, Keyword> strToKeyword;
@@ -157,57 +258,57 @@ class JackToken
 
     protected static void InitIfNeeded()
     {
-        if (JackToken.mInitialized)
+        if (Token.mInitialized)
             return;
 
         typeToStr = new Dictionary<Type, string>();
-        typeToStr.Add(Type.KEYWORD, "keyword" );
-        typeToStr.Add(Type.SYMBOL, "symbol");
-        typeToStr.Add(Type.IDENTIFIER, "identifier");
-        typeToStr.Add(Type.INT_CONST, "integerConstant");
-        typeToStr.Add(Type.STRING_CONST, "stringConstant");
+        typeToStr.Add(Token.Type.KEYWORD, "keyword");
+        typeToStr.Add(Token.Type.SYMBOL, "symbol");
+        typeToStr.Add(Token.Type.IDENTIFIER, "identifier");
+        typeToStr.Add(Token.Type.INT_CONST, "integerConstant");
+        typeToStr.Add(Token.Type.STRING_CONST, "stringConstant");
 
         strToKeyword = new Dictionary<string, Keyword>();
-        strToKeyword.Add("class", Keyword.CLASS );
-        strToKeyword.Add("method", Keyword.METHOD);
-        strToKeyword.Add("function", Keyword.FUNCTION);
-        strToKeyword.Add("constructor", Keyword.CONSTRUCTOR);
-        strToKeyword.Add("int", Keyword.INT);
-        strToKeyword.Add("boolean", Keyword.BOOL);
-        strToKeyword.Add("char", Keyword.CHAR);
-        strToKeyword.Add("void", Keyword.VOID);
-        strToKeyword.Add("var", Keyword.VAR);
-        strToKeyword.Add("static", Keyword.STATIC);
-        strToKeyword.Add("field", Keyword.FIELD);
-        strToKeyword.Add("let", Keyword.LET);
-        strToKeyword.Add("do", Keyword.DO);
-        strToKeyword.Add("if", Keyword.IF);
-        strToKeyword.Add("else", Keyword.ELSE);
-        strToKeyword.Add("while", Keyword.WHILE);
-        strToKeyword.Add("return", Keyword.RETURN);
-        strToKeyword.Add("true", Keyword.TRUE);
-        strToKeyword.Add("false", Keyword.FALSE);
-        strToKeyword.Add("null", Keyword.NULL);
-        strToKeyword.Add("this", Keyword.THIS);
+        strToKeyword.Add("class", Token.Keyword.CLASS);
+        strToKeyword.Add("method", Token.Keyword.METHOD);
+        strToKeyword.Add("function", Token.Keyword.FUNCTION);
+        strToKeyword.Add("constructor", Token.Keyword.CONSTRUCTOR);
+        strToKeyword.Add("int", Token.Keyword.INT);
+        strToKeyword.Add("boolean", Token.Keyword.BOOL);
+        strToKeyword.Add("char", Token.Keyword.CHAR);
+        strToKeyword.Add("void", Token.Keyword.VOID);
+        strToKeyword.Add("var", Token.Keyword.VAR);
+        strToKeyword.Add("static", Token.Keyword.STATIC);
+        strToKeyword.Add("field", Token.Keyword.FIELD);
+        strToKeyword.Add("let", Token.Keyword.LET);
+        strToKeyword.Add("do", Token.Keyword.DO);
+        strToKeyword.Add("if", Token.Keyword.IF);
+        strToKeyword.Add("else", Token.Keyword.ELSE);
+        strToKeyword.Add("while", Token.Keyword.WHILE);
+        strToKeyword.Add("return", Token.Keyword.RETURN);
+        strToKeyword.Add("true", Token.Keyword.TRUE);
+        strToKeyword.Add("false", Token.Keyword.FALSE);
+        strToKeyword.Add("null", Token.Keyword.NULL);
+        strToKeyword.Add("this", Token.Keyword.THIS);
 
         keywordToStr = new Dictionary<Keyword, string>();
         foreach (string key in strToKeyword.Keys)
         {
-            keywordToStr.Add(strToKeyword[key], key );
+            keywordToStr.Add(strToKeyword[key], key);
         }
 
         symbols = new Dictionary<char, string>();
         symbols.Add('{', "{"); symbols.Add('}', "}");
         symbols.Add('[', "["); symbols.Add(']', "]");
         symbols.Add('(', "("); symbols.Add(')', ")");
-        symbols.Add('.', "."); symbols.Add(',', ",");  symbols.Add(';', ";");
-        symbols.Add('+', "+"); symbols.Add('-', "-");  
+        symbols.Add('.', "."); symbols.Add(',', ","); symbols.Add(';', ";");
+        symbols.Add('+', "+"); symbols.Add('-', "-");
         symbols.Add('*', "*"); symbols.Add('/', "/");
         symbols.Add('&', "&amp;"); symbols.Add('|', "|");
         symbols.Add('=', "="); symbols.Add('~', "~");
         symbols.Add('<', "&lt;"); symbols.Add('>', "&gt;");
 
-        JackToken.mInitialized = true;
+        Token.mInitialized = true;
     }
 
     public static Keyword GetKeyword(string str)
@@ -219,10 +320,10 @@ class JackToken
             return keyword;
         }
 
-        return Keyword.NONE;
+        return Token.Keyword.NONE;
     }
 
-    public static string KeywordString( Keyword keyword )
+    public static string KeywordString(Keyword keyword)
     {
         InitIfNeeded();
         string keywordStr;
@@ -281,18 +382,18 @@ class JackToken
     }
 
     // Instance data and members//
-    public Type     type;
-    public Keyword  keyword;
-    public char     symbol;
-    public int      intVal;
-    public string   stringVal;
-    public string   identifier;
+    public Type type;
+    public Keyword keyword;
+    public char symbol;
+    public int intVal;
+    public string stringVal;
+    public string identifier;
 
     // For error reporting
-    public int      lineNumber;
-    public int      lineCharacter;
+    public int lineNumber;
+    public int lineCharacter;
 
-    public JackToken( int lineNum, int lineChar )
+    public Token(int lineNum, int lineChar)
     {
         lineNumber = lineNum;
         lineCharacter = lineChar;
@@ -312,20 +413,20 @@ class JackToken
 
         switch (type)
         {
-            case Type.KEYWORD:
+            case Token.Type.KEYWORD:
                 tokenString = KeywordString(keyword);
                 break;
-            case Type.IDENTIFIER:
+            case Token.Type.IDENTIFIER:
                 tokenString = identifier;
                 break;
-            case Type.INT_CONST:
+            case Token.Type.INT_CONST:
                 tokenString = "" + intVal;
                 break;
-            case Type.STRING_CONST:
+            case Token.Type.STRING_CONST:
                 tokenString = stringVal;
                 break;
-            case Type.SYMBOL:
-                tokenString = JackToken.SymbolString( symbol );
+            case Token.Type.SYMBOL:
+                tokenString = Token.SymbolString(symbol);
                 break;
         }
 
@@ -333,7 +434,7 @@ class JackToken
     }
 }
 
-class JackTokenizer : IEnumerable
+class Tokenizer : IEnumerable
 {
     public int mLine;
 
@@ -348,7 +449,7 @@ class JackTokenizer : IEnumerable
     public bool mReadingString;
     public string mTokenStr;
 
-    public JackTokenizer(string fileInput)
+    public Tokenizer(string fileInput)
     {
         mFile = new System.IO.StreamReader(fileInput);
         mTokens = new ArrayList();
@@ -365,7 +466,7 @@ class JackTokenizer : IEnumerable
             mFile = null;
         }
 
-        Rollback( mTokens.Count + 1 );
+        Rollback(mTokens.Count + 1);
     }
 
     public bool HasMoreTokens()
@@ -386,11 +487,12 @@ class JackTokenizer : IEnumerable
         mLineChar = 0;
         mLineStr = "";
 
-        while ( !mFile.EndOfStream && mLineStr == "" )
+        while (!mFile.EndOfStream && mLineStr == "")
         {
             mLineStr = mFile.ReadLine();
             mLine++;
         }
+
 
         if (mLineStr != "")
         {
@@ -400,20 +502,20 @@ class JackTokenizer : IEnumerable
         return false;
     }
 
-    public JackToken Get()
+    public Token Get()
     {
         if (mTokenCurrent < mTokens.Count)
-            return mTokens[mTokenCurrent] as JackToken;
+            return mTokens[mTokenCurrent] as Token;
         return null;
     }
 
-    public JackToken Advance()
+    public Token Advance()
     {
         if (mTokenCurrent < mTokens.Count - 1)
         {
             // Just advance to the next already parsed token
             mTokenCurrent++;
-            return mTokens[mTokenCurrent] as JackToken;
+            return mTokens[mTokenCurrent] as Token;
         }
 
         if (mFile == null)
@@ -421,16 +523,16 @@ class JackTokenizer : IEnumerable
             return null;
         }
 
-        if ( ( mLineStr == "" || mLineChar >= mLineStr.Length ) && !mFile.EndOfStream )
+        if ((mLineStr == "" || mLineChar >= mLineStr.Length) && !mFile.EndOfStream)
         {
             ReadLine();
         }
 
-        while ( mLineChar < mLineStr.Length || mCommentTerminateWait )
+        while (mLineChar < mLineStr.Length || mCommentTerminateWait)
         {
-            if ( mCommentTerminateWait && mLineChar >= mLineStr.Length )
+            if (mCommentTerminateWait && mLineChar >= mLineStr.Length)
             {
-                if ( ReadLine() )
+                if (ReadLine())
                     continue;
 
                 // no terminating */ in the file 
@@ -440,7 +542,7 @@ class JackTokenizer : IEnumerable
             char c = mLineStr[mLineChar];
 
             // Check for comments
-            if (mLineChar < mLineStr.Length - 1 || mCommentTerminateWait )
+            if (mLineChar < mLineStr.Length - 1 || mCommentTerminateWait)
             {
                 if (mCommentTerminateWait)
                 {
@@ -448,7 +550,7 @@ class JackTokenizer : IEnumerable
                     if (mLineStr[mLineChar] == '*' && mLineChar < mLineStr.Length - 1 && mLineStr[mLineChar + 1] == '/')
                     {
                         mLineChar = mLineChar + 2;
-                        if ( mLineChar >= mLineStr.Length )
+                        if (mLineChar >= mLineStr.Length)
                             ReadLine();
                         mCommentTerminateWait = false;
                     }
@@ -468,15 +570,15 @@ class JackTokenizer : IEnumerable
                 }
                 else if (mLineStr[mLineChar] == '/' && mLineStr[mLineChar + 1] == '/')
                 {
-                    if ( !ReadLine() )
+                    if (!ReadLine())
                         mLineChar = mLineStr.Length;
                     continue;
                 }
             }
 
-            bool isWhitespace = JackToken.IsWhitespace(c);
-            bool isSymbol = JackToken.IsSymbol(c);
-            bool isQuote = ( c == '"' );
+            bool isWhitespace = Token.IsWhitespace(c);
+            bool isSymbol = Token.IsSymbol(c);
+            bool isQuote = (c == '"');
 
             if (mReadingToken)
             {
@@ -489,10 +591,10 @@ class JackTokenizer : IEnumerable
                 else if (mReadingString && isQuote)
                 {
                     // Add the string
-                    JackToken token = new JackToken( mLine, mLineChar - mTokenStr.Length - 1 );
-                    token.type = Type.STRING_CONST;
+                    Token token = new Token(mLine, mLineChar - mTokenStr.Length - 1);
+                    token.type = Token.Type.STRING_CONST;
                     token.stringVal = mTokenStr;
-                    mTokens.Add( token );
+                    mTokens.Add(token);
 
                     mReadingToken = false;
                     mReadingString = false;
@@ -514,21 +616,21 @@ class JackTokenizer : IEnumerable
                     if (mTokenStr.Length > 0)
                     {
                         // Have a token string to add before adding the symbol
-                        JackToken token = new JackToken( mLine, mLineChar - mTokenStr.Length );
-                        Keyword keyword = JackToken.GetKeyword(mTokenStr);
-                        if (keyword != Keyword.NONE)
+                        Token token = new Token(mLine, mLineChar - mTokenStr.Length);
+                        Token.Keyword keyword = Token.GetKeyword(mTokenStr);
+                        if (keyword != Token.Keyword.NONE)
                         {
-                            token.type = Type.KEYWORD;
+                            token.type = Token.Type.KEYWORD;
                             token.keyword = keyword;
                         }
-                        else if (JackToken.IsNumber(mTokenStr[0]))
+                        else if (Token.IsNumber(mTokenStr[0]))
                         {
-                            token.type = Type.INT_CONST;
+                            token.type = Token.Type.INT_CONST;
                             token.intVal = int.Parse(mTokenStr);
                         }
                         else
                         {
-                            token.type = Type.IDENTIFIER;
+                            token.type = Token.Type.IDENTIFIER;
                             token.identifier = mTokenStr;
                         }
 
@@ -542,8 +644,8 @@ class JackTokenizer : IEnumerable
                     if (isSymbol)
                     {
                         // Add the symbol
-                        JackToken token = new JackToken( mLine, mLineChar );
-                        token.type = Type.SYMBOL;
+                        Token token = new Token(mLine, mLineChar);
+                        token.type = Token.Type.SYMBOL;
                         token.symbol = c;
                         mTokens.Add(token);
                         mTokenCurrent++;
@@ -598,17 +700,17 @@ class Grammar
     static bool mInitialized;
     static Dictionary<string, int> mNodeDic;
 
-    public enum Gram 
-    { 
-        NONE, 
+    public enum Gram
+    {
+        NONE,
         ZERO_OR_MORE, // Zero or more of the following grammar node
         OR,           // One of the N next nodes where N is the following entry
         OPTIONAL,     // Next entry is optional
         READ_AHEAD1   // Only outputs anything if the next 2 entries are valid in the token list
     };
 
-    public enum Enclose 
-    { 
+    public enum Enclose
+    {
         NEVER,        // never encloses this node in the xml <name> </name>
         NOT_EMPTY,    // only encloses this node in the xml <name> </name> when there is something inside of it
         ALWAYS        // always encloses this node in the xml <name> </name>  
@@ -622,10 +724,10 @@ class Grammar
         mNodeDic = new Dictionary<string, int>();
         int nodeIndex = 0;
         bool done = false;
-        while ( !done )
+        while (!done)
         {
             System.Type type = mNodes[nodeIndex].GetType();
-            if (type == typeof(int) && (int) mNodes[nodeIndex] == 0)
+            if (type == typeof(int) && (int)mNodes[nodeIndex] == 0)
             {
                 // End of list
                 done = true;
@@ -633,7 +735,7 @@ class Grammar
             else if (type == typeof(string))
             {
                 // Add entry point and advance to the next
-                mNodeDic.Add((string)mNodes[nodeIndex], nodeIndex );
+                mNodeDic.Add((string)mNodes[nodeIndex], nodeIndex);
                 bool advanced = false;
                 while (!advanced)
                 {
@@ -663,25 +765,25 @@ class Grammar
         // CLASS
 
         // class: 'class' className '{' clasVarDec* subroutineDec* '}'
-        "class", Enclose.ALWAYS, Keyword.CLASS, Type.IDENTIFIER, '{', Gram.ZERO_OR_MORE, "classVarDec", Gram.ZERO_OR_MORE, "subroutineDec", '}', 0,
+        "class", Enclose.ALWAYS, Token.Keyword.CLASS, Token.Type.IDENTIFIER, '{', Gram.ZERO_OR_MORE, "classVarDec", Gram.ZERO_OR_MORE, "subroutineDec", '}', 0,
 
         // classVarDec: ('static'|'field) type varName (',' varName)* ';'
-        "classVarDec", Enclose.NOT_EMPTY, Gram.OR, 2, Keyword.STATIC, Keyword.FIELD, "type", Type.IDENTIFIER,  Gram.ZERO_OR_MORE, "varDecAdd", ';', 0,
+        "classVarDec", Enclose.NOT_EMPTY, Gram.OR, 2, Token.Keyword.STATIC, Token.Keyword.FIELD, "type", Token.Type.IDENTIFIER,  Gram.ZERO_OR_MORE, "varDecAdd", ';', 0,
 
         // varDecAdd: ',' varName
-        "varDecAdd", Enclose.NEVER, ',', Type.IDENTIFIER, 0,
+        "varDecAdd", Enclose.NEVER, ',', Token.Type.IDENTIFIER, 0,
 
         // type: 'int'|'char'|'boolean'|className
-        "type", Enclose.NEVER, Gram.OR, 4, Keyword.INT, Keyword.CHAR, Keyword.BOOL, Type.IDENTIFIER, 0,
+        "type", Enclose.NEVER, Gram.OR, 4, Token.Keyword.INT, Token.Keyword.CHAR, Token.Keyword.BOOL, Token.Type.IDENTIFIER, 0,
 
         // subroutineDec: ('constructor'|'function'|'method') ('void'|type) subroutineName '(' paramaterList ')' subroutineBody
-        "subroutineDec", Enclose.NOT_EMPTY, Gram.OR, 3, Keyword.CONSTRUCTOR, Keyword.FUNCTION, Keyword.METHOD, Gram.OR, 2, Keyword.VOID, "type", Type.IDENTIFIER, '(', "parameterList", ')', "subroutineBody", 0,
+        "subroutineDec", Enclose.NOT_EMPTY, Gram.OR, 3, Token.Keyword.CONSTRUCTOR, Token.Keyword.FUNCTION, Token.Keyword.METHOD, Gram.OR, 2, Token.Keyword.VOID, "type", Token.Type.IDENTIFIER, '(', "parameterList", ')', "subroutineBody", 0,
 
         // parameter: type varName
-        "parameter", Enclose.NEVER, "type", Type.IDENTIFIER, 0,
+        "parameter", Enclose.NEVER, "type", Token.Type.IDENTIFIER, 0,
 
         // parameterAdd: ',' type varName
-        "parameterAdd", Enclose.NEVER, ',', "type", Type.IDENTIFIER, 0,
+        "parameterAdd", Enclose.NEVER, ',', "type", Token.Type.IDENTIFIER, 0,
 
         // parameterList: ( parameter (',' parameter)* )?
         "parameterList", Enclose.ALWAYS, Gram.OPTIONAL, "parameter", Gram.ZERO_OR_MORE, "parameterAdd", 0,
@@ -690,7 +792,7 @@ class Grammar
         "subroutineBody", Enclose.NOT_EMPTY, '{', Gram.ZERO_OR_MORE, "varDec", "statements", '}', 0,
 
         // varDec: 'var' type varName (',' varName)* ';'
-        "varDec", Enclose.NOT_EMPTY, Keyword.VAR, "type", Type.IDENTIFIER, Gram.ZERO_OR_MORE, "varDecAdd", ';', 0,
+        "varDec", Enclose.NOT_EMPTY, Token.Keyword.VAR, "type", Token.Type.IDENTIFIER, Gram.ZERO_OR_MORE, "varDecAdd", ';', 0,
 
 
         // STATEMENTS
@@ -705,25 +807,25 @@ class Grammar
         "arrayIndex", Enclose.NEVER, '[', "expression", ']', 0,
 
         // arrayValue: varName '[' expression ']'
-        "arrayValue", Enclose.NEVER, Gram.READ_AHEAD1, Type.IDENTIFIER, '[', "expression", ']', 0,
+        "arrayValue", Enclose.NEVER, Gram.READ_AHEAD1, Token.Type.IDENTIFIER, '[', "expression", ']', 0,
 
         // elseClause: 'else' '{' statements '}'
-        "elseClause", Enclose.NEVER, Keyword.ELSE, '{', "statements", '}', 0,
+        "elseClause", Enclose.NEVER, Token.Keyword.ELSE, '{', "statements", '}', 0,
 
         // letStatement: 'let' varName ('[' expression ']')? '=' expression ';'
-        "letStatement", Enclose.NOT_EMPTY, Keyword.LET, Type.IDENTIFIER, Gram.OPTIONAL, "arrayIndex", '=', "expression", ';', 0, 
+        "letStatement", Enclose.NOT_EMPTY, Token.Keyword.LET, Token.Type.IDENTIFIER, Gram.OPTIONAL, "arrayIndex", '=', "expression", ';', 0, 
 
         // ifStatement: 'if' '(' expression ')' '{' statements '}' ('else' '{' statements '}')?
-        "ifStatement", Enclose.NOT_EMPTY, Keyword.IF, '(', "expression", ')', '{', "statements", '}', Gram.OPTIONAL, "elseClause", 0, 
+        "ifStatement", Enclose.NOT_EMPTY, Token.Keyword.IF, '(', "expression", ')', '{', "statements", '}', Gram.OPTIONAL, "elseClause", 0, 
 
         // whileStatement: 'while' '(' expression ')' '{' statements '}'
-        "whileStatement", Enclose.NOT_EMPTY, Keyword.WHILE, '(', "expression", ')', '{', "statements", '}', 0,
+        "whileStatement", Enclose.NOT_EMPTY, Token.Keyword.WHILE, '(', "expression", ')', '{', "statements", '}', 0,
 
         // doStatement: 'do' subroutineCall ';'
-        "doStatement", Enclose.NOT_EMPTY, Keyword.DO, "subroutineCall", ';', 0,
+        "doStatement", Enclose.NOT_EMPTY, Token.Keyword.DO, "subroutineCall", ';', 0,
 
         // returnStatement: 'return' expression? ';'
-        "returnStatement", Enclose.NOT_EMPTY, Keyword.RETURN, Gram.OPTIONAL, "expression", ';', 0, 
+        "returnStatement", Enclose.NOT_EMPTY, Token.Keyword.RETURN, Gram.OPTIONAL, "expression", ';', 0, 
 
 
         // EXPRESSIONS
@@ -741,16 +843,16 @@ class Grammar
         "expressionParenth", Enclose.NEVER, '(', "expression", ')', 0,
 
         // term: 
-        "term", Enclose.NOT_EMPTY, Gram.OR, 8, "expressionParenth", "unaryTerm", Type.STRING_CONST, Type.INT_CONST, "keywordConstant", "subroutineCall", "arrayValue", Type.IDENTIFIER, 0,
+        "term", Enclose.NOT_EMPTY, Gram.OR, 8, "expressionParenth", "unaryTerm", Token.Type.STRING_CONST, Token.Type.INT_CONST, "keywordConstant", "subroutineCall", "arrayValue", Token.Type.IDENTIFIER, 0,
 
         // unaryTerm: unaryOp term
         "unaryTerm", Enclose.NEVER, "unaryOp", "term", 0,
 
         // subroutineObject: ( className | varName ) '.'
-        "subroutineObject", Enclose.NEVER, Gram.READ_AHEAD1, Type.IDENTIFIER, '.', 0,
+        "subroutineObject", Enclose.NEVER, Gram.READ_AHEAD1, Token.Type.IDENTIFIER, '.', 0,
 
         // subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')
-        "subroutineCall", Enclose.NEVER, Gram.OPTIONAL, "subroutineObject", Gram.READ_AHEAD1, Type.IDENTIFIER, '(', "expressionList", ')', 0,
+        "subroutineCall", Enclose.NEVER, Gram.OPTIONAL, "subroutineObject", Gram.READ_AHEAD1, Token.Type.IDENTIFIER, '(', "expressionList", ')', 0,
 
         // expressionList: ( expression (',' expression)* )?
         "expressionList", Enclose.ALWAYS, Gram.OPTIONAL, "expression", Gram.ZERO_OR_MORE, "expressionAdd", 0, 
@@ -762,7 +864,7 @@ class Grammar
         "unaryOp", Enclose.NEVER, Gram.OR, 2, '-', '~', 0, 
 
         // keywordConstant: 'true'|'false'|'null'|'this'
-        "keywordConstant", Enclose.NEVER, Gram.OR, 4, Keyword.TRUE, Keyword.FALSE, Keyword.NULL, Keyword.THIS, 0, 
+        "keywordConstant", Enclose.NEVER, Gram.OR, 4, Token.Keyword.TRUE, Token.Keyword.FALSE, Token.Keyword.NULL, Token.Keyword.THIS, 0,
 
         0
     };
@@ -771,7 +873,7 @@ class Grammar
     {
         InitIfNeeded();
 
-        if ( mNodeDic.TryGetValue(nodeName, out index) )
+        if (mNodeDic.TryGetValue(nodeName, out index))
             return mNodes;
 
         return null;
@@ -780,13 +882,13 @@ class Grammar
 
 class CompilationEngine
 {
-    StreamWriter    mFile;
-    JackTokenizer   mTokens;
-    int             mIndent;
-    ArrayList       mQueueLine;
-    int             mLinesWritten = 0;
+    StreamWriter mFile;
+    Tokenizer mTokens;
+    int mIndent;
+    ArrayList mQueueLine;
+    int mLinesWritten = 0;
 
-    public CompilationEngine( JackTokenizer tokens, string outFile )
+    public CompilationEngine(Tokenizer tokens, string outFile)
     {
         mFile = new StreamWriter(outFile);
         mFile.AutoFlush = true;
@@ -794,14 +896,14 @@ class CompilationEngine
         mQueueLine = new ArrayList();
     }
 
-    public void Error( string msg = "" )
+    public void Error(string msg = "")
     {
         // FIXME
-        JackToken token = mTokens.Get();
-        Console.WriteLine("ERROR: Line< " + token.lineNumber + " > Char< " + token.lineCharacter + " > " + msg );
+        Token token = mTokens.Get();
+        Console.WriteLine("ERROR: Line< " + token.lineNumber + " > Char< " + token.lineCharacter + " > " + msg);
     }
 
-    public void QueueLineAdd( string line, bool doIndent = true)
+    public void QueueLineAdd(string line, bool doIndent = true)
     {
         string indent = "";
         for (int i = 0; doIndent && i < mIndent; i++)
@@ -824,28 +926,28 @@ class CompilationEngine
         }
     }
 
-    public void WriteLine(string line, bool doIndent = true )
+    public void WriteLine(string line, bool doIndent = true)
     {
         if (mQueueLine.Count > 0)
         {
             ArrayList queue = mQueueLine;
             mQueueLine = new ArrayList();
-            foreach ( string qline in queue )
-                WriteLine(qline, false );
+            foreach (string qline in queue)
+                WriteLine(qline, false);
         }
 
         string indent = "";
         for (int i = 0; doIndent && i < mIndent; i++)
             indent = indent + " ";
-        if( JackAnalyzer.mVerbose )
+        if (JackCompiler.mVerbose)
             Console.WriteLine(indent + line);
-        mFile.WriteLine( indent + line );
+        mFile.WriteLine(indent + line);
         mLinesWritten++;
     }
 
     public void CompileClass()
     {
-        CompileGrammar( "class", false, 0 );
+        CompileGrammar("class", false, 0);
     }
 
     public bool CompileGrammar(string nodeName, bool optional, int indentAdd)
@@ -857,7 +959,7 @@ class CompilationEngine
 
         if (nodes == null)
         {
-            Error( "Internal - Missing grammar node" );
+            Error("Internal - Missing grammar node");
             return false;
         }
 
@@ -873,21 +975,21 @@ class CompilationEngine
         {
             WriteLine("<" + nodeName + ">");
         }
-        else if ( enclose == Grammar.Enclose.NOT_EMPTY )
+        else if (enclose == Grammar.Enclose.NOT_EMPTY)
         {
-            QueueLineAdd( "<" + nodeName + ">" );
+            QueueLineAdd("<" + nodeName + ">");
             linesWrittenPrev = mLinesWritten;
         }
 
-        bool result = CompileGrammar( nodeName, nodes, node, optional );
+        bool result = CompileGrammar(nodeName, nodes, node, optional);
 
         if (enclose == Grammar.Enclose.ALWAYS || (enclose == Grammar.Enclose.NOT_EMPTY && mLinesWritten > linesWrittenPrev))
         {
             WriteLine("</" + nodeName + ">");
         }
-        else if ( enclose == Grammar.Enclose.NOT_EMPTY )
+        else if (enclose == Grammar.Enclose.NOT_EMPTY)
         {
-            QueueLineRemove( "<" + nodeName + ">" );
+            QueueLineRemove("<" + nodeName + ">");
         }
 
         mIndent = mIndent - indentAdd;
@@ -895,7 +997,7 @@ class CompilationEngine
         return result;
     }
 
-    public bool CompileGrammar(string nodeName, object[] nodes, int node, bool optional, int earlyTerminate = -1 )
+    public bool CompileGrammar(string nodeName, object[] nodes, int node, bool optional, int earlyTerminate = -1)
     {
         bool done = false;
 
@@ -904,7 +1006,7 @@ class CompilationEngine
 
         while (!done)
         {
-            JackToken token = mTokens.Get();
+            Token token = mTokens.Get();
 
             System.Type type = nodes[node].GetType();
 
@@ -913,22 +1015,22 @@ class CompilationEngine
                 if (token.type != (Type)nodes[node])
                 {
                     if (!optional)
-                        Error("Expected " + JackToken.TypeString((Type)nodes[node]));
+                        Error("Expected " + Token.TypeString((Type)nodes[node]));
                     if (readAheadToken >= 0)
                         mTokens.mTokenCurrent = readAheadToken;
                     return false;
                 }
 
-                if (readAheadNode < 0 )
+                if (readAheadNode < 0)
                     WriteLine(token.GetXMLString());
                 token = mTokens.Advance();
             }
             else if (type == typeof(Keyword))
             {
-                if (token.type != Type.KEYWORD || token.keyword != (Keyword)nodes[node])
+                if (token.type != Token.Type.KEYWORD || token.keyword != (Keyword)nodes[node])
                 {
                     if (!optional)
-                        Error("Expected " + JackToken.KeywordString((Keyword)nodes[node]) );
+                        Error("Expected " + Token.KeywordString((Keyword)nodes[node]));
                     if (readAheadToken >= 0)
                         mTokens.mTokenCurrent = readAheadToken;
                     return false;
@@ -940,11 +1042,11 @@ class CompilationEngine
             }
             else if (type == typeof(char))
             {
-                if (token.type != Type.SYMBOL || token.symbol != (char) nodes[node] )
+                if (token.type != Token.Type.SYMBOL || token.symbol != (char)nodes[node])
                 {
-                    if ( !optional )
-                        Error( "Expected " + (char)nodes[node] );
-                    if ( readAheadToken >= 0 )
+                    if (!optional)
+                        Error("Expected " + (char)nodes[node]);
+                    if (readAheadToken >= 0)
                         mTokens.mTokenCurrent = readAheadToken;
                     return false;
                 }
@@ -979,13 +1081,13 @@ class CompilationEngine
                 switch (gram)
                 {
                     case Grammar.Gram.OR:
-                        while ( !CompileGrammar( nodeName, nodes, node, node <= optionalEnd, node + 1) )
+                        while (!CompileGrammar(nodeName, nodes, node, node <= optionalEnd, node + 1))
                         {
                             node++;
 
                             if (node > optionalEnd)
                             {
-                                if ( !optional )
+                                if (!optional)
                                     Error();
                                 if (readAheadToken >= 0)
                                     mTokens.mTokenCurrent = readAheadToken;
@@ -1000,7 +1102,7 @@ class CompilationEngine
                         break;
 
                     case Grammar.Gram.ZERO_OR_MORE:
-                        while ( CompileGrammar(nodeName, nodes, node, true, node + 1 ) )
+                        while (CompileGrammar(nodeName, nodes, node, true, node + 1))
                         {
                             // do nothing
                         }
@@ -1016,9 +1118,9 @@ class CompilationEngine
             }
             else if (type == typeof(string))
             {
-                if( !CompileGrammar( (string)nodes[node], optional, 2 ) )
+                if (!CompileGrammar((string)nodes[node], optional, 2))
                 {
-                    if ( !optional )
+                    if (!optional)
                         Error();
                     if (readAheadToken >= 0)
                         mTokens.mTokenCurrent = readAheadToken;
@@ -1029,15 +1131,15 @@ class CompilationEngine
             {
                 done = true;
             }
-            
+
             node++;
 
-            if ( !done && earlyTerminate > 0 && node >= earlyTerminate )
+            if (!done && earlyTerminate > 0 && node >= earlyTerminate)
             {
                 done = true;
             }
 
-            if ( readAheadNode > 0 && node >= readAheadNode )
+            if (readAheadNode > 0 && node >= readAheadNode)
             {
                 // Rewind and write it for real now
                 mTokens.mTokenCurrent = readAheadToken;

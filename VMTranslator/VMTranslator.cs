@@ -61,6 +61,9 @@ class VMTranslator
             vmFiles = new string[1] { path };
         }
 
+        Parser.Command command = null;
+        Parser.Command commandNext = null;
+
         for ( int i = 0; i < vmFiles.Length; i++ )
         {
             Parser parser = new Parser( vmFiles[i] );
@@ -69,41 +72,69 @@ class VMTranslator
 
             Console.WriteLine( "  " + vmFiles[i]);
 
-            while (parser.HasMoreCommands())
+            while ( parser.HasMoreCommands() || commandNext != null )
             {
-                if (parser.Advance())
-                {
-                    writer.WriteComment(parser.mLineString);
+                command = commandNext;
+                commandNext = null;
 
-                    switch (parser.mCommandType)
+                if ( parser.HasMoreCommands() )
+                {
+                    commandNext = parser.Advance();
+                }
+
+                if ( command != null )
+                {
+                    // If the command after a PUSH is a POP write PUSHPOP that writes directly to the destination rather than using the stack
+                    if ( commandNext != null && command.mCommandType == CommandType.C_PUSH && commandNext.mCommandType == CommandType.C_POP )
+                    {
+                        writer.WriteComment(command.mLineString + " AND " + commandNext.mLineString );
+                        writer.WritePushPop( command.mArg1, command.mArg2, commandNext.mArg1, commandNext.mArg2 );
+                        commandNext = null;
+                        if (parser.HasMoreCommands())
+                        {
+                            commandNext = parser.Advance();
+                        }
+                        if (writer.mError != "")
+                        {
+                            Console.WriteLine("ERROR: Line " + parser.mLine + " - " + writer.mError);
+                        }
+                        continue;
+                    }
+
+                    writer.WriteComment(command.mLineString);
+
+                    switch (command.mCommandType)
                     {
                         case CommandType.C_ARITHMETIC:
-                            writer.WriteArithmetic(parser.mArg1);
+                            writer.WriteArithmetic(command.mArg1);
                             break;
 
                         case CommandType.C_PUSH:
+                            writer.WritePush(command.mArg1, command.mArg2);
+                            break;
+
                         case CommandType.C_POP:
-                            writer.WritePushPop(parser.mCommandType, parser.mArg1, parser.mArg2);
+                            writer.WritePop(command.mArg1, command.mArg2);
                             break;
 
                         case CommandType.C_LABEL:
-                            writer.WriteLabel(parser.mArg1);
+                            writer.WriteLabel(command.mArg1);
                             break;
 
                         case CommandType.C_GOTO:
-                            writer.WriteGoto(parser.mArg1);
+                            writer.WriteGoto(command.mArg1);
                             break;
 
                         case CommandType.C_IF:
-                            writer.WriteIf(parser.mArg1);
+                            writer.WriteIf(command.mArg1);
                             break;
 
                         case CommandType.C_FUNCTION:
-                            writer.WriteFunction(parser.mArg1, parser.mArg2);
+                            writer.WriteFunction(command.mArg1, command.mArg2);
                             break;
 
                         case CommandType.C_CALL:
-                            writer.WriteCall(parser.mArg1, parser.mArg2);
+                            writer.WriteCall(command.mArg1, command.mArg2);
                             break;
 
                         case CommandType.C_RETURN:
@@ -185,11 +216,14 @@ public enum CommandType
 
 public class Parser
 {
-    public CommandType  mCommandType;
-    public string       mArg1;
-    public int          mArg2;
-    public int          mLine;
-    public string       mLineString;
+    public class Command
+    {
+        public CommandType  mCommandType;
+        public string       mArg1;
+        public int          mArg2;
+        public int          mLine;
+        public string       mLineString;
+    };
 
     public System.IO.StreamReader   mFile;
 
@@ -214,9 +248,9 @@ public class Parser
         return !mFile.EndOfStream;
     }
 
-    public bool Advance()
+    public Command Advance()
     {
-        bool readCommand = false;
+        Command command = null;
 
         while (!readCommand && HasMoreCommands())
         {
@@ -239,60 +273,60 @@ public class Parser
                 {
                     case 0:
                         // Command (enum)
-                        readCommand = true;
+                        command = new Command();
                         if (lower == "push")
                         {
-                            mCommandType = CommandType.C_PUSH;
+                            command.mCommandType = CommandType.C_PUSH;
                         }
                         else if (lower == "pop")
                         {
-                            mCommandType = CommandType.C_POP;
+                            command.mCommandType = CommandType.C_POP;
                         }
                         else if (lower == "label")
                         {
-                            mCommandType = CommandType.C_LABEL;
+                            command.mCommandType = CommandType.C_LABEL;
                         }
                         else if (lower == "goto")
                         {
-                            mCommandType = CommandType.C_GOTO;
+                            command.mCommandType = CommandType.C_GOTO;
                         }
                         else if (lower == "if-goto")
                         {
-                            mCommandType = CommandType.C_IF;
+                            command.mCommandType = CommandType.C_IF;
                         }
                         else if (lower == "function")
                         {
-                            mCommandType = CommandType.C_FUNCTION;
+                            command.mCommandType = CommandType.C_FUNCTION;
                         }
                         else if (lower == "call")
                         {
-                            mCommandType = CommandType.C_CALL;
+                            command.mCommandType = CommandType.C_CALL;
                         }
                         else if (lower == "return")
                         {
-                            mCommandType = CommandType.C_RETURN;
+                            command.mCommandType = CommandType.C_RETURN;
                         }
                         else
                         {
-                            mCommandType = CommandType.C_ARITHMETIC;
+                            command.mCommandType = CommandType.C_ARITHMETIC;
                             mArg1 = word;
                         }
                         break;
 
                     case 1:
                         // Argument 1 (string)
-                        mArg1 = word;
+                        command.mArg1 = word;
                         break;
 
                     case 2:
                         // Argument 2 (int)
-                        mArg2 = int.Parse( word );
+                        command.mArg2 = int.Parse( word );
                         break;
                 }
             }
         }
 
-        return readCommand;
+        return command;
     }
 }
 
@@ -695,7 +729,7 @@ class CodeWriter
         }
     }
 
-    public void WritePushPop(CommandType command, string segment, int index)
+    public void WritePush(string segment, int index)
     {
         mError = "";
         segment = segment.ToLower();
@@ -706,65 +740,135 @@ class CodeWriter
 
         SegmentInfo(segment, ref index, out address, out isPointer, out isConstant);
 
-        switch (command)
+        FileWriteLine("@" + index); // @index
+        FileWriteLine("D=A"); // D=A
+        if ( !isConstant )
         {
-            case CommandType.C_PUSH:
-                FileWriteLine("@" + index); // @index
-                FileWriteLine("D=A"); // D=A
-                if ( !isConstant )
-                {
-                    FileWriteLine("@" + address); // @segment pointer
-                    if ( !isPointer )
-                    {
-                        FileWriteLine("A=D+A"); // A=D+A
-                    }
-                    else 
-                    {
-                        FileWriteLine("A=D+M"); // A=D+M
-                    }
-                    FileWriteLine("D=M"); // D=M
-                }
-                FileWriteLine("@SP"); // @SP
-                FileWriteLine("M=M+1"); // M=M+1
-                FileWriteLine("A=M-1"); // A=M
-                FileWriteLine("M=D"); // M=D
-                break;
-
-            case CommandType.C_POP:
-
-                // TODO: Optimize as follows
-                // put addr = 7 + RAM[LCL] into D  // 4 lines of code
-                // add the top of the stack to D  so that D holds val + addr (and //decrease stack pointer in the process // 3 lines of code
-                //  A = val + addr - val so A = addr  // 1 line of code
-                // RAM[addr] = val + addr - addr = val // 1 line of code
-
-                // Store target address at current stackpointer
-                FileWriteLine("@" + index); // @index
-                FileWriteLine("D=A"); // D=A
-                FileWriteLine("@" + address ); // @segment pointer
-                if ( !isPointer )
-                {
-                    FileWriteLine("D=D+A"); // A=D+A
-                }
-                else
-                {
-                    FileWriteLine("D=D+M"); // A=D+M
-                }
-                FileWriteLine("@SP"); // @SP
-                FileWriteLine("A=M"); // M=D
-                FileWriteLine("M=D"); // M=D
-
-                // Fetch stack pointer - 1 value
-                FileWriteLine("@SP"); // @SP
-                FileWriteLine("AM=M-1"); // AM=M-1
-                FileWriteLine("D=M"); // D=M
-
-                // Write it to stored address
-                FileWriteLine("A=A+1"); // A=A+1
-                FileWriteLine("A=M"); // A=M
-                FileWriteLine("M=D"); // M=D
-                break;
+            FileWriteLine("@" + address); // @segment pointer
+            if ( !isPointer )
+            {
+                FileWriteLine("A=D+A"); // A=D+A
+            }
+            else 
+            {
+                FileWriteLine("A=D+M"); // A=D+M
+            }
+            FileWriteLine("D=M"); // D=M
         }
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("M=M+1"); // M=M+1
+        FileWriteLine("A=M-1"); // A=M
+        FileWriteLine("M=D"); // M=D
+    }
+
+    public void WritePop(string segment, int index)
+    {
+        mError = "";
+        segment = segment.ToLower();
+
+        bool isPointer = false;
+        bool isConstant = false;
+        string address = "0";
+
+        SegmentInfo(segment, ref index, out address, out isPointer, out isConstant);
+
+        // TODO: Optimize as follows
+        // put addr = 7 + RAM[LCL] into D  // 4 lines of code
+        // add the top of the stack to D  so that D holds val + addr (and //decrease stack pointer in the process // 3 lines of code
+        //  A = val + addr - val so A = addr  // 1 line of code
+        // RAM[addr] = val + addr - addr = val // 1 line of code
+
+        // Store target address at current stackpointer
+        FileWriteLine("@" + index); // @index
+        FileWriteLine("D=A"); // D=A
+        FileWriteLine("@" + address); // @segment pointer
+        if (!isPointer)
+        {
+            FileWriteLine("D=D+A"); // A=D+A
+        }
+        else
+        {
+            FileWriteLine("D=D+M"); // A=D+M
+        }
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("A=M"); // M=D
+        FileWriteLine("M=D"); // M=D
+
+        // Fetch stack pointer - 1 value
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("AM=M-1"); // AM=M-1
+        FileWriteLine("D=M"); // D=M
+
+        // Write it to stored address
+        FileWriteLine("A=A+1"); // A=A+1
+        FileWriteLine("A=M"); // A=M
+        FileWriteLine("M=D"); // M=D
+    }
+
+    public void WritePushPop( string segmentPush, int indexPush, string segmentPop, int indexPop )
+    {
+        mError = "";
+        segmentPush = segmentPush.ToLower();
+        segmentPop = segmentPop.ToLower();
+
+        bool isPointerPush = false;
+        bool isConstantPush = false;
+        string addressPush = "0";
+
+        bool isPointerPop = false;
+        bool isConstantPop = false;
+        string addressPop = "0";
+
+        SegmentInfo(segmentPush, ref indexPush, out addressPush, out isPointerPush, out isConstantPush);
+        SegmentInfo(segmentPop, ref indexPop, out addressPop, out isPointerPop, out isConstantPop);
+
+        // PUSH - FIXME - optimize
+        FileWriteLine("@" + indexPush); // @index
+        FileWriteLine("D=A"); // D=A
+        if (!isConstantPush)
+        {
+            FileWriteLine("@" + addressPush); // @segment pointer
+            if (!isPointer)
+            {
+                FileWriteLine("A=D+A"); // A=D+A
+            }
+            else
+            {
+                FileWriteLine("A=D+M"); // A=D+M
+            }
+            FileWriteLine("D=M"); // D=M
+        }
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("M=M+1"); // M=M+1
+        FileWriteLine("A=M-1"); // A=M
+        FileWriteLine("M=D"); // M=D
+
+        // POP - FIXME - optimize
+        // Store target address at current stack pointer
+        FileWriteLine("@" + indexPop); // @index
+        FileWriteLine("D=A"); // D=A
+        FileWriteLine("@" + addressPop); // @segment pointer
+        if (!isPointer)
+        {
+            FileWriteLine("D=D+A"); // A=D+A
+        }
+        else
+        {
+            FileWriteLine("D=D+M"); // A=D+M
+        }
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("A=M"); // M=D
+        FileWriteLine("M=D"); // M=D
+
+        // Fetch stack pointer - 1 value
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("AM=M-1"); // AM=M-1
+        FileWriteLine("D=M"); // D=M
+
+        // Write it to stored address
+        FileWriteLine("A=A+1"); // A=A+1
+        FileWriteLine("A=M"); // A=M
+        FileWriteLine("M=D"); // M=D
     }
 
     public void WriteComment(string comment)
