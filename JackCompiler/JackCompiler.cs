@@ -320,6 +320,7 @@ class Token
     private static Dictionary<Type, string> typeToStr;
     private static Dictionary<char, string> symbols;
     private static Dictionary<char, string> ops;
+    private static Dictionary<Keyword, bool> statements;
 
     protected static void InitIfNeeded()
     {
@@ -380,6 +381,14 @@ class Token
         ops.Add('&', "&amp;"); ops.Add('|', "|");
         ops.Add('=', "="); ops.Add('~', "~");
         ops.Add('<', "&lt;"); ops.Add('>', "&gt;");
+
+        statements = new Dictionary<Keyword, bool>();
+        statements.Add(Token.Keyword.LET, true);
+        statements.Add(Token.Keyword.DO, true);
+        statements.Add(Token.Keyword.IF, true);
+        statements.Add(Token.Keyword.ELSE, true);
+        statements.Add(Token.Keyword.WHILE, true);
+        statements.Add(Token.Keyword.RETURN, true);
 
         Token.mInitialized = true;
     }
@@ -447,6 +456,13 @@ class Token
     public static bool IsUnaryOp(char c)
     {
         return c == '~' || c == '-';
+    }
+
+    public static bool IsStatement( Keyword keyword  )
+    {
+        bool result = false;
+        statements.TryGetValue(keyword, out result);
+        return result;
     }
 
     public static string SymbolString(char c)
@@ -1697,12 +1713,12 @@ class CompilationEngine
     {
         // compiles the statements within a subroutine
 
+        ValidateTokenAdvance('{');
+
         while (CompileVarDec())
         {
             // keep going with more varDec
         }
-
-        ValidateTokenAdvance('{');
 
         CompileStatements();
 
@@ -1748,28 +1764,29 @@ class CompilationEngine
         // statements: statement*
         // statement: letStatement | ifStatement | whileStatement | doStatement | returnStatement
 
-        Token.Keyword statementType = mTokens.Get().keyword;
-
-        switch (statementType)
+        while ( Token.IsStatement( mTokens.Get().keyword ) )
         {
-            case Token.Keyword.LET:
-                CompileStatementLet();
-                break;
-            case Token.Keyword.IF:
-                CompileStatementIf();
-                break;
-            case Token.Keyword.WHILE:
-                CompileStatementWhile();
-                break;
-            case Token.Keyword.DO:
-                CompileStatementDo();
-                break;
-            case Token.Keyword.RETURN:
-                CompileStatementReturn();
-                break;
-            default:
-                Error("Expected let, do, while, if, or return");
-                break;
+            switch ( mTokens.Get().keyword )
+            {
+                case Token.Keyword.LET:
+                    CompileStatementLet();
+                    break;
+                case Token.Keyword.IF:
+                    CompileStatementIf();
+                    break;
+                case Token.Keyword.WHILE:
+                    CompileStatementWhile();
+                    break;
+                case Token.Keyword.DO:
+                    CompileStatementDo();
+                    break;
+                case Token.Keyword.RETURN:
+                    CompileStatementReturn();
+                    break;
+                default:
+                    Error("Expected let, do, while, if, or return");
+                    break;
+            }
         }
     }
 
@@ -1830,12 +1847,12 @@ class CompilationEngine
 
     public void CompileStatementIf()
     {
-
+        // FIXME
     }
 
     public void CompileStatementWhile()
     {
-
+        // FIXME
     }
 
     public void CompileStatementReturn()
@@ -1902,9 +1919,12 @@ class CompilationEngine
             if (SymbolTable.Exists(token.identifier))
             {
                 mVMWriter.WritePush(SymbolTable.SegmentOf(token.identifier), SymbolTable.OffsetOf(token.identifier));
+                mTokens.Advance();
                 return;
             }
         }
+
+        // FIXME
 
         // if exp is "exp1 op exp2":
         //   CompileExpression( exp1 );

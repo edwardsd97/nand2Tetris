@@ -1,0 +1,10 @@
+label Main.main
+push local 0
+pop local 0
+push local 0
+call game.run 1
+push local 0
+call game.dispose 1
+push constant 0
+return
+label Main.more

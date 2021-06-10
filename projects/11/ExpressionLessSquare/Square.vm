@@ -1,0 +1,5 @@
+label Square.new
+call Memory.alloc 3
+pop pointer 0
+push argument 0
+pop this 0
