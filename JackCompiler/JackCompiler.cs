@@ -72,6 +72,7 @@ class JackCompiler
             tokenizer.Advance();
         }
         tokenizer.Close();
+        tokenizer.Reset();
 
         if (JackCompiler.mDumpTokenFile)
         {
@@ -84,10 +85,13 @@ class JackCompiler
                 writer.WriteLine(token.GetXMLString());
             }
             writer.WriteLine("</tokens>");
+            tokenizer.Reset();
         }
 
         // Compile the tokens into output file
         CompilationEngine compiler = new CompilationEngine(tokenizer, GetOutBasefile(path));
+        compiler.CompileGrammar( "class" );
+        compiler.Reset();
         compiler.CompileClass();
     }
 
@@ -139,7 +143,7 @@ class SymbolTable
     {
         public string   mVarName;   // varName
         public Kind     mKind;      // STATIC, FIELD, ARG, VAR
-        public string   mType;      // int, boolean, char, ClassName
+        public Token    mType;      // int, boolean, char, ClassName
         public int      mOffset;     // segment offset
     }
 
@@ -172,7 +176,7 @@ class SymbolTable
         }
     }
 
-    public static void Define(string varName, string type, Kind kind)
+    public static void Define(string varName, Token type, Kind kind)
     {
         if (mScopes.Count == 0)
             return;
@@ -217,12 +221,12 @@ class SymbolTable
         return Kind.NONE;
     }
 
-    public static string TypeOf(string varName)
+    public static Token TypeOf(string varName)
     {
         Symbol symbol = SymbolTable.Find(varName);
         if (symbol != null)
             return symbol.mType;
-        return "";
+        return null;
     }
 
     public static int OffsetOf(string varName)
@@ -481,6 +485,11 @@ class Tokenizer : IEnumerable
         mTokenCurrent = state.mTokenCurrent;
     }
 
+    public void Reset()
+    {
+        Rollback(mTokens.Count + 1);
+    }
+
     public void Close()
     {
         if (mFile != null)
@@ -488,8 +497,6 @@ class Tokenizer : IEnumerable
             mFile.Close();
             mFile = null;
         }
-
-        Rollback(mTokens.Count + 1);
     }
 
     public bool HasMoreTokens()
@@ -530,6 +537,15 @@ class Tokenizer : IEnumerable
         if (mTokenCurrent < mTokens.Count)
             return mTokens[mTokenCurrent];
         return null;
+    }
+
+    public Token GetAndAdvance()
+    {
+        Token result = null;
+        if (mTokenCurrent < mTokens.Count)
+            result = mTokens[mTokenCurrent];
+        Advance();
+        return result;
     }
 
     public Token Advance()
@@ -918,7 +934,7 @@ class Writer
     protected StreamWriter mFile;
     public int mLinesWritten = 0;
 
-    public Writer( string outFile )
+    public Writer(string outFile)
     {
         mFile = new StreamWriter(outFile);
         mFile.AutoFlush = true;
@@ -926,10 +942,17 @@ class Writer
 
     public virtual void WriteLine(string line)
     {
-        if ( JackCompiler.mVerbose )
+        if (JackCompiler.mVerbose)
             Console.WriteLine(line);
         mFile.WriteLine(line);
         mLinesWritten++;
+    }
+}
+    
+class GrammarWriter : Writer
+{
+    public GrammarWriter( string outFile ) : base( outFile )
+    {
     }
 
     public virtual void PreGrammarEntry(Grammar.Node nodeObj, Tokenizer tokenStack) { }
@@ -937,7 +960,7 @@ class Writer
     public virtual void PostGrammarEntry(Grammar.Node nodeObj, Tokenizer tokenStack) { }
 }
 
-class XMLWriter : Writer
+class XMLWriter : GrammarWriter
 {
     ArrayList mQueueLine;
     List<int> mLinesWrittenPrev;
@@ -1118,19 +1141,30 @@ class VMWriter : Writer
 class CompilationEngine
 {
     Tokenizer mTokens;
-    List<Writer> mWriters = new List<Writer>();
+    List<GrammarWriter> mGrammarWriters = new List<GrammarWriter>();
+    VMWriter mVMWriter;
+    string mClassName;
 
     public CompilationEngine(Tokenizer tokens, string baseOutFile)
     {
         mTokens = tokens;
+
+        Reset();
+
         if (JackCompiler.mDumpVMFile)
         {
-            mWriters.Add(new VMWriter(baseOutFile + ".vm"));
+            mVMWriter = new VMWriter(baseOutFile + ".vm");
         }
         if (JackCompiler.mDumpXmlFile)
         {
-            mWriters.Add( new XMLWriter(baseOutFile + ".xml") );
+            mGrammarWriters.Add(new XMLWriter(baseOutFile + ".xml"));
         }
+    }
+
+    public void Reset()
+    {
+        mTokens.Reset();
+        mClassName = "";
     }
 
     public void Error(string msg = "")
@@ -1143,7 +1177,7 @@ class CompilationEngine
     public void WritersPreGrammarEntry( Grammar.Node nodeObj )
     {
         Tokenizer.State state = mTokens.StateGet();
-        foreach (Writer writer in mWriters)
+        foreach (GrammarWriter writer in mGrammarWriters)
         {
             writer.PreGrammarEntry(nodeObj, mTokens);
             mTokens.StateSet(state);
@@ -1153,7 +1187,7 @@ class CompilationEngine
     public void WritersWriteGrammarEntry(Grammar.Node nodeObj)
     {
         Tokenizer.State state = mTokens.StateGet();
-        foreach (Writer writer in mWriters)
+        foreach (GrammarWriter writer in mGrammarWriters)
         {
             writer.WriteGrammarEntry(nodeObj, mTokens);
             mTokens.StateSet(state);
@@ -1163,14 +1197,14 @@ class CompilationEngine
     public void WritersPostGrammarEntry(Grammar.Node nodeObj)
     {
         Tokenizer.State state = mTokens.StateGet();
-        foreach (Writer writer in mWriters)
+        foreach (GrammarWriter writer in mGrammarWriters)
         {
             mTokens.StateSet(state);
             writer.PostGrammarEntry(nodeObj, mTokens);
         }
     }
 
-    public bool CompileGrammar(string nodeName, bool optional, bool canWrite = true )
+    public bool CompileGrammar(string nodeName, bool optional = false, bool canWrite = true )
     {
         int nodeStep = 0;
 
@@ -1321,7 +1355,7 @@ class CompilationEngine
                 if (!CompileGrammar((string)nodeObj[nodeStep], optional, readAheadNode < 0))
                 {
                     if (!optional)
-                        Error();
+                        Error("Expected " + nodeName + " " + (string)nodeObj[nodeStep]);
                     if (tokenStateRestore != null)
                         mTokens.StateSet(tokenStateRestore);
                     return false;
@@ -1348,50 +1382,285 @@ class CompilationEngine
         return true;
     }
 
+    public Token ValidateTokenAdvance(object tokenCheck)
+    {
+        string dontCare = "";
+        return ValidateTokenAdvance(tokenCheck, out dontCare);
+    }
+
+    public Token ValidateTokenAdvance( object tokenCheck, out string tokenString )
+    {
+        Token token = mTokens.Get();
+
+        string error = null;
+
+        tokenString = token.GetTokenString();
+
+        System.Type type = tokenCheck.GetType();
+
+        if ( type == typeof(Token.Type) && token.type != (Token.Type)tokenCheck)
+        {
+            error = "Expected " + tokenCheck.ToString();
+        }
+        else if (type == typeof(Token.Keyword) && token.keyword != (Token.Keyword)tokenCheck)
+        {
+            error = "Expected " + tokenCheck.ToString();
+        }
+        else if (type == typeof(char) && token.symbol != (char)tokenCheck)
+        {
+            error = "Expected " + tokenCheck.ToString();
+        }
+
+        if (error != null)
+            Error(error);
+
+        mTokens.Advance();
+
+        return mTokens.Get();
+    }
+
+    public bool ValidateFunctionReturnType(Token varType)
+    {
+        if (ValidateVarType(varType))
+            return true;
+
+        return varType.keyword == Token.Keyword.VOID;
+    }
+
+    public bool ValidateVarType(Token varType)
+    {
+        switch (varType.keyword)
+        {
+            case Token.Keyword.INT:
+            case Token.Keyword.BOOL:
+            case Token.Keyword.CHAR:
+                return true;
+            default:
+                return varType.type == Token.Type.IDENTIFIER;
+        }
+    }
+
     public void CompileClass()
     {
-        // compiles a complete class
-        CompileGrammar("class", false );
+        // class: 'class' className '{' classVarDec* subroutineDec* '}'
+
+        ValidateTokenAdvance(Token.Keyword.CLASS);
+        ValidateTokenAdvance(Token.Type.IDENTIFIER, out mClassName);
+        ValidateTokenAdvance('{');
+
+        SymbolTable.ScopePush("class");
+
+        while (CompileClassVarDec())
+        {
+            // continue with classVarDec
+        }
+
+        while ( CompileSubroutineDec() )
+        {
+            // continue with subroutineDec
+        }
+
+        ValidateTokenAdvance('}');
     }
 
-    public void CompileClassVarDec()
+    public bool CompileClassVarDec()
     {
         // compiles class fields and static vars
-        SymbolTable.ScopePush("class");
+        // classVarDec: ('static'|'field) type varName (',' varName)* ';'
+
+        Token token = mTokens.Get();
+
+        if (token.type == Token.Type.KEYWORD && (token.keyword == Token.Keyword.FIELD || token.keyword == Token.Keyword.STATIC))
+        {
+            SymbolTable.Kind varKind = (token.keyword == Token.Keyword.STATIC) ? SymbolTable.Kind.STATIC : SymbolTable.Kind.FIELD;
+            mTokens.Advance();
+
+            Token varType = mTokens.Get();
+
+            do
+            {
+                mTokens.Advance();
+
+                string varName;
+                ValidateTokenAdvance(Token.Type.IDENTIFIER, out varName );
+
+                SymbolTable.Define(varName, varType, varKind);
+
+            } while (mTokens.Get().symbol == ',');
+
+            token = ValidateTokenAdvance(';');
+
+            return true;
+        }
+
+        return false;
     }
 
-    public void CompileSubroutineDec()
+    public bool CompileSubroutineDec()
     {
         // compiles a method, function, or constructor
+        // subroutineDec: ('constructor'|'function'|'method') ('void'|type) subroutineName '(' paramaterList ')' subroutineBody
 
-        // prep
+        Token token = mTokens.Get();
 
-        CompileSubroutineBody();
+        if (token.type == Token.Type.KEYWORD && (token.keyword == Token.Keyword.CONSTRUCTOR || token.keyword == Token.Keyword.FUNCTION || token.keyword == Token.Keyword.METHOD))
+        {
+            Token.Keyword funcCallType = token.keyword;
+            mTokens.Advance();
 
-        // return
+            Token funcReturnType = mTokens.GetAndAdvance();
+            if (!ValidateFunctionReturnType(funcReturnType))
+            {
+                Error("Return type unrecognized '" + funcReturnType.GetTokenString() + "'");
+            }
+
+            string funcName;
+            ValidateTokenAdvance(Token.Type.IDENTIFIER, out funcName);
+
+            SymbolTable.ScopePush("function");
+
+            ValidateTokenAdvance('(');
+
+            CompileParameterList();
+
+            ValidateTokenAdvance(')');
+
+            CompileSubroutineBody();
+
+            SymbolTable.ScopePop();
+
+            return true;
+        }
+
+        return false;
     }
 
     public void CompileParameterList()
     {
         // compiles a parameter list within () without dealing with the ()s
         // can be completely empty
+
+        // parameterList: ( type varName (',' type varName)* )?
+        while ( ValidateVarType( mTokens.Get() ) )
+        {
+            // handle argument
+            Token varType = mTokens.GetAndAdvance();
+
+            string varName;
+            ValidateTokenAdvance(Token.Type.IDENTIFIER, out varName);
+
+            SymbolTable.Define(varName, varType, SymbolTable.Kind.ARG);
+
+            if (mTokens.Get().symbol != ',')
+                break;
+
+            mTokens.Advance();
+        }
     }
 
     public void CompileSubroutineBody()
     {
         // compiles the statements within a subroutine
-        CompileVarDec();
+
+        while (CompileVarDec())
+        {
+            // keep going with more varDec
+        }
+
+        ValidateTokenAdvance('{');
+
         CompileStatements();
+
+        ValidateTokenAdvance('}');
     }
 
-    public void CompileVarDec()
+    public bool CompileVarDec()
     {
         // handles local variables in a subroutine
+        // varDec: 'var' type varName (',' varName)* ';'
+
+        Token token = mTokens.Get();
+
+        if ( token.keyword == Token.Keyword.VAR )
+        {
+            mTokens.Advance();
+
+            Token varType = mTokens.Get();
+
+            do
+            {
+                mTokens.Advance();
+
+                string varName;
+                ValidateTokenAdvance(Token.Type.IDENTIFIER, out varName);
+
+                SymbolTable.Define(varName, varType, SymbolTable.Kind.VAR );
+
+            } while (mTokens.Get().symbol == ',');
+
+            token = ValidateTokenAdvance(';');
+
+            return true;
+        }
+
+        return false;
     }
 
     public void CompileStatements()
     {
         // compiles a series of statements without handling the enclosing {}s
+
+        // statements: statement*
+        // statement: letStatement | ifStatement | whileStatement | doStatement | returnStatement
+
+        Token.Keyword statementType = mTokens.GetAndAdvance().keyword;
+
+        switch (statementType)
+        {
+            case Token.Keyword.LET:
+                CompileStatementLet();
+                break;
+            case Token.Keyword.IF:
+                CompileStatementIf();
+                break;
+            case Token.Keyword.WHILE:
+                CompileStatementWhile();
+                break;
+            case Token.Keyword.DO:
+                CompileStatementDo();
+                break;
+            case Token.Keyword.RETURN:
+                CompileStatementReturn();
+                break;
+            default:
+                Error("Expected let, do, while, if, or return");
+                break;
+        }
+    }
+
+    public void CompileStatementLet()
+    {
+
+    }
+
+    public void CompileStatementIf()
+    {
+
+    }
+
+    public void CompileStatementWhile()
+    {
+
+    }
+
+    public void CompileStatementDo()
+    {
+
+    }
+
+    public void CompileStatementReturn()
+    {
+
     }
 
     public void CompileExpression()
