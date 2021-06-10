@@ -1,7 +1,8 @@
 {
   "profiles": {
     "JackCompiler": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "C:\\Projects\\nand2Tetris\\projects\\11\\Pong -t -x"
     }
   }
 }

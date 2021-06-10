@@ -9,6 +9,7 @@ class JackCompiler
     static public bool mVerbose = false;
     static public bool mDumpTokenFile = false;
     static public bool mDumpXmlFile = false;
+    static public bool mDumpVMFile = true;
 
     static void Main(string[] args)
     {
@@ -50,6 +51,9 @@ class JackCompiler
             }
         }
 
+        // Setup global scope symbol table
+        SymbolTable.ScopePush( "global" );
+
         // Process the files
         for (int i = 0; i < paths.Count; i++)
         {
@@ -83,7 +87,7 @@ class JackCompiler
         }
 
         // Compile the tokens into output file
-        CompilationEngine compiler = new CompilationEngine(tokenizer, GetOutXMLfile(path));
+        CompilationEngine compiler = new CompilationEngine(tokenizer, GetOutBasefile(path));
         compiler.CompileClass();
     }
 
@@ -95,11 +99,11 @@ class JackCompiler
         return outFile;
     }
 
-    public static string GetOutXMLfile(string file)
+    public static string GetOutBasefile(string file)
     {
         string name = FileToName(file);
         string path = FileToPath(file);
-        string outFile = path + name + ".xml";
+        string outFile = path + name;
         return outFile;
     }
 
@@ -151,10 +155,10 @@ class SymbolTable
 
     public enum Kind
     {
-        NONE, STATIC, FIELD, ARG, VAR
+        NONE, GLOBAL, STATIC, FIELD, ARG, VAR
     }
 
-    public static void Scope( string name )
+    public static void ScopePush( string name )
     {
         SymbolScope scope = new SymbolScope(name);
         mScopes.Add(scope);
@@ -436,26 +440,45 @@ class Token
 
 class Tokenizer : IEnumerable
 {
-    public int mLine;
+    // All the tokens saved in a list
+    public List<Token> mTokens;
+    protected int mTokenCurrent;
 
-    public string mLineStr;
-    public int mLineChar;
+    // Token parsing vars
+    protected System.IO.StreamReader mFile;
+    protected int mLine;
+    protected string mLineStr;
+    protected int mLineChar;
+    protected bool mCommentTerminateWait;
+    protected bool mReadingToken;
+    protected bool mReadingString;
+    protected string mTokenStr;
 
-    public System.IO.StreamReader mFile;
-    public ArrayList mTokens;
-    public int mTokenCurrent;
-    public bool mCommentTerminateWait;
-    public bool mReadingToken;
-    public bool mReadingString;
-    public string mTokenStr;
+    public class State
+    {
+        public int mTokenCurrent;
+        public State( int tokenCurrent ) { mTokenCurrent = tokenCurrent; }
+        public State() { mTokenCurrent = -1; }
+        public bool IsDefined() { return mTokenCurrent >= 0; }
+    }
 
     public Tokenizer(string fileInput)
     {
         mFile = new System.IO.StreamReader(fileInput);
-        mTokens = new ArrayList();
+        mTokens = new List<Token>();
         mLineStr = "";
         mTokenStr = "";
         mTokenCurrent = -1;
+    }
+
+    public State StateGet()
+    {
+        return new State(mTokenCurrent);
+    }
+
+    public void StateSet( State state )
+    {
+        mTokenCurrent = state.mTokenCurrent;
     }
 
     public void Close()
@@ -505,7 +528,7 @@ class Tokenizer : IEnumerable
     public Token Get()
     {
         if (mTokenCurrent < mTokens.Count)
-            return mTokens[mTokenCurrent] as Token;
+            return mTokens[mTokenCurrent];
         return null;
     }
 
@@ -515,7 +538,7 @@ class Tokenizer : IEnumerable
         {
             // Just advance to the next already parsed token
             mTokenCurrent++;
-            return mTokens[mTokenCurrent] as Token;
+            return mTokens[mTokenCurrent];
         }
 
         if (mFile == null)
@@ -698,12 +721,14 @@ class Tokenizer : IEnumerable
 class Grammar
 {
     static bool mInitialized;
-    static Dictionary<string, int> mNodeDic;
+    static Dictionary<string, Node> mNodeDic;
+
+    public class Node : List<object> { }
 
     public enum Gram
     {
         NONE,
-        ZERO_OR_MORE, // Zero or more of the following grammar node
+        ZERO_OR_MORE, // Zero or more of the following grammar nodeStep
         OR,           // One of the N next nodes where N is the following entry
         OPTIONAL,     // Next entry is optional
         READ_AHEAD1   // Only outputs anything if the next 2 entries are valid in the token list
@@ -711,9 +736,9 @@ class Grammar
 
     public enum Enclose
     {
-        NEVER,        // never encloses this node in the xml <name> </name>
-        NOT_EMPTY,    // only encloses this node in the xml <name> </name> when there is something inside of it
-        ALWAYS        // always encloses this node in the xml <name> </name>  
+        NEVER,        // never encloses this nodeStep in the xml <name> </name>
+        NOT_EMPTY,    // only encloses this nodeStep in the xml <name> </name> when there is something inside of it
+        ALWAYS        // always encloses this nodeStep in the xml <name> </name>  
     };
 
     public static void InitIfNeeded()
@@ -721,13 +746,13 @@ class Grammar
         if (Grammar.mInitialized)
             return;
 
-        mNodeDic = new Dictionary<string, int>();
+        mNodeDic = new Dictionary<string, Node>();
         int nodeIndex = 0;
         bool done = false;
         while (!done)
         {
-            System.Type type = mNodes[nodeIndex].GetType();
-            if (type == typeof(int) && (int)mNodes[nodeIndex] == 0)
+            System.Type type = mParseLangNodeDefs[nodeIndex].GetType();
+            if (type == typeof(int) && (int)mParseLangNodeDefs[nodeIndex] == 0)
             {
                 // End of list
                 done = true;
@@ -735,15 +760,20 @@ class Grammar
             else if (type == typeof(string))
             {
                 // Add entry point and advance to the next
-                mNodeDic.Add((string)mNodes[nodeIndex], nodeIndex);
+                Node nodeEntry = new Node();
+                mNodeDic.Add((string)mParseLangNodeDefs[nodeIndex], nodeEntry);
                 bool advanced = false;
                 while (!advanced)
                 {
-                    type = mNodes[nodeIndex].GetType();
-                    if (type == typeof(int) && (int)mNodes[nodeIndex] == 0)
+                    type = mParseLangNodeDefs[nodeIndex].GetType();
+                    if (type == typeof(int) && (int)mParseLangNodeDefs[nodeIndex] == 0)
                     {
                         advanced = true;
                         break;
+                    }
+                    else
+                    {
+                        nodeEntry.Add(mParseLangNodeDefs[nodeIndex]);
                     }
                     nodeIndex++;
                 }
@@ -755,12 +785,14 @@ class Grammar
         Grammar.mInitialized = true;
     }
 
-    static object[] mNodes =
+    static object[] mParseLangNodeDefs =
     {
         // Each entry consists of a
-        // node name,
+        // nodeStep name,
         // NEVER, NOT_EMPTY, ALWAYS enclose with <name> </name>,
         // and then the definitions
+
+        // FIXME - this could be a data file
 
         // CLASS
 
@@ -869,31 +901,236 @@ class Grammar
         0
     };
 
-    static public object[] GetNode(string nodeName, out int index)
+    static public Node GetNode(string nodeName)
     {
         InitIfNeeded();
 
-        if (mNodeDic.TryGetValue(nodeName, out index))
-            return mNodes;
+        Node nodeStep;
+        if (mNodeDic.TryGetValue(nodeName, out nodeStep))
+            return nodeStep;
 
         return null;
     }
 }
 
-class CompilationEngine
+class Writer
 {
-    StreamWriter mFile;
-    Tokenizer mTokens;
-    int mIndent;
-    ArrayList mQueueLine;
-    int mLinesWritten = 0;
+    protected StreamWriter mFile;
+    public int mLinesWritten = 0;
 
-    public CompilationEngine(Tokenizer tokens, string outFile)
+    public Writer( string outFile )
     {
         mFile = new StreamWriter(outFile);
         mFile.AutoFlush = true;
-        mTokens = tokens;
+    }
+
+    public virtual void WriteLine(string line)
+    {
+        if ( JackCompiler.mVerbose )
+            Console.WriteLine(line);
+        mFile.WriteLine(line);
+        mLinesWritten++;
+    }
+
+    public virtual void PreGrammarEntry(Grammar.Node nodeObj, Tokenizer tokenStack) { }
+    public virtual void WriteGrammarEntry(Grammar.Node nodeObj, Tokenizer tokenStack) { }
+    public virtual void PostGrammarEntry(Grammar.Node nodeObj, Tokenizer tokenStack) { }
+}
+
+class XMLWriter : Writer
+{
+    ArrayList mQueueLine;
+    List<int> mLinesWrittenPrev;
+
+    public XMLWriter(string outFile) : base( outFile )
+    {
         mQueueLine = new ArrayList();
+        mLinesWrittenPrev = new List<int>();
+    }
+
+    public void QueueLineAdd(string line)
+    {
+        mQueueLine.Add(line);
+    }
+
+    public void QueueLineRemove(string line)
+    {
+        for (int i = 0; i < mQueueLine.Count; i++)
+        {
+            if ((string)mQueueLine[i] == line)
+            {
+                mQueueLine.RemoveAt(i);
+                return;
+            }
+        }
+    }
+
+    public override void WriteLine(string line)
+    {
+        if (mQueueLine.Count > 0)
+        {
+            ArrayList queue = mQueueLine;
+            mQueueLine = new ArrayList();
+            foreach (string qline in queue)
+                WriteLine(qline);
+        }
+
+        base.WriteLine(line);
+    }
+
+    public override void PreGrammarEntry(Grammar.Node nodeObj, Tokenizer tokenStack)
+    {
+        string nodeName = (string) nodeObj[0];
+        Grammar.Enclose enclose = (Grammar.Enclose)nodeObj[1];
+
+        if (enclose == Grammar.Enclose.ALWAYS)
+        {
+            WriteLine("<" + nodeName + ">");
+        }
+        else if (enclose == Grammar.Enclose.NOT_EMPTY)
+        {
+            QueueLineAdd("<" + nodeName + ">");
+            mLinesWrittenPrev.Add( mLinesWritten );
+        }
+    }
+
+    public override void PostGrammarEntry(Grammar.Node nodeObj, Tokenizer tokenStack)
+    {
+        string nodeName = (string)nodeObj[0];
+        Grammar.Enclose enclose = (Grammar.Enclose)nodeObj[1];
+
+        int linesWrittenPrev = 0;
+        if (enclose == Grammar.Enclose.NOT_EMPTY)
+        {
+            linesWrittenPrev = mLinesWrittenPrev[mLinesWrittenPrev.Count - 1];
+            mLinesWrittenPrev.RemoveAt(mLinesWrittenPrev.Count - 1);
+        }
+
+        // Post process grammar node for each writer
+        if (enclose == Grammar.Enclose.ALWAYS || (enclose == Grammar.Enclose.NOT_EMPTY && mLinesWritten > linesWrittenPrev))
+        {
+            WriteLine("</" + nodeName + ">");
+        }
+        else if (enclose == Grammar.Enclose.NOT_EMPTY)
+        {
+            QueueLineRemove("<" + nodeName + ">");
+        }
+    }
+
+    public override void WriteGrammarEntry(Grammar.Node nodeObj, Tokenizer tokenStack)
+    {
+        Token token = tokenStack.Get();
+        string line = token.GetXMLString();
+        WriteLine(line);
+    }
+}
+
+class VMWriter : Writer
+{
+    public enum Segment
+    {
+        CONST, ARG, LOCAL, STATIC, THIS, THAT, POINTER, TEMP
+    }
+
+    public enum Command
+    {
+        ADD, SUB, NEG, EQ, LT, GT, AND, OR, NOT
+    }
+
+    public VMWriter(string fileName) : base(fileName)
+    {
+    }
+
+    public string SegmentString(Segment segment)
+    {
+        switch (segment)
+        {
+            case Segment.ARG: return "argument";
+            case Segment.LOCAL: return "local";
+            case Segment.STATIC: return "static";
+            case Segment.THIS: return "this";
+            case Segment.THAT: return "that";
+            case Segment.POINTER: return "pointer";
+            case Segment.TEMP: return "temp";
+            default: return "constant";
+        }
+    }
+
+    public string CommandString(Command command)
+    {
+        switch (command)
+        {
+            case Command.ADD: return "add";
+            case Command.SUB: return "sub";
+            case Command.NEG: return "neg";
+            case Command.EQ: return "eq";
+            case Command.LT: return "lt";
+            case Command.GT: return "gt";
+            case Command.AND: return "and";
+            case Command.OR: return "or";
+            default: return "not";
+        }
+    }
+
+    public void WritePush(Segment segment, int index)
+    {
+        // push segment int
+        WriteLine("push " + SegmentString(segment) + " " + index);
+    }
+
+    public void WriteArithmetic(Command command)
+    {
+        // command
+        WriteLine(CommandString(command));
+    }
+
+    public void WriteLabel(string label)
+    {
+        // label
+        WriteLine("label " + label);
+    }
+
+    public void WriteGoto(string label)
+    {
+        // goto
+        WriteLine("goto " + label);
+    }
+
+    public void WriteIf(string label)
+    {
+        // if-goto
+        WriteLine("if-goto " + label);
+    }
+
+    public void WriteCall(string function, int argCount)
+    {
+        // call function argCount
+        WriteLine("call " + function + " " + argCount);
+    }
+
+    public void WriteReturn()
+    {
+        // return
+        WriteLine("return");
+    }
+}
+
+class CompilationEngine
+{
+    Tokenizer mTokens;
+    List<Writer> mWriters = new List<Writer>();
+
+    public CompilationEngine(Tokenizer tokens, string baseOutFile)
+    {
+        mTokens = tokens;
+        if (JackCompiler.mDumpVMFile)
+        {
+            mWriters.Add(new VMWriter(baseOutFile + ".vm"));
+        }
+        if (JackCompiler.mDumpXmlFile)
+        {
+            mWriters.Add( new XMLWriter(baseOutFile + ".xml") );
+        }
     }
 
     public void Error(string msg = "")
@@ -903,214 +1140,177 @@ class CompilationEngine
         Console.WriteLine("ERROR: Line< " + token.lineNumber + " > Char< " + token.lineCharacter + " > " + msg);
     }
 
-    public void QueueLineAdd(string line, bool doIndent = true)
+    public void WritersPreGrammarEntry( Grammar.Node nodeObj )
     {
-        string indent = "";
-        for (int i = 0; doIndent && i < mIndent; i++)
-            indent = indent + " ";
-        mQueueLine.Add(indent + line);
-    }
-
-    public void QueueLineRemove(string line, bool doIndent = true)
-    {
-        string indent = "";
-        for (int i = 0; doIndent && i < mIndent; i++)
-            indent = indent + " ";
-        for (int i = 0; i < mQueueLine.Count; i++)
+        Tokenizer.State state = mTokens.StateGet();
+        foreach (Writer writer in mWriters)
         {
-            if ((string)mQueueLine[i] == indent + line)
-            {
-                mQueueLine.RemoveAt(i);
-                return;
-            }
+            writer.PreGrammarEntry(nodeObj, mTokens);
+            mTokens.StateSet(state);
         }
     }
 
-    public void WriteLine(string line, bool doIndent = true)
+    public void WritersWriteGrammarEntry(Grammar.Node nodeObj)
     {
-        if (mQueueLine.Count > 0)
+        Tokenizer.State state = mTokens.StateGet();
+        foreach (Writer writer in mWriters)
         {
-            ArrayList queue = mQueueLine;
-            mQueueLine = new ArrayList();
-            foreach (string qline in queue)
-                WriteLine(qline, false);
+            writer.WriteGrammarEntry(nodeObj, mTokens);
+            mTokens.StateSet(state);
         }
-
-        string indent = "";
-        for (int i = 0; doIndent && i < mIndent; i++)
-            indent = indent + " ";
-        if (JackCompiler.mVerbose)
-            Console.WriteLine(indent + line);
-        mFile.WriteLine(indent + line);
-        mLinesWritten++;
     }
 
-    public void CompileClass()
+    public void WritersPostGrammarEntry(Grammar.Node nodeObj)
     {
-        CompileGrammar("class", false, 0);
-    }
-
-    public bool CompileGrammar(string nodeName, bool optional, int indentAdd)
-    {
-        int node;
-        int linesWrittenPrev = mLinesWritten;
-
-        object[] nodes = Grammar.GetNode(nodeName, out node);
-
-        if (nodes == null)
+        Tokenizer.State state = mTokens.StateGet();
+        foreach (Writer writer in mWriters)
         {
-            Error("Internal - Missing grammar node");
+            mTokens.StateSet(state);
+            writer.PostGrammarEntry(nodeObj, mTokens);
+        }
+    }
+
+    public bool CompileGrammar(string nodeName, bool optional, bool canWrite = true )
+    {
+        int nodeStep = 0;
+
+        Grammar.Node nodeObj = Grammar.GetNode(nodeName);
+
+        if (nodeObj == null)
+        {
+            Error("Internal - Missing grammar nodeStep");
             return false;
         }
 
-        node++;
+        nodeStep++;
 
-        Grammar.Enclose enclose = (Grammar.Enclose)nodes[node];
+        Grammar.Enclose enclose = (Grammar.Enclose)nodeObj[nodeStep];
 
-        node++;
+        nodeStep++;
 
-        mIndent = mIndent + indentAdd;
+        WritersPreGrammarEntry(nodeObj);
 
-        if (enclose == Grammar.Enclose.ALWAYS)
-        {
-            WriteLine("<" + nodeName + ">");
-        }
-        else if (enclose == Grammar.Enclose.NOT_EMPTY)
-        {
-            QueueLineAdd("<" + nodeName + ">");
-            linesWrittenPrev = mLinesWritten;
-        }
+        bool result = CompileGrammar(nodeName, nodeObj, nodeStep, optional, canWrite );
 
-        bool result = CompileGrammar(nodeName, nodes, node, optional);
-
-        if (enclose == Grammar.Enclose.ALWAYS || (enclose == Grammar.Enclose.NOT_EMPTY && mLinesWritten > linesWrittenPrev))
-        {
-            WriteLine("</" + nodeName + ">");
-        }
-        else if (enclose == Grammar.Enclose.NOT_EMPTY)
-        {
-            QueueLineRemove("<" + nodeName + ">");
-        }
-
-        mIndent = mIndent - indentAdd;
+        WritersPostGrammarEntry(nodeObj);
 
         return result;
     }
 
-    public bool CompileGrammar(string nodeName, object[] nodes, int node, bool optional, int earlyTerminate = -1)
+    public bool CompileGrammar(string nodeName, Grammar.Node nodeObj, int nodeStart, bool optional, bool canWrite = true, int earlyTerminate = -1)
     {
         bool done = false;
 
         int readAheadNode = -1;
-        int readAheadToken = -1;
+        Tokenizer.State tokenStateRestore = null;
 
-        while (!done)
+        for(int nodeStep = nodeStart; nodeStep < nodeObj.Count && !done; nodeStep++ )
         {
             Token token = mTokens.Get();
 
-            System.Type type = nodes[node].GetType();
+            System.Type type = nodeObj[nodeStep].GetType();
 
-            if (type == typeof(Type))
+            if (type == typeof(Token.Type))
             {
-                if (token.type != (Type)nodes[node])
+                if (token.type != (Token.Type)nodeObj[nodeStep])
                 {
                     if (!optional)
-                        Error("Expected " + Token.TypeString((Type)nodes[node]));
-                    if (readAheadToken >= 0)
-                        mTokens.mTokenCurrent = readAheadToken;
+                        Error("Expected " + nodeName + " type " + Token.TypeString((Token.Type)nodeObj[nodeStep]));
+                    if (tokenStateRestore != null)
+                        mTokens.StateSet(tokenStateRestore);
                     return false;
                 }
 
-                if (readAheadNode < 0)
-                    WriteLine(token.GetXMLString());
+                if (readAheadNode < 0 && canWrite)
+                    WritersWriteGrammarEntry(nodeObj);
                 token = mTokens.Advance();
             }
-            else if (type == typeof(Keyword))
+            else if (type == typeof(Token.Keyword))
             {
-                if (token.type != Token.Type.KEYWORD || token.keyword != (Keyword)nodes[node])
+                if (token.type != Token.Type.KEYWORD || token.keyword != (Token.Keyword)nodeObj[nodeStep])
                 {
                     if (!optional)
-                        Error("Expected " + Token.KeywordString((Keyword)nodes[node]));
-                    if (readAheadToken >= 0)
-                        mTokens.mTokenCurrent = readAheadToken;
+                        Error("Expected " + nodeName + " keyword " + Token.KeywordString((Token.Keyword)nodeObj[nodeStep]));
+                    if (tokenStateRestore != null)
+                        mTokens.StateSet(tokenStateRestore);
                     return false;
                 }
 
-                if (readAheadNode < 0)
-                    WriteLine(token.GetXMLString());
+                if (readAheadNode < 0 && canWrite)
+                    WritersWriteGrammarEntry(nodeObj);
                 token = mTokens.Advance();
             }
             else if (type == typeof(char))
             {
-                if (token.type != Token.Type.SYMBOL || token.symbol != (char)nodes[node])
+                if (token.type != Token.Type.SYMBOL || token.symbol != (char)nodeObj[nodeStep])
                 {
                     if (!optional)
-                        Error("Expected " + (char)nodes[node]);
-                    if (readAheadToken >= 0)
-                        mTokens.mTokenCurrent = readAheadToken;
+                        Error("Expected " + nodeName + " symbol " + (char)nodeObj[nodeStep]);
+                    if (tokenStateRestore != null)
+                        mTokens.StateSet(tokenStateRestore);
                     return false;
                 }
 
-                if (readAheadNode < 0)
-                    WriteLine(token.GetXMLString());
+                if (readAheadNode < 0 && canWrite)
+                    WritersWriteGrammarEntry(nodeObj);
                 token = mTokens.Advance();
             }
             else if (type == typeof(Grammar.Gram))
             {
                 int optionalEnd = 0;
-                Grammar.Gram gram = (Grammar.Gram)nodes[node];
+                Grammar.Gram gram = (Grammar.Gram)nodeObj[nodeStep];
                 switch (gram)
                 {
                     case Grammar.Gram.OPTIONAL:
-                        optionalEnd = node + 1;
-                        node++;
+                        optionalEnd = nodeStep + 1;
+                        nodeStep++;
                         break;
 
                     case Grammar.Gram.OR:
-                        node++;
-                        optionalEnd = node + (int)nodes[node];
-                        node++;
+                        nodeStep++;
+                        optionalEnd = nodeStep + (int)nodeObj[nodeStep];
+                        nodeStep++;
                         break;
 
                     case Grammar.Gram.ZERO_OR_MORE:
                         optionalEnd = -1;
-                        node++;
+                        nodeStep++;
                         break;
                 }
 
                 switch (gram)
                 {
                     case Grammar.Gram.OR:
-                        while (!CompileGrammar(nodeName, nodes, node, node <= optionalEnd, node + 1))
+                        while (!CompileGrammar(nodeName, nodeObj, nodeStep, nodeStep <= optionalEnd, readAheadNode < 0, nodeStep + 1))
                         {
-                            node++;
+                            nodeStep++;
 
-                            if (node > optionalEnd)
+                            if (nodeStep > optionalEnd)
                             {
                                 if (!optional)
                                     Error();
-                                if (readAheadToken >= 0)
-                                    mTokens.mTokenCurrent = readAheadToken;
+                                if (tokenStateRestore != null)
+                                    mTokens.StateSet(tokenStateRestore);
                                 return false;
                             }
                         }
-                        node = optionalEnd;
+                        nodeStep = optionalEnd;
                         break;
 
                     case Grammar.Gram.OPTIONAL:
-                        CompileGrammar(nodeName, nodes, node, true, node + 1);
+                        CompileGrammar(nodeName, nodeObj, nodeStep, true, readAheadNode < 0, nodeStep + 1);
                         break;
 
                     case Grammar.Gram.ZERO_OR_MORE:
-                        while (CompileGrammar(nodeName, nodes, node, true, node + 1))
+                        while (CompileGrammar(nodeName, nodeObj, nodeStep, true, readAheadNode < 0, nodeStep + 1))
                         {
                             // do nothing
                         }
                         break;
 
                     case Grammar.Gram.READ_AHEAD1:
-                        readAheadNode = node + 3;
-                        readAheadToken = mTokens.mTokenCurrent;
+                        readAheadNode = nodeStep + 3;
+                        tokenStateRestore = mTokens.StateGet();
                         break;
                 }
 
@@ -1118,37 +1318,105 @@ class CompilationEngine
             }
             else if (type == typeof(string))
             {
-                if (!CompileGrammar((string)nodes[node], optional, 2))
+                if (!CompileGrammar((string)nodeObj[nodeStep], optional, readAheadNode < 0))
                 {
                     if (!optional)
                         Error();
-                    if (readAheadToken >= 0)
-                        mTokens.mTokenCurrent = readAheadToken;
+                    if (tokenStateRestore != null)
+                        mTokens.StateSet(tokenStateRestore);
                     return false;
                 }
             }
-            else if (type == typeof(int) && (int)nodes[node] == 0)
+
+            if (!done && earlyTerminate > 0 && ( nodeStep + 1 ) >= earlyTerminate)
             {
+                // terminate
                 done = true;
             }
 
-            node++;
-
-            if (!done && earlyTerminate > 0 && node >= earlyTerminate)
-            {
-                done = true;
-            }
-
-            if (readAheadNode > 0 && node >= readAheadNode)
+            if (readAheadNode > 0 && ( nodeStep + 1 ) >= readAheadNode && tokenStateRestore != null )
             {
                 // Rewind and write it for real now
-                mTokens.mTokenCurrent = readAheadToken;
-                node = readAheadNode - 2;
+                mTokens.StateSet(tokenStateRestore);
+                tokenStateRestore = null;
+                nodeStep = readAheadNode - 3;
                 readAheadNode = -1;
-                readAheadToken = -1;
+                done = false;
             }
         }
 
         return true;
     }
+
+    public void CompileClass()
+    {
+        // compiles a complete class
+        CompileGrammar("class", false );
+    }
+
+    public void CompileClassVarDec()
+    {
+        // compiles class fields and static vars
+        SymbolTable.ScopePush("class");
+    }
+
+    public void CompileSubroutineDec()
+    {
+        // compiles a method, function, or constructor
+
+        // prep
+
+        CompileSubroutineBody();
+
+        // return
+    }
+
+    public void CompileParameterList()
+    {
+        // compiles a parameter list within () without dealing with the ()s
+        // can be completely empty
+    }
+
+    public void CompileSubroutineBody()
+    {
+        // compiles the statements within a subroutine
+        CompileVarDec();
+        CompileStatements();
+    }
+
+    public void CompileVarDec()
+    {
+        // handles local variables in a subroutine
+    }
+
+    public void CompileStatements()
+    {
+        // compiles a series of statements without handling the enclosing {}s
+    }
+
+    public void CompileExpression()
+    {
+        // if exp is a number n:
+        //   push constant n
+
+        // if exp is a variable var:
+        //   push segment i
+
+        // if exp is "exp1 op exp2":
+        //   CompileExpression( exp1 );
+        //   CompileExpression( exp2 );
+        //   op command (add, sub, call Math.multiply, ... )
+
+        // if exp is "op exp"
+        //   CompileExpression( exp )
+        //   op command (add, sub, call Math.multiply, ... )
+
+        // if exp is "f(exp1, exp2, ..., expN )"
+        //   CompileExpression( exp1 )
+        //   CompileExpression( exp2 )
+        //    ...
+        //   CompileExpression( expN )
+        //   call f N
+    }
 }
+

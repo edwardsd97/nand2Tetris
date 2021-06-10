@@ -2,7 +2,7 @@
   "profiles": {
     "JackAnalyzer": {
       "commandName": "Project",
-      "commandLineArgs": " C:\\Projects\\nand2Tetris\\projects\\10\\Square C:\\Projects\\nand2Tetris\\projects\\10\\ExpressionLessSquare C:\\Projects\\nand2Tetris\\projects\\10\\ArrayTest"
+      "commandLineArgs": "C:\\Projects\\nand2Tetris\\projects\\11\\Pong -t"
     }
   }
 }
