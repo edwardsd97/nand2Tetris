@@ -8,3 +8,11 @@ call game.dispose 1
 push constant 0
 return
 label Main.more
+push local 0
+not
+if-goto Main_more_L1
+goto Main_more_L2
+label Main_more_L1
+label Main_more_L2
+push constant 0
+return

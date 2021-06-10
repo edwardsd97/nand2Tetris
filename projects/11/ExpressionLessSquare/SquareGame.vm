@@ -3,3 +3,117 @@ call Memory.alloc 5
 pop pointer 0
 push this 0
 pop this 0
+push this 1
+pop this 1
+push this 0
+return
+label SquareGame.dispose
+pop pointer 0
+push this 0
+call square.dispose 1
+push this 0
+call deAlloc 1
+push constant 0
+return
+label SquareGame.moveSquare
+pop pointer 0
+push this 1
+not
+if-goto SquareGame_moveSquare_L1
+push this 0
+call square.moveUp 1
+label SquareGame_moveSquare_L1
+push this 1
+not
+if-goto SquareGame_moveSquare_L2
+push this 0
+call square.moveDown 1
+label SquareGame_moveSquare_L2
+push this 1
+not
+if-goto SquareGame_moveSquare_L3
+push this 0
+call square.moveLeft 1
+label SquareGame_moveSquare_L3
+push this 1
+not
+if-goto SquareGame_moveSquare_L4
+push this 0
+call square.moveRight 1
+label SquareGame_moveSquare_L4
+push this 1
+call wait 1
+push constant 0
+return
+label SquareGame.run
+pop pointer 0
+push local 0
+pop local 1
+label SquareGame_run_L1
+push local 1
+not
+if-goto SquareGame_run_L2
+label SquareGame_run_L3
+push local 0
+not
+if-goto SquareGame_run_L4
+push local 0
+pop local 0
+call moveSquare 0
+goto SquareGame_run_L3
+label SquareGame_run_L4
+push local 0
+not
+if-goto SquareGame_run_L5
+push local 1
+pop local 1
+label SquareGame_run_L5
+push local 0
+not
+if-goto SquareGame_run_L6
+push this 0
+call square.decSize 1
+label SquareGame_run_L6
+push local 0
+not
+if-goto SquareGame_run_L7
+push this 0
+call square.incSize 1
+label SquareGame_run_L7
+push local 0
+not
+if-goto SquareGame_run_L8
+push local 1
+pop this 1
+label SquareGame_run_L8
+push local 0
+not
+if-goto SquareGame_run_L9
+push local 0
+pop this 1
+label SquareGame_run_L9
+push local 0
+not
+if-goto SquareGame_run_L10
+push this 0
+pop this 1
+label SquareGame_run_L10
+push local 0
+not
+if-goto SquareGame_run_L11
+push this 1
+pop this 1
+label SquareGame_run_L11
+label SquareGame_run_L12
+push local 0
+not
+if-goto SquareGame_run_L13
+push local 0
+pop local 0
+call moveSquare 0
+goto SquareGame_run_L12
+label SquareGame_run_L13
+goto SquareGame_run_L1
+label SquareGame_run_L2
+push constant 0
+return

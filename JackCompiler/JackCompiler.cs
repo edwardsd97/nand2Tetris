@@ -1223,7 +1223,7 @@ class VMWriter : Writer
         WriteLine("goto " + label);
     }
 
-    public void WriteIf(string label)
+    public void WriteIfGoto(string label)
     {
         // if-goto
         WriteLine("if-goto " + label);
@@ -1248,6 +1248,8 @@ class CompilationEngine
     List<GrammarWriter> mGrammarWriters = new List<GrammarWriter>();
     VMWriter mVMWriter;
     string mClassName;
+    string mFuncName;
+    int mFuncLabel;
 
     public CompilationEngine(Tokenizer tokens, string baseOutFile)
     {
@@ -1544,6 +1546,12 @@ class CompilationEngine
         }
     }
 
+    public string NewFuncFlowLabel()
+    {
+        string result = mClassName + "_" + mFuncName + "_L" + ++mFuncLabel;
+        return result;
+    }
+
     public void CompileClass()
     {
         // class: 'class' className '{' classVarDec* subroutineDec* '}'
@@ -1618,8 +1626,7 @@ class CompilationEngine
                 Error("Return type unrecognized '" + funcReturnType.GetTokenString() + "'");
             }
 
-            string funcName;
-            ValidateTokenAdvance(Token.Type.IDENTIFIER, out funcName);
+            ValidateTokenAdvance(Token.Type.IDENTIFIER, out mFuncName);
 
             SymbolTable.ScopePush("function");
 
@@ -1630,7 +1637,8 @@ class CompilationEngine
             ValidateTokenAdvance(')');
 
             // Compile function beginning
-            mVMWriter.WriteLabel(mClassName + "." + funcName);
+            mFuncLabel = 0;
+            mVMWriter.WriteLabel(mClassName + "." + mFuncName);
             if (funcCallType == Token.Keyword.CONSTRUCTOR || funcCallType == Token.Keyword.METHOD)
             {
                 if (funcCallType == Token.Keyword.CONSTRUCTOR)
@@ -1847,12 +1855,79 @@ class CompilationEngine
 
     public void CompileStatementIf()
     {
-        // FIXME
+        // ifStatement: 'if' '(' expression ')' '{' statements '}' ('else' '{' statements '}')?
+
+        ValidateTokenAdvance(Token.Keyword.IF);
+        ValidateTokenAdvance('(');
+
+        // invert the expression to make the jumps simpler
+        CompileExpression();
+        mVMWriter.WriteArithmetic(VMWriter.Command.NOT);
+
+        ValidateTokenAdvance(')');
+
+        string label1 = NewFuncFlowLabel();
+        string label2 = null;
+
+        mVMWriter.WriteIfGoto( label1 );
+
+        ValidateTokenAdvance('{');
+
+        CompileStatements();
+
+        ValidateTokenAdvance('}');
+
+        if (mTokens.Get().keyword == Token.Keyword.ELSE)
+        {
+            label2 = NewFuncFlowLabel();
+            mVMWriter.WriteGoto(label2);
+        }
+
+        mVMWriter.WriteLabel(label1);
+
+        if (mTokens.Get().keyword == Token.Keyword.ELSE)
+        {
+            mTokens.Advance();
+
+            ValidateTokenAdvance('{');
+
+            CompileStatements();
+
+            ValidateTokenAdvance('}');
+
+            mVMWriter.WriteLabel(label2);
+        }
     }
 
     public void CompileStatementWhile()
     {
-        // FIXME
+        // whileStatement: 'while' '(' expression ')' '{' statements '}'
+
+        ValidateTokenAdvance(Token.Keyword.WHILE);
+
+        string label1 = NewFuncFlowLabel();
+        string label2 = NewFuncFlowLabel();
+
+        mVMWriter.WriteLabel(label1);
+
+        // invert the expression to make the jumps simpler
+        ValidateTokenAdvance('(');
+        CompileExpression();
+        mVMWriter.WriteArithmetic(VMWriter.Command.NOT);
+        ValidateTokenAdvance(')');
+
+        mVMWriter.WriteIfGoto(label2);
+
+        ValidateTokenAdvance('{');
+
+        CompileStatements();
+
+        ValidateTokenAdvance('}');
+
+        mVMWriter.WriteGoto(label1);
+
+        mVMWriter.WriteLabel(label2);
+
     }
 
     public void CompileStatementReturn()
@@ -1871,12 +1946,13 @@ class CompilationEngine
         else
         {
             CompileExpression();
+            ValidateTokenAdvance(';');
         }
 
         mVMWriter.WriteReturn();
     }
 
-    public void CompileExpression()
+    public bool CompileExpression()
     {
         // expression: term (op term)*
         // op: '+'|'-'|'*'|'/'|'&'|'|'|'<'|'>'|'='
@@ -1911,7 +1987,7 @@ class CompilationEngine
             {
                 mVMWriter.WritePush(VMWriter.Segment.CONST, int.Parse(token.identifier));
                 mTokens.Advance();
-                return;
+                return true;
             }
 
             // if exp is a variable var:
@@ -1920,7 +1996,29 @@ class CompilationEngine
             {
                 mVMWriter.WritePush(SymbolTable.SegmentOf(token.identifier), SymbolTable.OffsetOf(token.identifier));
                 mTokens.Advance();
-                return;
+                return true;
+            }
+        }
+
+        if (token.type == Token.Type.KEYWORD)
+        {
+            if (token.keyword == Token.Keyword.TRUE)
+            {
+                mVMWriter.WritePush(VMWriter.Segment.CONST, -1);
+                mTokens.Advance();
+                return true;
+            }
+            else if (token.keyword == Token.Keyword.FALSE || token.keyword == Token.Keyword.NULL)
+            {
+                mVMWriter.WritePush(VMWriter.Segment.CONST, 0);
+                mTokens.Advance();
+                return true;
+            }
+            else if (token.keyword == Token.Keyword.THIS)
+            {
+                mVMWriter.WritePush(VMWriter.Segment.POINTER, 0);
+                mTokens.Advance();
+                return true;
             }
         }
 
@@ -1938,16 +2036,34 @@ class CompilationEngine
         // if exp is "f(exp1, exp2, ..., expN )"
         //   N = CompileExpressionList()
         //   call f N
+
+        return false;
     }
 
     public int CompileExpressionList()
     {
         // expressionList: ( expression (',' expression)* )?
+        int expressions = 0;
 
-        // FIXME
+        while ( true )
+        {
+            if (CompileExpression())
+            {
+                expressions++;
+            }
+
+            if (mTokens.Get().symbol == ',')
+            {
+                mTokens.Advance();
+                continue;
+            }
+
+            if (mTokens.Get().symbol == ')')
+                break;
+        }
 
         // return the number of expressions encountered
-        return 0;
+        return expressions;
     }
 
 }
