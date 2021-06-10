@@ -1,0 +1,3 @@
+label PongGame.new
+call Memory.alloc 27
+pop pointer 0

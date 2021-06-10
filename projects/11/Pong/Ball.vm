@@ -1,0 +1,4 @@
+label Ball.new
+call Memory.alloc 15
+pop pointer 0
+pop this 1

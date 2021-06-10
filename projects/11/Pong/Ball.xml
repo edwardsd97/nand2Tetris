@@ -100,9 +100,9 @@
 <identifier> y </identifier>
 <symbol> = </symbol>
 <expression>
-<term>
-<identifier> Ay </identifier>
-</term>
+  <term>
+    <identifier> Ay </identifier>
+  </term>
 </expression>
 <symbol> ; </symbol>
 </letStatement>
@@ -111,9 +111,9 @@
 <identifier> leftWall </identifier>
 <symbol> = </symbol>
 <expression>
-<term>
-<identifier> AleftWall </identifier>
-</term>
+  <term>
+    <identifier> AleftWall </identifier>
+  </term>
 </expression>
 <symbol> ; </symbol>
 </letStatement>
@@ -122,9 +122,9 @@
 <identifier> rightWall </identifier>
 <symbol> = </symbol>
 <expression>
-<term>
-<identifier> ArightWall </identifier>
-</term>
+  <term>
+    <identifier> ArightWall </identifier>
+  </term>
 <symbol> - </symbol>
 <term>
 <integerConstant> 6 </integerConstant>
@@ -148,13 +148,13 @@
 <identifier> bottomWall </identifier>
 <symbol> = </symbol>
 <expression>
-<term>
-<identifier> AbottomWall </identifier>
-</term>
-<symbol> - </symbol>
-<term>
-<integerConstant> 6 </integerConstant>
-</term>
+  <term>
+    <identifier> AbottomWall </identifier>
+  </term>
+  <symbol> - </symbol>
+  <term>
+    <integerConstant> 6 </integerConstant>
+  </term>
 </expression>
 <symbol> ; </symbol>
 </letStatement>

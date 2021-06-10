@@ -198,15 +198,33 @@ class SymbolTable
         mScopes[mScopes.Count - 1].mSymbols.Add(varName, newVar);
     }
 
+    public static bool Exists(string varName)
+    {
+        // Walk backwards from most recently added scope backward to oldest looking for the symbol
+        int iScope = mScopes.Count - 1;
+
+        while ( iScope >= 0)
+        {
+            Symbol result = null;
+            if ( varName != null && mScopes[iScope].mSymbols.TryGetValue(varName, out result))
+                return true;
+            iScope--;
+        }
+
+        return false;
+    }
+
     public static Symbol Find( string varName )
     {
         // Walk backwards from most recently added scope backward to oldest looking for the symbol
         Symbol result = null;
         int iScope = mScopes.Count - 1;
 
-        while (result == null && iScope >= 0)
+        while (iScope >= 0)
         {
-            mScopes[iScope].mSymbols.TryGetValue(varName, out result);
+            if (varName != null && mScopes[iScope].mSymbols.TryGetValue(varName, out result))
+                return result;
+
             iScope--;
         }
 
@@ -233,8 +251,46 @@ class SymbolTable
     {
         Symbol symbol = SymbolTable.Find(varName);
         if (symbol != null)
+        {
             return symbol.mOffset;
+        }
         return 0;
+    }
+
+    public static VMWriter.Segment SegmentOf(string varName)
+    {
+        Symbol symbol = SymbolTable.Find(varName);
+        if (symbol != null)
+        {
+            switch (symbol.mKind)
+            {
+                case Kind.ARG: return VMWriter.Segment.ARG;
+                case Kind.FIELD: return VMWriter.Segment.THIS;
+                case Kind.STATIC: return VMWriter.Segment.STATIC;
+                case Kind.VAR: return VMWriter.Segment.LOCAL;
+            }
+        }
+
+        return VMWriter.Segment.INVALID;
+    }
+
+    public static int KindSize( Kind kind )
+    {
+        int result = 0;
+
+        for( int iScope = 0; iScope < mScopes.Count; iScope++ )
+        {
+            foreach ( Symbol symbol in mScopes[iScope].mSymbols.Values )
+            {
+                if (symbol.mKind == kind)
+                {
+                    // in Jack all symbols are 1 word and size is measured in words
+                    result++;
+                }
+            }
+        }
+
+        return result;
     }
 }
 
@@ -263,6 +319,7 @@ class Token
     private static Dictionary<Keyword, string> keywordToStr;
     private static Dictionary<Type, string> typeToStr;
     private static Dictionary<char, string> symbols;
+    private static Dictionary<char, string> ops;
 
     protected static void InitIfNeeded()
     {
@@ -316,6 +373,14 @@ class Token
         symbols.Add('=', "="); symbols.Add('~', "~");
         symbols.Add('<', "&lt;"); symbols.Add('>', "&gt;");
 
+        // op: '+' | '-' | '*' | '/' | '&' | '|' | '<' | '>' | '='
+        ops = new Dictionary<char, string>();
+        ops.Add('+', "+"); ops.Add('-', "-");
+        ops.Add('*', "*"); ops.Add('/', "/");
+        ops.Add('&', "&amp;"); ops.Add('|', "|");
+        ops.Add('=', "="); ops.Add('~', "~");
+        ops.Add('<', "&lt;"); ops.Add('>', "&gt;");
+
         Token.mInitialized = true;
     }
 
@@ -365,6 +430,23 @@ class Token
         }
 
         return false;
+    }
+
+    public static bool IsOp(char c)
+    {
+        InitIfNeeded();
+        string symbolStr;
+        if (ops.TryGetValue(c, out symbolStr))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    public static bool IsUnaryOp(char c)
+    {
+        return c == '~' || c == '-';
     }
 
     public static string SymbolString(char c)
@@ -890,9 +972,9 @@ class Grammar
         // expressionParenth: '(' expression ')
         "expressionParenth", Enclose.NEVER, '(', "expression", ')', 0,
 
-        // term: 
+        // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
         "term", Enclose.NOT_EMPTY, Gram.OR, 8, "expressionParenth", "unaryTerm", Token.Type.STRING_CONST, Token.Type.INT_CONST, "keywordConstant", "subroutineCall", "arrayValue", Token.Type.IDENTIFIER, 0,
-
+        
         // unaryTerm: unaryOp term
         "unaryTerm", Enclose.NEVER, "unaryOp", "term", 0,
 
@@ -1052,7 +1134,7 @@ class VMWriter : Writer
 {
     public enum Segment
     {
-        CONST, ARG, LOCAL, STATIC, THIS, THAT, POINTER, TEMP
+        INVALID, CONST, ARG, LOCAL, STATIC, THIS, THAT, POINTER, TEMP
     }
 
     public enum Command
@@ -1099,6 +1181,12 @@ class VMWriter : Writer
     {
         // push segment int
         WriteLine("push " + SegmentString(segment) + " " + index);
+    }
+
+    public void WritePop(Segment segment, int index)
+    {
+        // push segment int
+        WriteLine("pop " + SegmentString(segment) + " " + index);
     }
 
     public void WriteArithmetic(Command command)
@@ -1174,7 +1262,7 @@ class CompilationEngine
         Console.WriteLine("ERROR: Line< " + token.lineNumber + " > Char< " + token.lineCharacter + " > " + msg);
     }
 
-    public void WritersPreGrammarEntry( Grammar.Node nodeObj )
+    public void WritersPreGrammarEntry(Grammar.Node nodeObj)
     {
         Tokenizer.State state = mTokens.StateGet();
         foreach (GrammarWriter writer in mGrammarWriters)
@@ -1204,7 +1292,7 @@ class CompilationEngine
         }
     }
 
-    public bool CompileGrammar(string nodeName, bool optional = false, bool canWrite = true )
+    public bool CompileGrammar(string nodeName, bool optional = false, bool canWrite = true)
     {
         int nodeStep = 0;
 
@@ -1224,7 +1312,7 @@ class CompilationEngine
 
         WritersPreGrammarEntry(nodeObj);
 
-        bool result = CompileGrammar(nodeName, nodeObj, nodeStep, optional, canWrite );
+        bool result = CompileGrammar(nodeName, nodeObj, nodeStep, optional, canWrite);
 
         WritersPostGrammarEntry(nodeObj);
 
@@ -1238,7 +1326,7 @@ class CompilationEngine
         int readAheadNode = -1;
         Tokenizer.State tokenStateRestore = null;
 
-        for(int nodeStep = nodeStart; nodeStep < nodeObj.Count && !done; nodeStep++ )
+        for (int nodeStep = nodeStart; nodeStep < nodeObj.Count && !done; nodeStep++)
         {
             Token token = mTokens.Get();
 
@@ -1362,13 +1450,13 @@ class CompilationEngine
                 }
             }
 
-            if (!done && earlyTerminate > 0 && ( nodeStep + 1 ) >= earlyTerminate)
+            if (!done && earlyTerminate > 0 && (nodeStep + 1) >= earlyTerminate)
             {
                 // terminate
                 done = true;
             }
 
-            if (readAheadNode > 0 && ( nodeStep + 1 ) >= readAheadNode && tokenStateRestore != null )
+            if (readAheadNode > 0 && (nodeStep + 1) >= readAheadNode && tokenStateRestore != null)
             {
                 // Rewind and write it for real now
                 mTokens.StateSet(tokenStateRestore);
@@ -1388,7 +1476,7 @@ class CompilationEngine
         return ValidateTokenAdvance(tokenCheck, out dontCare);
     }
 
-    public Token ValidateTokenAdvance( object tokenCheck, out string tokenString )
+    public Token ValidateTokenAdvance(object tokenCheck, out string tokenString)
     {
         Token token = mTokens.Get();
 
@@ -1398,7 +1486,7 @@ class CompilationEngine
 
         System.Type type = tokenCheck.GetType();
 
-        if ( type == typeof(Token.Type) && token.type != (Token.Type)tokenCheck)
+        if (type == typeof(Token.Type) && token.type != (Token.Type)tokenCheck)
         {
             error = "Expected " + tokenCheck.ToString();
         }
@@ -1455,7 +1543,7 @@ class CompilationEngine
             // continue with classVarDec
         }
 
-        while ( CompileSubroutineDec() )
+        while (CompileSubroutineDec())
         {
             // continue with subroutineDec
         }
@@ -1482,7 +1570,7 @@ class CompilationEngine
                 mTokens.Advance();
 
                 string varName;
-                ValidateTokenAdvance(Token.Type.IDENTIFIER, out varName );
+                ValidateTokenAdvance(Token.Type.IDENTIFIER, out varName);
 
                 SymbolTable.Define(varName, varType, varKind);
 
@@ -1525,6 +1613,20 @@ class CompilationEngine
 
             ValidateTokenAdvance(')');
 
+            // Compile function beginning
+            mVMWriter.WriteLabel(mClassName + "." + funcName);
+            if (funcCallType == Token.Keyword.CONSTRUCTOR || funcCallType == Token.Keyword.METHOD)
+            {
+                if (funcCallType == Token.Keyword.CONSTRUCTOR)
+                {
+                    // Alloc "this" ( and it is pushed onto the stack )
+                    mVMWriter.WriteCall("Memory.alloc", SymbolTable.KindSize(SymbolTable.Kind.FIELD));
+                }
+
+                // pop "this" off the stack
+                mVMWriter.WritePop(VMWriter.Segment.POINTER, 0);
+            }
+
             CompileSubroutineBody();
 
             SymbolTable.ScopePop();
@@ -1535,13 +1637,46 @@ class CompilationEngine
         return false;
     }
 
+    public void CompileSubroutineCall()
+    {
+        // subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')
+        // expressionList: ( expression (',' expression)* )?
+
+        string subroutineName = null;
+        string objectName = null;
+
+        ValidateTokenAdvance(Token.Type.IDENTIFIER, out subroutineName);
+        if (mTokens.Get().symbol == '.')
+        {
+            objectName = subroutineName;
+            mTokens.Advance();
+            ValidateTokenAdvance(Token.Type.IDENTIFIER, out subroutineName);
+        }
+
+        ValidateTokenAdvance('(');
+
+        int argCount = CompileExpressionList();
+
+        ValidateTokenAdvance(')');
+
+        if (SymbolTable.Exists(objectName))
+        {
+            mVMWriter.WritePush(SymbolTable.SegmentOf(objectName), SymbolTable.OffsetOf(objectName));
+            mVMWriter.WriteCall(objectName + "." + subroutineName, argCount + 1);
+        }
+        else
+        {
+            mVMWriter.WriteCall(subroutineName, argCount);
+        }
+    }
+
     public void CompileParameterList()
     {
         // compiles a parameter list within () without dealing with the ()s
         // can be completely empty
 
         // parameterList: ( type varName (',' type varName)* )?
-        while ( ValidateVarType( mTokens.Get() ) )
+        while (ValidateVarType(mTokens.Get()))
         {
             // handle argument
             Token varType = mTokens.GetAndAdvance();
@@ -1581,7 +1716,7 @@ class CompilationEngine
 
         Token token = mTokens.Get();
 
-        if ( token.keyword == Token.Keyword.VAR )
+        if (token.keyword == Token.Keyword.VAR)
         {
             mTokens.Advance();
 
@@ -1594,7 +1729,7 @@ class CompilationEngine
                 string varName;
                 ValidateTokenAdvance(Token.Type.IDENTIFIER, out varName);
 
-                SymbolTable.Define(varName, varType, SymbolTable.Kind.VAR );
+                SymbolTable.Define(varName, varType, SymbolTable.Kind.VAR);
 
             } while (mTokens.Get().symbol == ',');
 
@@ -1613,7 +1748,7 @@ class CompilationEngine
         // statements: statement*
         // statement: letStatement | ifStatement | whileStatement | doStatement | returnStatement
 
-        Token.Keyword statementType = mTokens.GetAndAdvance().keyword;
+        Token.Keyword statementType = mTokens.Get().keyword;
 
         switch (statementType)
         {
@@ -1640,7 +1775,57 @@ class CompilationEngine
 
     public void CompileStatementLet()
     {
+        // letStatement: 'let' varName ('[' expression ']')? '=' expression ';'
 
+        ValidateTokenAdvance(Token.Keyword.LET);
+
+        string varName;
+        bool isArray = false;
+        ValidateTokenAdvance(Token.Type.IDENTIFIER, out varName);
+
+        if (mTokens.Get().symbol == '[')
+        {
+            isArray = true;
+
+            // Push the array indexed address onto stack
+            mVMWriter.WritePush(SymbolTable.SegmentOf(varName), SymbolTable.OffsetOf(varName));
+            ValidateTokenAdvance('[');
+            CompileExpression();
+            ValidateTokenAdvance(']');
+            mVMWriter.WriteArithmetic(VMWriter.Command.ADD);
+        }
+
+        ValidateTokenAdvance('=');
+
+        CompileExpression(); // push value onto stack
+
+        if (isArray)
+        {
+            // requires use of the top 2 values on the stack
+            //   value
+            //   address
+            mVMWriter.WritePop(VMWriter.Segment.TEMP, 0);
+            mVMWriter.WritePop(VMWriter.Segment.POINTER, 1);
+            mVMWriter.WritePush(VMWriter.Segment.TEMP, 0);
+            mVMWriter.WritePop(VMWriter.Segment.THAT, 0);
+        }
+        else
+        {
+            mVMWriter.WritePop(SymbolTable.SegmentOf(varName), SymbolTable.OffsetOf(varName));
+        }
+
+        ValidateTokenAdvance(';');
+    }
+
+    public void CompileStatementDo()
+    {
+        // doStatement: 'do' subroutineCall ';'
+
+        ValidateTokenAdvance(Token.Keyword.DO);
+
+        CompileSubroutineCall();
+
+        ValidateTokenAdvance(';');
     }
 
     public void CompileStatementIf()
@@ -1653,39 +1838,96 @@ class CompilationEngine
 
     }
 
-    public void CompileStatementDo()
-    {
-
-    }
-
     public void CompileStatementReturn()
     {
+        // returnStatement: 'return' expression? ';'
 
+        ValidateTokenAdvance(Token.Keyword.RETURN);
+
+        Token token = mTokens.Get();
+
+        if (token.symbol == ';')
+        {
+            mVMWriter.WritePush(VMWriter.Segment.CONST, 0);
+            mTokens.Advance();
+        }
+        else
+        {
+            CompileExpression();
+        }
+
+        mVMWriter.WriteReturn();
     }
 
     public void CompileExpression()
     {
-        // if exp is a number n:
-        //   push constant n
+        // expression: term (op term)*
+        // op: '+'|'-'|'*'|'/'|'&'|'|'|'<'|'>'|'='
+        // opTerm: op term
+        // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
+        // expressionParenth: '(' expression ')
+        // unaryTerm: ('-'|'~') term
+        // keywordConstant: 'true'|'false'|'null'|'this'
+        // arrayValue: varName '[' expression ']'
+        // subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')
+        // expressionList: ( expression (',' expression)* )?
 
-        // if exp is a variable var:
-        //   push segment i
+        /*
+        <expression>
+            <term>
+                <identifier> AbottomWall </identifier>
+            </term>
+
+            <symbol> - </symbol>
+            <term>
+                <integerConstant> 6 </integerConstant>
+            </term>
+        </expression>
+        */
+        Token token = mTokens.Get();
+
+        if (token.type == Token.Type.IDENTIFIER)
+        {
+            // if exp is a number n:
+            //   push constant n
+            if (token.identifier[0] >= '0' && token.identifier[0] <= 9)
+            {
+                mVMWriter.WritePush(VMWriter.Segment.CONST, int.Parse(token.identifier));
+                mTokens.Advance();
+                return;
+            }
+
+            // if exp is a variable var:
+            //   push segment i
+            if (SymbolTable.Exists(token.identifier))
+            {
+                mVMWriter.WritePush(SymbolTable.SegmentOf(token.identifier), SymbolTable.OffsetOf(token.identifier));
+                return;
+            }
+        }
 
         // if exp is "exp1 op exp2":
         //   CompileExpression( exp1 );
         //   CompileExpression( exp2 );
-        //   op command (add, sub, call Math.multiply, ... )
+        //   op command (add, sub, ... )
 
         // if exp is "op exp"
         //   CompileExpression( exp )
-        //   op command (add, sub, call Math.multiply, ... )
+        //   op command (add, sub, ... )
 
         // if exp is "f(exp1, exp2, ..., expN )"
-        //   CompileExpression( exp1 )
-        //   CompileExpression( exp2 )
-        //    ...
-        //   CompileExpression( expN )
+        //   N = CompileExpressionList()
         //   call f N
     }
-}
 
+    public int CompileExpressionList()
+    {
+        // expressionList: ( expression (',' expression)* )?
+
+        // FIXME
+
+        // return the number of expressions encountered
+        return 0;
+    }
+
+}

@@ -1,0 +1,3 @@
+label Bat.new
+call Memory.alloc 20
+pop pointer 0
