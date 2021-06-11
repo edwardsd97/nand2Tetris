@@ -10,6 +10,7 @@ class JackCompiler
     static public bool mDumpTokenFile = false;
     static public bool mDumpXmlFile = false;
     static public bool mDumpVMFile = true;
+    static public Dictionary<string, Tokenizer> mTokenizerDic = new Dictionary<string, Tokenizer>();
 
     static void Main(string[] args)
     {
@@ -54,15 +55,22 @@ class JackCompiler
         // Setup global scope symbol table
         SymbolTable.ScopePush( "global" );
 
+        // Preprocess the files
+        for (int i = 0; i < paths.Count; i++)
+        {
+            Console.WriteLine("Preprocessing... " + (string)paths[i]);
+            PreProcessFile((string)paths[i]);
+        }
+
         // Process the files
         for (int i = 0; i < paths.Count; i++)
         {
             Console.WriteLine("Compiling... " + (string)paths[i]);
-            ProcessFile((string)paths[i]);
+            CompileFile((string)paths[i]);
         }
     }
 
-    static void ProcessFile(string path)
+    static void PreProcessFile(string path)
     {
         Tokenizer tokenizer = new Tokenizer(path);
 
@@ -88,12 +96,28 @@ class JackCompiler
             tokenizer.Reset();
         }
 
-        CompilationEngine compiler = new CompilationEngine(tokenizer, GetOutBasefile(path));
+        mTokenizerDic.Add(path, tokenizer);
 
-        // Compile the tokens into output file
-        compiler.CompileGrammar( "class" );
-        compiler.Reset();
-        compiler.CompileClass();
+        CompilationEngine compiler = new CompilationEngine(tokenizer);
+        compiler.CompilePrePass();
+    }
+
+    static void CompileFile(string path)
+    {
+        Tokenizer tokenizer;
+        if (mTokenizerDic.TryGetValue(path, out tokenizer))
+        {
+            CompilationEngine compiler = new CompilationEngine(tokenizer, GetOutBasefile(path));
+
+            // Compile the tokens into output file
+            compiler.CompileGrammar("class");
+            compiler.Reset();
+            compiler.CompileClass();
+        }
+        else
+        {
+            Console.WriteLine("Tokens not found for " + path);
+        }
     }
 
     public static string GetOutTokenfile(string file)
@@ -152,9 +176,11 @@ class SymbolTable
     {
         public Dictionary<string, Symbol> mSymbols = new Dictionary<string, Symbol>();
         public string mName;
-        public SymbolScope(string name)
+        public bool mMethod;
+        public SymbolScope(string name, bool isMethod = false)
         {
             mName = name;
+            mMethod = isMethod;
         }
     };
 
@@ -163,9 +189,9 @@ class SymbolTable
         NONE, GLOBAL, STATIC, FIELD, ARG, VAR
     }
 
-    public static void ScopePush( string name )
+    public static void ScopePush( string name, bool isMethod = false )
     {
-        SymbolScope scope = new SymbolScope(name);
+        SymbolScope scope = new SymbolScope(name, isMethod);
         mScopes.Add(scope);
     }
 
@@ -232,6 +258,22 @@ class SymbolTable
         return result;
     }
 
+    public static bool CompilingMethod()
+    {
+        // Walk backwards from most recently added scope backward to oldest looking for method
+        int iScope = mScopes.Count - 1;
+
+        while (iScope >= 0)
+        {
+            if ( mScopes[iScope].mMethod )
+                return true;
+
+            iScope--;
+        }
+
+        return false;
+    }
+
     public static Kind KindOf(string varName)
     {
         Symbol symbol = SymbolTable.Find( varName );
@@ -240,11 +282,11 @@ class SymbolTable
         return Kind.NONE;
     }
 
-    public static Token TypeOf(string varName)
+    public static string TypeOf(string varName)
     {
         Symbol symbol = SymbolTable.Find(varName);
         if (symbol != null)
-            return symbol.mType;
+            return symbol.mType.GetTokenString();
         return null;
     }
 
@@ -253,6 +295,8 @@ class SymbolTable
         Symbol symbol = SymbolTable.Find(varName);
         if (symbol != null)
         {
+            if ( SymbolTable.CompilingMethod() && symbol.mKind == Kind.ARG )
+                return symbol.mOffset + 1; // skip over argument 0 (this)
             return symbol.mOffset;
         }
         return 0;
@@ -603,7 +647,7 @@ class Tokenizer : IEnumerable
         if (mLineStr.Length > 0 && mLineChar < mLineStr.Length)
             return true;
 
-        return !mFile.EndOfStream;
+        return mFile != null && !mFile.EndOfStream;
     }
 
     public IEnumerator GetEnumerator()
@@ -1251,6 +1295,9 @@ class VMWriter : Writer
 
 class CompilationEngine
 {
+    static public Dictionary<string, bool> mMethods = new Dictionary<string, bool>();
+    static public Dictionary<string, int> mStrings = new Dictionary<string, int>();
+
     Tokenizer mTokens;
     List<GrammarWriter> mGrammarWriters = new List<GrammarWriter>();
     VMWriter mVMWriter;
@@ -1273,6 +1320,42 @@ class CompilationEngine
         {
             mGrammarWriters.Add(new XMLWriter(baseOutFile + ".xml"));
         }
+    }
+
+    public CompilationEngine(Tokenizer tokens)
+    {
+        mTokens = tokens;
+        Reset();
+    }
+
+    public void CompilePrePass()
+    {
+        ValidateTokenAdvance(Token.Keyword.CLASS);
+        ValidateTokenAdvance(Token.Type.IDENTIFIER, out mClassName);
+
+        Token token = mTokens.Advance();
+
+        while ( token != null )
+        {
+            if (token.type == Token.Type.STRING_CONST)
+            {
+                // FIXME - string constants need to be allocated and stored in a table with memory addresses starting with first static address below the stack downward.
+                // 255, 254, 253, ... downward 
+                mStrings.Add(token.stringVal, 255 - mStrings.Count);
+            }
+            else if (token.keyword == Token.Keyword.METHOD)
+            {
+                // Register which functions are methods so that we now how to call them when they are encountered while compiling
+                mTokens.Advance();
+                mTokens.Advance();
+
+                mMethods.Add(mClassName + "." + mTokens.Get().identifier, true );
+            }
+
+            token = mTokens.Advance();
+        }
+
+        mTokens.Reset();
     }
 
     public void Reset()
@@ -1640,13 +1723,20 @@ class CompilationEngine
 
             ValidateTokenAdvance(Token.Type.IDENTIFIER, out mFuncName);
 
-            SymbolTable.ScopePush("function");
+            SymbolTable.ScopePush( "function", funcCallType == Token.Keyword.METHOD );
 
             ValidateTokenAdvance('(');
 
             CompileParameterList();
 
             ValidateTokenAdvance(')');
+
+            ValidateTokenAdvance('{');
+
+            while (CompileVarDec())
+            {
+                // keep going with more varDec
+            }
 
             // Compile function beginning
             mFuncLabel = 0;
@@ -1656,14 +1746,23 @@ class CompilationEngine
                 if (funcCallType == Token.Keyword.CONSTRUCTOR)
                 {
                     // Alloc "this" ( and it is pushed onto the stack )
-                    mVMWriter.WriteCall("Memory.alloc", SymbolTable.KindSize(SymbolTable.Kind.FIELD));
+                    mVMWriter.WritePush(VMWriter.Segment.CONST, SymbolTable.KindSize(SymbolTable.Kind.FIELD));
+                    mVMWriter.WriteCall("Memory.alloc", 1);
+                }
+
+                if ( funcCallType == Token.Keyword.METHOD)
+                {
+                    // grab argument 0 (this) and push it on the stack
+                    mVMWriter.WritePush(VMWriter.Segment.ARG, 0);
                 }
 
                 // pop "this" off the stack
                 mVMWriter.WritePop(VMWriter.Segment.POINTER, 0);
             }
 
-            CompileSubroutineBody();
+            CompileStatements();
+
+            ValidateTokenAdvance('}');
 
             SymbolTable.ScopePop();
 
@@ -1689,13 +1788,25 @@ class CompilationEngine
             mTokens.Advance();
             ValidateTokenAdvance(Token.Type.IDENTIFIER, out subroutineName);
         }
+        else
+        {
+            // all calls without an object specified must be assumed to be the current class object
+            objectName = mClassName;
+        }
 
         ValidateTokenAdvance('(');
 
-        if ( SymbolTable.Exists(objectName) )
+        // Only for functions that are methods, we need to push the this pointer as first argument
+        if ( objectName == mClassName && CompilationEngine.mMethods.ContainsKey(objectName + "." + subroutineName) )
         {
             // push pointer to object (this for object)
-            mVMWriter.WritePush(SymbolTable.SegmentOf(objectName), SymbolTable.OffsetOf(objectName));
+            mVMWriter.WritePush(VMWriter.Segment.POINTER, 0); // this
+            argCount = argCount + 1;
+        }
+        else if ( SymbolTable.Exists(objectName) && CompilationEngine.mMethods.ContainsKey( SymbolTable.TypeOf( objectName ) + "." + subroutineName ) )
+        {
+            // push pointer to object (this for object)
+            mVMWriter.WritePush(SymbolTable.SegmentOf(objectName), SymbolTable.OffsetOf(objectName)); // object pointer
             argCount = argCount + 1;
         }
 
@@ -1705,7 +1816,10 @@ class CompilationEngine
 
         if ( objectName != null )
         {
-            mVMWriter.WriteCall(objectName + "." + subroutineName, argCount);
+            if ( SymbolTable.Exists(objectName) )   
+                mVMWriter.WriteCall(SymbolTable.TypeOf( objectName ) + "." + subroutineName, argCount);
+            else
+                mVMWriter.WriteCall(objectName + "." + subroutineName, argCount);
         }
         else
         {
@@ -1734,22 +1848,6 @@ class CompilationEngine
 
             mTokens.Advance();
         }
-    }
-
-    public void CompileSubroutineBody()
-    {
-        // compiles the statements within a subroutine
-
-        ValidateTokenAdvance('{');
-
-        while (CompileVarDec())
-        {
-            // keep going with more varDec
-        }
-
-        CompileStatements();
-
-        ValidateTokenAdvance('}');
     }
 
     public bool CompileVarDec()
@@ -1825,10 +1923,10 @@ class CompilationEngine
         {
             ValidateTokenAdvance(Token.Type.IDENTIFIER, out varName);
         }
-        mVMWriter.WritePush(SymbolTable.SegmentOf(varName), SymbolTable.OffsetOf(varName));
         ValidateTokenAdvance('[');
         CompileExpression();
         ValidateTokenAdvance(']');
+        mVMWriter.WritePush(SymbolTable.SegmentOf(varName), SymbolTable.OffsetOf(varName));
         mVMWriter.WriteArithmetic(VMWriter.Command.ADD);
     }
 
@@ -2016,14 +2114,6 @@ class CompilationEngine
         // ---------
         // expression: term (op term)*
         // op: '+'|'-'|'*'|'/'|'&'|'|'|'<'|'>'|'='
-        // opTerm: op term
-        // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
-        // expressionParenth: '(' expression ')
-        // unaryTerm: ('-'|'~') term
-        // keywordConstant: 'true'|'false'|'null'|'this'
-        // arrayValue: varName '[' expression ']'
-        // subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')
-        // expressionList: ( expression (',' expression)* )?
 
         // Pseudo:
         // --------
@@ -2046,10 +2136,48 @@ class CompilationEngine
         //   N = CompileExpressionList()
         //   call f N
 
+        bool compiledExpression = CompileTerm();
+
+        Token token = mTokens.Get();
+
+        if ( compiledExpression && Token.IsOp(token.symbol) )
+        {
+            // expression: term (op term)*
+            char op = token.symbol;
+
+            mTokens.Advance();
+            CompileExpression();
+
+            switch (op)
+            {
+                // op: '+'|'-'|'*'|'/'|'&'|'|'|'<'|'>'|'='
+                case '+': mVMWriter.WriteArithmetic(VMWriter.Command.ADD); break;
+                case '-': mVMWriter.WriteArithmetic(VMWriter.Command.SUB); break;
+                case '*': mVMWriter.WriteCall("Math.multiply", 2); break;
+                case '/': mVMWriter.WriteCall("Math.divide", 2); break;
+                case '|': mVMWriter.WriteArithmetic(VMWriter.Command.OR); break;
+                case '&': mVMWriter.WriteArithmetic(VMWriter.Command.AND); break;
+                case '<': mVMWriter.WriteArithmetic(VMWriter.Command.LT); break;
+                case '>': mVMWriter.WriteArithmetic(VMWriter.Command.GT); break;
+                case '=': mVMWriter.WriteArithmetic(VMWriter.Command.EQ); break;
+            }
+        }
+
+        return compiledExpression;
+    }
+
+    public bool CompileTerm()
+    {
+        // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
+        // expressionParenth: '(' expression ')
+        // unaryTerm: ('-'|'~') term
+        // keywordConstant: 'true'|'false'|'null'|'this'
+        // arrayValue: varName '[' expression ']'
+        // subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')
+        // expressionList: ( expression (',' expression)* )?
+
         Token token = mTokens.GetAndAdvance();
         Token tokenNext = mTokens.Get();
-        bool compiledExpression = false;
-
         mTokens.Rollback(1);
 
         if (token.symbol == '(')
@@ -2058,7 +2186,7 @@ class CompilationEngine
             ValidateTokenAdvance('(');
             CompileExpression();
             ValidateTokenAdvance(')');
-            compiledExpression = true;
+            return true;
         }
         else if (token.symbol == '~' || token.symbol == '-')
         {
@@ -2074,11 +2202,11 @@ class CompilationEngine
             {
                 mVMWriter.WriteArithmetic(VMWriter.Command.NEG);
             }
-            compiledExpression = true;
+            return true;
         }
         else if (token.type == Token.Type.INT_CONST)
         {
-            // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
+            // integer constant : e.g 723
             if (token.intVal < 0)
             {
                 // negative value
@@ -2091,79 +2219,57 @@ class CompilationEngine
                 mVMWriter.WritePush(VMWriter.Segment.CONST, token.intVal);
             }
             mTokens.Advance();
-            compiledExpression = true;
+            return true;
         }
-        else if ( token.type == Token.Type.STRING_CONST )
+        else if (token.type == Token.Type.STRING_CONST)
         {
-            // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
+            // string constant: e.g. "string constant"
             CompileStringConst();
-            compiledExpression = true;
+            return true;
         }
         else if (token.type == Token.Type.IDENTIFIER && (tokenNext.symbol == '.' || tokenNext.symbol == '('))
         {
             // subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')
             CompileSubroutineCall();
-            compiledExpression = true;
+            return true;
         }
         else if (token.type == Token.Type.IDENTIFIER && tokenNext.symbol == '[')
         {
             // arrayValue: varName '[' expression ']'
             CompileArrayValue();
-            compiledExpression = true;
+            return true;
         }
         else if (token.type == Token.Type.IDENTIFIER && SymbolTable.Exists(token.identifier))
         {
-            // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
+            // varName
             mVMWriter.WritePush(SymbolTable.SegmentOf(token.identifier), SymbolTable.OffsetOf(token.identifier));
             mTokens.Advance();
-            compiledExpression = true;
+            return true;
         }
         else if (token.type == Token.Type.KEYWORD && token.keyword == Token.Keyword.TRUE)
         {
-            // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
-            mVMWriter.WritePush(VMWriter.Segment.CONST, 1);
-            mVMWriter.WriteArithmetic(VMWriter.Command.NEG);
+            // true
+            mVMWriter.WritePush(VMWriter.Segment.CONST, 0);
+            mVMWriter.WriteArithmetic(VMWriter.Command.NOT);
             mTokens.Advance();
-            compiledExpression = true;
+            return true;
         }
-        else if (token.type == Token.Type.KEYWORD && ( token.keyword == Token.Keyword.FALSE || token.keyword == Token.Keyword.NULL ) )
+        else if (token.type == Token.Type.KEYWORD && (token.keyword == Token.Keyword.FALSE || token.keyword == Token.Keyword.NULL))
         {
-            // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
+            // false / null
             mVMWriter.WritePush(VMWriter.Segment.CONST, 0);
             mTokens.Advance();
-            compiledExpression = true;
+            return true;
         }
-        else if (token.type == Token.Type.KEYWORD && token.keyword == Token.Keyword.THIS )
+        else if (token.type == Token.Type.KEYWORD && token.keyword == Token.Keyword.THIS)
         {
-            // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
+            // this
             mVMWriter.WritePush(VMWriter.Segment.POINTER, 0);
             mTokens.Advance();
-            compiledExpression = true;
+            return true;
         }
 
-        if ( compiledExpression && Token.IsOp(mTokens.Get().symbol) )
-        {
-            // expression: term (op term)*
-            char op = mTokens.Get().symbol;
-
-            mTokens.Advance();
-            CompileExpression();
-
-            switch (op)
-            {
-                case '+': mVMWriter.WriteArithmetic(VMWriter.Command.ADD); break;
-                case '-': mVMWriter.WriteArithmetic(VMWriter.Command.SUB); break;
-                case '*': mVMWriter.WriteCall("Math.multiply", 2); break;
-                case '/': mVMWriter.WriteCall("Math.divide", 2); break;
-                case '|': mVMWriter.WriteArithmetic(VMWriter.Command.OR); break;
-                case '&': mVMWriter.WriteArithmetic(VMWriter.Command.AND); break;
-                case '<': mVMWriter.WriteArithmetic(VMWriter.Command.LT); break;
-                case '>': mVMWriter.WriteArithmetic(VMWriter.Command.GT); break;
-                case '=': mVMWriter.WriteArithmetic(VMWriter.Command.EQ); break;
-            }
-        }
-
-        return compiledExpression;
+        return false;
     }
 
     public int CompileExpressionList()

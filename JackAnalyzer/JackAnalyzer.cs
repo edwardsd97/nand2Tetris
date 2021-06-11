@@ -794,6 +794,11 @@ class CompilationEngine
         mQueueLine = new ArrayList();
     }
 
+    public CompilationEngine(JackTokenizer tokens)
+    {
+        mTokens = tokens;
+    }
+
     public void Error( string msg = "" )
     {
         // FIXME

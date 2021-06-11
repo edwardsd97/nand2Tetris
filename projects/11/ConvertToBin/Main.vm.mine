@@ -1,4 +1,4 @@
-function Main.main 1
+function Main.main 0
 push constant 8001
 push constant 16
 push constant 1
@@ -13,9 +13,9 @@ call Main.convert 1
 pop temp 0
 push constant 0
 return
-function Main.convert 3
-push constant 0
-not
+function Main.convert 0
+push constant 1
+neg
 pop local 2
 label Main_convert_L1
 push local 2
