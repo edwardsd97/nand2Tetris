@@ -2,7 +2,7 @@
   "profiles": {
     "JackCompiler": {
       "commandName": "Project",
-      "commandLineArgs": "C:\\Projects\\nand2Tetris\\projects\\11\\Square C:\\Projects\\nand2Tetris\\projects\\11\\Seven C:\\Projects\\nand2Tetris\\projects\\11\\ConvertToBin C:\\Projects\\nand2Tetris\\projects\\11\\ComplexArrays C:\\Projects\\nand2Tetris\\projects\\11\\Average C:\\Projects\\nand2Tetris\\projects\\11\\Pong"
+      "commandLineArgs": "C:\\Projects\\nand2Tetris\\projects\\11\\Square C:\\Projects\\nand2Tetris\\projects\\11\\Seven C:\\Projects\\nand2Tetris\\projects\\11\\ConvertToBin C:\\Projects\\nand2Tetris\\projects\\11\\ComplexArrays C:\\Projects\\nand2Tetris\\projects\\11\\Average"
     }
   }
 }

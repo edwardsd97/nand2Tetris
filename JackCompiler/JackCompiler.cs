@@ -1339,9 +1339,9 @@ class CompilationEngine
         {
             if (token.type == Token.Type.STRING_CONST)
             {
-                // FIXME - string constants need to be allocated and stored in a table with memory addresses starting with first static address below the stack downward.
-                // 255, 254, 253, ... downward 
-                mStrings.Add(token.stringVal, 255 - mStrings.Count);
+                // 255, 254, 253, ... downward taking static base address 16 into account
+                if ( !mStrings.ContainsKey( token.stringVal ) )
+                    mStrings.Add(token.stringVal, 255 - mStrings.Count - 16);
             }
             else if (token.keyword == Token.Keyword.METHOD)
             {
@@ -1642,7 +1642,7 @@ class CompilationEngine
         string result = mClassName + "_" + mFuncName + "_L" + ++mFuncLabel;
         return result;
     }
-
+    
     public void CompileClass()
     {
         // class: 'class' className '{' classVarDec* subroutineDec* '}'
@@ -1758,6 +1758,12 @@ class CompilationEngine
 
                 // pop "this" off the stack
                 mVMWriter.WritePop(VMWriter.Segment.POINTER, 0);
+            }
+
+            // Before starting with Main.main, inject the allocation of all the static string contants
+            if (mClassName == "Main" && mFuncName == "main")
+            {
+                CompileStaticStrings();
             }
 
             CompileStatements();
@@ -2094,18 +2100,35 @@ class CompilationEngine
 
     public void CompileStringConst()
     {
-        // FIXME - this is a HUGE memory leak allocating a string each reference - a system needs to be established when all static strings are allocated at static memory locations
-        // 255, 254, 253, ... downward 
-        string str = mTokens.Get().stringVal;
-        int strLen = str.Length;
-        mVMWriter.WritePush(VMWriter.Segment.CONST, strLen);
-        mVMWriter.WriteCall("String.new", 1);
-        for (int i = 0; i < strLen; i++)
+        string str;
+        int staticIndex;
+
+        ValidateTokenAdvance(Token.Type.STRING_CONST, out str);
+        if (CompilationEngine.mStrings.TryGetValue(str, out staticIndex))
+            mVMWriter.WritePush(VMWriter.Segment.STATIC, staticIndex);
+        else
+            Error("String not found '" + str + "'");
+    }
+
+    public void CompileStaticStrings()
+    {
+        mVMWriter.WriteLine("/* Static String Allocation (Inserted by the compiler at the beginning of Main.main) */");
+
+        foreach (string staticString in CompilationEngine.mStrings.Keys)
         {
-            mVMWriter.WritePush(VMWriter.Segment.CONST, str[i]);
-            mVMWriter.WriteCall("String.appendChar", 2);
+            int strLen = staticString.Length;
+            mVMWriter.WriteLine("// \"" + staticString + "\"");
+            mVMWriter.WritePush(VMWriter.Segment.CONST, strLen);
+            mVMWriter.WriteCall("String.new", 1);
+            for (int i = 0; i < strLen; i++)
+            {
+                mVMWriter.WritePush(VMWriter.Segment.CONST, staticString[i]);
+                mVMWriter.WriteCall("String.appendChar", 2);
+            }
+            mVMWriter.WritePop(VMWriter.Segment.STATIC, CompilationEngine.mStrings[staticString]);
         }
-        mTokens.Advance();
+
+        mVMWriter.WriteLine("/* Main.main statements begin ... */" );
     }
 
     public bool CompileExpression()
