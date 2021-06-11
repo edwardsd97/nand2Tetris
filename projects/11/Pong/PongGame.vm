@@ -1,14 +1,15 @@
-label PongGame.new
-call Memory.alloc 37
+function PongGame.new 0
+call Memory.alloc 7
 pop pointer 0
-call clearScreen 0
+call Screen.clearScreen 0
+pop temp 0
 push constant 50
 pop this 6
 push constant 230
 push constant 229
 push this 6
 push constant 7
-call new 4
+call Bat.new 4
 pop this 0
 push constant 253
 push constant 222
@@ -16,21 +17,43 @@ push constant 0
 push constant 511
 push constant 0
 push constant 229
-call new 6
+call Ball.new 6
 pop this 1
+push this 1
 push constant 400
 push constant 0
-push this 1
 call ball.setDestination 3
+pop temp 0
 push constant 0
 push constant 238
 push constant 511
 push constant 240
-call drawRectangle 4
+call Screen.drawRectangle 4
+pop temp 0
 push constant 22
 push constant 0
-call moveCursor 2
-call printString 1
+call Output.moveCursor 2
+pop temp 0
+push constant 8
+call String.new 1
+push constant 83
+call String.appendChar 2
+push constant 99
+call String.appendChar 2
+push constant 111
+call String.appendChar 2
+push constant 114
+call String.appendChar 2
+push constant 101
+call String.appendChar 2
+push constant 58
+call String.appendChar 2
+push constant 32
+call String.appendChar 2
+push constant 48
+call String.appendChar 2
+call Output.printString 1
+pop temp 0
 push constant 0
 pop this 3
 push constant 0
@@ -41,25 +64,28 @@ push constant 0
 pop this 5
 push pointer 0
 return
-label PongGame.dispose
+function PongGame.dispose 0
 pop pointer 0
 push this 0
 call bat.dispose 1
+pop temp 0
 push this 1
 call ball.dispose 1
+pop temp 0
 push pointer 0
-call deAlloc 1
+call Memory.deAlloc 1
+pop temp 0
 push constant 0
 return
-label PongGame.newInstance
-call new 0
+function PongGame.newInstance 0
+call PongGame.new 0
 pop static 0
 push constant 0
 return
-label PongGame.getInstance
+function PongGame.getInstance 0
 push static 0
 return
-label PongGame.run
+function PongGame.run 0
 pop pointer 0
 label PongGame_run_L1
 push this 3
@@ -75,13 +101,16 @@ not
 and
 not
 if-goto PongGame_run_L4
-call keyPressed 0
+call Keyboard.keyPressed 0
 pop local 0
 push this 0
 call bat.move 1
+pop temp 0
 call moveBall 0
+pop temp 0
 push constant 50
-call wait 1
+call Sys.wait 1
+pop temp 0
 goto PongGame_run_L3
 label PongGame_run_L4
 push local 0
@@ -89,9 +118,10 @@ push constant 130
 eq
 not
 if-goto PongGame_run_L5
-push constant 1
 push this 0
+push constant 1
 call bat.setDirection 2
+pop temp 0
 goto PongGame_run_L6
 label PongGame_run_L5
 push local 0
@@ -99,9 +129,10 @@ push constant 132
 eq
 not
 if-goto PongGame_run_L7
-push constant 2
 push this 0
+push constant 2
 call bat.setDirection 2
+pop temp 0
 goto PongGame_run_L8
 label PongGame_run_L7
 push local 0
@@ -109,7 +140,8 @@ push constant 140
 eq
 not
 if-goto PongGame_run_L9
-push constant -1
+push constant 1
+neg
 pop this 3
 label PongGame_run_L9
 label PongGame_run_L8
@@ -124,13 +156,16 @@ not
 and
 not
 if-goto PongGame_run_L11
-call keyPressed 0
+call Keyboard.keyPressed 0
 pop local 0
 push this 0
 call bat.move 1
+pop temp 0
 call moveBall 0
+pop temp 0
 push constant 50
-call wait 1
+call Sys.wait 1
+pop temp 0
 goto PongGame_run_L10
 label PongGame_run_L11
 goto PongGame_run_L1
@@ -140,12 +175,34 @@ not
 if-goto PongGame_run_L12
 push constant 10
 push constant 27
-call moveCursor 2
-call printString 1
+call Output.moveCursor 2
+pop temp 0
+push constant 9
+call String.new 1
+push constant 71
+call String.appendChar 2
+push constant 97
+call String.appendChar 2
+push constant 109
+call String.appendChar 2
+push constant 101
+call String.appendChar 2
+push constant 32
+call String.appendChar 2
+push constant 79
+call String.appendChar 2
+push constant 118
+call String.appendChar 2
+push constant 101
+call String.appendChar 2
+push constant 114
+call String.appendChar 2
+call Output.printString 1
+pop temp 0
 label PongGame_run_L12
 push constant 0
 return
-label PongGame.moveBall
+function PongGame.moveBall 0
 pop pointer 0
 push this 1
 call ball.move 1
@@ -220,23 +277,27 @@ push this 6
 push constant 2
 sub
 pop this 6
-push this 6
 push this 0
+push this 6
 call bat.setWidth 2
+pop temp 0
 push this 4
 push constant 1
 add
 pop this 4
 push constant 22
 push constant 7
-call moveCursor 2
+call Output.moveCursor 2
+pop temp 0
 push this 4
-call printInt 1
+call Output.printInt 1
+pop temp 0
 label PongGame_moveBall_L3
 label PongGame_moveBall_L2
-push local 0
 push this 1
+push local 0
 call ball.bounce 2
+pop temp 0
 label PongGame_moveBall_L1
 push constant 0
 return

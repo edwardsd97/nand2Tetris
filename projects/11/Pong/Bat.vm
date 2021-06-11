@@ -1,5 +1,5 @@
-label Bat.new
-call Memory.alloc 30
+function Bat.new 0
+call Memory.alloc 5
 pop pointer 0
 push argument 0
 pop this 0
@@ -12,29 +12,36 @@ pop this 3
 push constant 2
 pop this 4
 call show 0
+pop temp 0
 push pointer 0
 return
-label Bat.dispose
+function Bat.dispose 0
 pop pointer 0
 push pointer 0
-call deAlloc 1
+call Memory.deAlloc 1
+pop temp 0
 push constant 0
 return
-label Bat.show
+function Bat.show 0
 pop pointer 0
-push constant -1
-call setColor 1
+push constant 1
+neg
+call Screen.setColor 1
+pop temp 0
 call draw 0
+pop temp 0
 push constant 0
 return
-label Bat.hide
+function Bat.hide 0
 pop pointer 0
 push constant 0
-call setColor 1
+call Screen.setColor 1
+pop temp 0
 call draw 0
+pop temp 0
 push constant 0
 return
-label Bat.draw
+function Bat.draw 0
 pop pointer 0
 push this 0
 push this 1
@@ -44,34 +51,37 @@ add
 push this 1
 push this 3
 add
-call drawRectangle 4
+call Screen.drawRectangle 4
+pop temp 0
 push constant 0
 return
-label Bat.setDirection
+function Bat.setDirection 0
 pop pointer 0
 push argument 0
 pop this 4
 push constant 0
 return
-label Bat.getLeft
+function Bat.getLeft 0
 pop pointer 0
 push this 0
 return
-label Bat.getRight
+function Bat.getRight 0
 pop pointer 0
 push this 0
 push this 2
 add
 return
-label Bat.setWidth
+function Bat.setWidth 0
 pop pointer 0
 call hide 0
+pop temp 0
 push argument 0
 pop this 2
 call show 0
+pop temp 0
 push constant 0
 return
-label Bat.move
+function Bat.move 0
 pop pointer 0
 push this 4
 push constant 1
@@ -91,7 +101,8 @@ push constant 0
 pop this 0
 label Bat_move_L2
 push constant 0
-call setColor 1
+call Screen.setColor 1
+pop temp 0
 push this 0
 push this 2
 add
@@ -106,9 +117,12 @@ add
 push this 1
 push this 3
 add
-call drawRectangle 4
-push constant -1
-call setColor 1
+call Screen.drawRectangle 4
+pop temp 0
+push constant 1
+neg
+call Screen.setColor 1
+pop temp 0
 push this 0
 push this 1
 push this 0
@@ -117,7 +131,8 @@ add
 push this 1
 push this 3
 add
-call drawRectangle 4
+call Screen.drawRectangle 4
+pop temp 0
 goto Bat_move_L3
 label Bat_move_L1
 push this 0
@@ -137,7 +152,8 @@ sub
 pop this 0
 label Bat_move_L4
 push constant 0
-call setColor 1
+call Screen.setColor 1
+pop temp 0
 push this 0
 push constant 4
 sub
@@ -148,9 +164,12 @@ sub
 push this 1
 push this 3
 add
-call drawRectangle 4
-push constant -1
-call setColor 1
+call Screen.drawRectangle 4
+pop temp 0
+push constant 1
+neg
+call Screen.setColor 1
+pop temp 0
 push this 0
 push this 2
 add
@@ -163,7 +182,8 @@ add
 push this 1
 push this 3
 add
-call drawRectangle 4
+call Screen.drawRectangle 4
+pop temp 0
 label Bat_move_L3
 push constant 0
 return

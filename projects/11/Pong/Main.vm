@@ -1,10 +1,13 @@
-label Main.main
-call newInstance 0
-call getInstance 0
+function Main.main 0
+call PongGame.newInstance 0
+pop temp 0
+call PongGame.getInstance 0
 pop local 0
 push local 0
 call game.run 1
+pop temp 0
 push local 0
 call game.dispose 1
+pop temp 0
 push constant 0
 return

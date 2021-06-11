@@ -88,8 +88,9 @@ class JackCompiler
             tokenizer.Reset();
         }
 
-        // Compile the tokens into output file
         CompilationEngine compiler = new CompilationEngine(tokenizer, GetOutBasefile(path));
+
+        // Compile the tokens into output file
         compiler.CompileGrammar( "class" );
         compiler.Reset();
         compiler.CompileClass();
@@ -1229,6 +1230,12 @@ class VMWriter : Writer
         WriteLine("if-goto " + label);
     }
 
+    public void WriteFunction(string function, int argCount)
+    {
+        // function function argCount
+        WriteLine("function " + function + " " + argCount);
+    }
+
     public void WriteCall(string function, int argCount)
     {
         // call function argCount
@@ -1276,7 +1283,6 @@ class CompilationEngine
 
     public void Error(string msg = "")
     {
-        // FIXME
         Token token = mTokens.Get();
         string line = "ERROR: Line< " + token.lineNumber + " > Char< " + token.lineCharacter + " > " + msg;
         Console.WriteLine(line);
@@ -1558,6 +1564,8 @@ class CompilationEngine
     {
         // class: 'class' className '{' classVarDec* subroutineDec* '}'
 
+        mTokens.Reset();
+
         ValidateTokenAdvance(Token.Keyword.CLASS);
         ValidateTokenAdvance(Token.Type.IDENTIFIER, out mClassName);
         ValidateTokenAdvance('{');
@@ -1575,6 +1583,8 @@ class CompilationEngine
         }
 
         ValidateTokenAdvance('}');
+
+        SymbolTable.ScopePop();
     }
 
     public bool CompileClassVarDec()
@@ -1640,7 +1650,7 @@ class CompilationEngine
 
             // Compile function beginning
             mFuncLabel = 0;
-            mVMWriter.WriteLabel(mClassName + "." + mFuncName);
+            mVMWriter.WriteFunction(mClassName + "." + mFuncName, SymbolTable.KindSize( SymbolTable.Kind.VAR ) );
             if (funcCallType == Token.Keyword.CONSTRUCTOR || funcCallType == Token.Keyword.METHOD)
             {
                 if (funcCallType == Token.Keyword.CONSTRUCTOR)
@@ -1670,6 +1680,7 @@ class CompilationEngine
 
         string subroutineName = null;
         string objectName = null;
+        int argCount = 0;
 
         ValidateTokenAdvance(Token.Type.IDENTIFIER, out subroutineName);
         if (mTokens.Get().symbol == '.')
@@ -1681,14 +1692,20 @@ class CompilationEngine
 
         ValidateTokenAdvance('(');
 
-        int argCount = CompileExpressionList();
+        if ( SymbolTable.Exists(objectName) )
+        {
+            // push pointer to object (this for object)
+            mVMWriter.WritePush(SymbolTable.SegmentOf(objectName), SymbolTable.OffsetOf(objectName));
+            argCount = argCount + 1;
+        }
+
+        argCount = argCount + CompileExpressionList();
 
         ValidateTokenAdvance(')');
 
-        if (SymbolTable.Exists(objectName))
+        if ( objectName != null )
         {
-            mVMWriter.WritePush(SymbolTable.SegmentOf(objectName), SymbolTable.OffsetOf(objectName));
-            mVMWriter.WriteCall(objectName + "." + subroutineName, argCount + 1);
+            mVMWriter.WriteCall(objectName + "." + subroutineName, argCount);
         }
         else
         {
@@ -1873,6 +1890,8 @@ class CompilationEngine
 
         CompileSubroutineCall();
 
+        mVMWriter.WritePop( VMWriter.Segment.TEMP, 0 ); // ignore return value
+
         ValidateTokenAdvance(';');
     }
 
@@ -1975,6 +1994,22 @@ class CompilationEngine
         mVMWriter.WriteReturn();
     }
 
+    public void CompileStringConst()
+    {
+        // FIXME - this is a HUGE memory leak allocating a string each reference - a system needs to be established when all static strings are allocated at static memory locations
+        // 255, 254, 253, ... downward 
+        string str = mTokens.Get().stringVal;
+        int strLen = str.Length;
+        mVMWriter.WritePush(VMWriter.Segment.CONST, strLen);
+        mVMWriter.WriteCall("String.new", 1);
+        for (int i = 0; i < strLen; i++)
+        {
+            mVMWriter.WritePush(VMWriter.Segment.CONST, str[i]);
+            mVMWriter.WriteCall("String.appendChar", 2);
+        }
+        mTokens.Advance();
+    }
+
     public bool CompileExpression()
     {
         // Grammar:
@@ -2041,10 +2076,27 @@ class CompilationEngine
             }
             compiledExpression = true;
         }
+        else if (token.type == Token.Type.INT_CONST)
+        {
+            // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
+            if (token.intVal < 0)
+            {
+                // negative value
+                mVMWriter.WritePush(VMWriter.Segment.CONST, -token.intVal);
+                mVMWriter.WriteArithmetic(VMWriter.Command.NEG);
+            }
+            else
+            {
+                // positive value
+                mVMWriter.WritePush(VMWriter.Segment.CONST, token.intVal);
+            }
+            mTokens.Advance();
+            compiledExpression = true;
+        }
         else if ( token.type == Token.Type.STRING_CONST )
         {
-            // string_const
-            mTokens.Advance(); // FIXME
+            // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
+            CompileStringConst();
             compiledExpression = true;
         }
         else if (token.type == Token.Type.IDENTIFIER && (tokenNext.symbol == '.' || tokenNext.symbol == '('))
@@ -2059,13 +2111,6 @@ class CompilationEngine
             CompileArrayValue();
             compiledExpression = true;
         }
-        else if (token.type == Token.Type.INT_CONST )
-        {
-            // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
-            mVMWriter.WritePush(VMWriter.Segment.CONST, token.intVal );
-            mTokens.Advance();
-            compiledExpression = true;
-        }
         else if (token.type == Token.Type.IDENTIFIER && SymbolTable.Exists(token.identifier))
         {
             // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
@@ -2076,7 +2121,8 @@ class CompilationEngine
         else if (token.type == Token.Type.KEYWORD && token.keyword == Token.Keyword.TRUE)
         {
             // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
-            mVMWriter.WritePush(VMWriter.Segment.CONST, -1);
+            mVMWriter.WritePush(VMWriter.Segment.CONST, 1);
+            mVMWriter.WriteArithmetic(VMWriter.Command.NEG);
             mTokens.Advance();
             compiledExpression = true;
         }

@@ -1,18 +1,21 @@
-label Main.main
+function Main.main 0
 push constant 8001
 push constant 16
 push constant 1
 neg
-call fillMemory 3
+call Main.fillMemory 3
+pop temp 0
 push constant 8000
-call peek 1
+call Memory.peek 1
 pop local 0
 push local 0
-call convert 1
+call Main.convert 1
+pop temp 0
 push constant 0
 return
-label Main.convert
-push constant -1
+function Main.convert 0
+push constant 1
+neg
 pop local 2
 label Main_convert_L1
 push local 2
@@ -23,7 +26,7 @@ push constant 1
 add
 pop local 1
 push local 0
-call nextMask 1
+call Main.nextMask 1
 pop local 0
 push local 1
 push constant 16
@@ -43,14 +46,16 @@ push constant 8000
 push local 1
 add
 push constant 1
-call poke 2
+call Memory.poke 2
+pop temp 0
 goto Main_convert_L5
 label Main_convert_L4
 push constant 8000
 push local 1
 add
 push constant 0
-call poke 2
+call Memory.poke 2
+pop temp 0
 label Main_convert_L5
 goto Main_convert_L6
 label Main_convert_L3
@@ -61,7 +66,7 @@ goto Main_convert_L1
 label Main_convert_L2
 push constant 0
 return
-label Main.nextMask
+function Main.nextMask 0
 push argument 0
 push constant 0
 eq
@@ -76,7 +81,7 @@ push constant 2
 call Math.multiply 2
 return
 label Main_nextMask_L2
-label Main.fillMemory
+function Main.fillMemory 0
 label Main_fillMemory_L1
 push argument 1
 push constant 0
@@ -85,7 +90,8 @@ not
 if-goto Main_fillMemory_L2
 push argument 0
 push argument 2
-call poke 2
+call Memory.poke 2
+pop temp 0
 push argument 1
 push constant 1
 sub
