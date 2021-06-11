@@ -1,6 +1,5 @@
 label Main.main
-call newInstance 0
-call getInstance 0
+call new 0
 pop local 0
 push local 0
 call game.run 1

@@ -1,5 +1,5 @@
 label Square.new
-call Memory.alloc 8
+call Memory.alloc 3
 pop pointer 0
 push argument 0
 pop this 0
@@ -8,7 +8,7 @@ pop this 1
 push argument 2
 pop this 2
 call draw 0
-push this 0
+push pointer 0
 return
 label Square.dispose
 pop pointer 0
@@ -18,33 +18,53 @@ push constant 0
 return
 label Square.draw
 pop pointer 0
-push this 0
+push constant -1
 call setColor 1
 push this 0
 push this 1
 push this 0
+push this 2
+add
 push this 1
+push this 2
+add
 call drawRectangle 4
 push constant 0
 return
 label Square.erase
 pop pointer 0
-push this 0
+push constant 0
 call setColor 1
 push this 0
 push this 1
 push this 0
+push this 2
+add
 push this 1
+push this 2
+add
 call drawRectangle 4
 push constant 0
 return
 label Square.incSize
 pop pointer 0
+push this 1
+push this 2
+add
+push constant 254
+lt
 push this 0
+push this 2
+add
+push constant 510
+lt
+and
 not
 if-goto Square_incSize_L1
 call erase 0
 push this 2
+push constant 2
+add
 pop this 2
 call draw 0
 label Square_incSize_L1
@@ -53,10 +73,14 @@ return
 label Square.decSize
 pop pointer 0
 push this 2
+push constant 2
+gt
 not
 if-goto Square_decSize_L1
 call erase 0
 push this 2
+push constant 2
+sub
 pop this 2
 call draw 0
 label Square_decSize_L1
@@ -65,23 +89,39 @@ return
 label Square.moveUp
 pop pointer 0
 push this 1
+push constant 1
+gt
 not
 if-goto Square_moveUp_L1
-push this 0
+push constant 0
 call setColor 1
 push this 0
 push this 1
+push this 2
+add
+push constant 1
+sub
 push this 0
+push this 2
+add
 push this 1
+push this 2
+add
 call drawRectangle 4
 push this 1
+push constant 2
+sub
 pop this 1
-push this 0
+push constant -1
 call setColor 1
 push this 0
 push this 1
 push this 0
+push this 2
+add
 push this 1
+push constant 1
+add
 call drawRectangle 4
 label Square_moveUp_L1
 push constant 0
@@ -89,23 +129,41 @@ return
 label Square.moveDown
 pop pointer 0
 push this 1
+push this 2
+add
+push constant 254
+lt
 not
 if-goto Square_moveDown_L1
-push this 0
+push constant 0
 call setColor 1
 push this 0
 push this 1
 push this 0
+push this 2
+add
 push this 1
+push constant 1
+add
 call drawRectangle 4
 push this 1
+push constant 2
+add
 pop this 1
-push this 0
+push constant -1
 call setColor 1
 push this 0
 push this 1
+push this 2
+add
+push constant 1
+sub
 push this 0
+push this 2
+add
 push this 1
+push this 2
+add
 call drawRectangle 4
 label Square_moveDown_L1
 push constant 0
@@ -113,23 +171,39 @@ return
 label Square.moveLeft
 pop pointer 0
 push this 0
+push constant 1
+gt
 not
 if-goto Square_moveLeft_L1
-push this 0
+push constant 0
 call setColor 1
 push this 0
+push this 2
+add
+push constant 1
+sub
 push this 1
 push this 0
+push this 2
+add
 push this 1
+push this 2
+add
 call drawRectangle 4
 push this 0
+push constant 2
+sub
 pop this 0
-push this 0
+push constant -1
 call setColor 1
 push this 0
 push this 1
 push this 0
+push constant 1
+add
 push this 1
+push this 2
+add
 call drawRectangle 4
 label Square_moveLeft_L1
 push constant 0
@@ -137,23 +211,41 @@ return
 label Square.moveRight
 pop pointer 0
 push this 0
+push this 2
+add
+push constant 510
+lt
 not
 if-goto Square_moveRight_L1
-push this 0
+push constant 0
 call setColor 1
 push this 0
 push this 1
 push this 0
+push constant 1
+add
 push this 1
+push this 2
+add
 call drawRectangle 4
 push this 0
+push constant 2
+add
 pop this 0
-push this 0
+push constant -1
 call setColor 1
 push this 0
+push this 2
+add
+push constant 1
+sub
 push this 1
 push this 0
+push this 2
+add
 push this 1
+push this 2
+add
 call drawRectangle 4
 label Square_moveRight_L1
 push constant 0

@@ -1,0 +1,9 @@
+label Main.main
+push constant 1
+push constant 2
+push constant 3
+call Math.mult 2
+add
+call printInt 1
+push constant 0
+return

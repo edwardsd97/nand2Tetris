@@ -3,6 +3,26 @@
   "Id": "b2c9d888-b676-4ba0-ba7e-4703df78e0c6",
   "Items": [
     {
+      "Id": "d050b4c8-8c3d-4054-8c70-6a6bc0f91228",
+      "Command": "C:\\Projects\\nand2Tetris\\projects\\11\\Square"
+    },
+    {
+      "Id": "963c9258-919f-49ea-8452-d2e45fb34a04",
+      "Command": "C:\\Projects\\nand2Tetris\\projects\\11\\Seven"
+    },
+    {
+      "Id": "b8d5feac-d128-49dc-ad4a-510804de568f",
+      "Command": "C:\\Projects\\nand2Tetris\\projects\\11\\ConvertToBin"
+    },
+    {
+      "Id": "4ec24335-edbe-488d-9f90-b2131ce3526e",
+      "Command": "C:\\Projects\\nand2Tetris\\projects\\11\\ComplexArrays"
+    },
+    {
+      "Id": "3d55e4c2-97d9-4636-ab35-fa81e8d77ffb",
+      "Command": "C:\\Projects\\nand2Tetris\\projects\\11\\Average"
+    },
+    {
       "Id": "6baef74b-fc1d-4af8-94b5-a6cc7bef9e2a",
       "Command": "C:\\Projects\\nand2Tetris\\projects\\11\\ExpressionLessSquare"
     },

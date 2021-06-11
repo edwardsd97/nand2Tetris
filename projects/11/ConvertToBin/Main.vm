@@ -1,0 +1,100 @@
+label Main.main
+push constant 8001
+push constant 16
+push constant 1
+neg
+call fillMemory 3
+push constant 8000
+call peek 1
+pop local 0
+push local 0
+call convert 1
+push constant 0
+return
+label Main.convert
+push constant -1
+pop local 2
+label Main_convert_L1
+push local 2
+not
+if-goto Main_convert_L2
+push local 1
+push constant 1
+add
+pop local 1
+push local 0
+call nextMask 1
+pop local 0
+push local 1
+push constant 16
+gt
+not
+not
+if-goto Main_convert_L3
+push argument 0
+push local 0
+and
+push constant 0
+eq
+not
+not
+if-goto Main_convert_L4
+push constant 8000
+push local 1
+add
+push constant 1
+call poke 2
+goto Main_convert_L5
+label Main_convert_L4
+push constant 8000
+push local 1
+add
+push constant 0
+call poke 2
+label Main_convert_L5
+goto Main_convert_L6
+label Main_convert_L3
+push constant 0
+pop local 2
+label Main_convert_L6
+goto Main_convert_L1
+label Main_convert_L2
+push constant 0
+return
+label Main.nextMask
+push argument 0
+push constant 0
+eq
+not
+if-goto Main_nextMask_L1
+push constant 1
+return
+goto Main_nextMask_L2
+label Main_nextMask_L1
+push argument 0
+push constant 2
+call Math.mult 2
+return
+label Main_nextMask_L2
+label Main.fillMemory
+label Main_fillMemory_L1
+push argument 1
+push constant 0
+gt
+not
+if-goto Main_fillMemory_L2
+push argument 0
+push argument 2
+call poke 2
+push argument 1
+push constant 1
+sub
+pop argument 1
+push argument 0
+push constant 1
+add
+pop argument 0
+goto Main_fillMemory_L1
+label Main_fillMemory_L2
+push constant 0
+return

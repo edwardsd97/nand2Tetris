@@ -1,3 +1,242 @@
 label PongGame.new
-call Memory.alloc 27
+call Memory.alloc 37
 pop pointer 0
+call clearScreen 0
+push constant 50
+pop this 6
+push constant 230
+push constant 229
+push this 6
+push constant 7
+call new 4
+pop this 0
+push constant 253
+push constant 222
+push constant 0
+push constant 511
+push constant 0
+push constant 229
+call new 6
+pop this 1
+push constant 400
+push constant 0
+push this 1
+call ball.setDestination 3
+push constant 0
+push constant 238
+push constant 511
+push constant 240
+call drawRectangle 4
+push constant 22
+push constant 0
+call moveCursor 2
+call printString 1
+push constant 0
+pop this 3
+push constant 0
+pop this 4
+push constant 0
+pop this 2
+push constant 0
+pop this 5
+push pointer 0
+return
+label PongGame.dispose
+pop pointer 0
+push this 0
+call bat.dispose 1
+push this 1
+call ball.dispose 1
+push pointer 0
+call deAlloc 1
+push constant 0
+return
+label PongGame.newInstance
+call new 0
+pop static 0
+push constant 0
+return
+label PongGame.getInstance
+push static 0
+return
+label PongGame.run
+pop pointer 0
+label PongGame_run_L1
+push this 3
+not
+not
+if-goto PongGame_run_L2
+label PongGame_run_L3
+push local 0
+push constant 0
+eq
+push this 3
+not
+and
+not
+if-goto PongGame_run_L4
+call keyPressed 0
+pop local 0
+push this 0
+call bat.move 1
+call moveBall 0
+push constant 50
+call wait 1
+goto PongGame_run_L3
+label PongGame_run_L4
+push local 0
+push constant 130
+eq
+not
+if-goto PongGame_run_L5
+push constant 1
+push this 0
+call bat.setDirection 2
+goto PongGame_run_L6
+label PongGame_run_L5
+push local 0
+push constant 132
+eq
+not
+if-goto PongGame_run_L7
+push constant 2
+push this 0
+call bat.setDirection 2
+goto PongGame_run_L8
+label PongGame_run_L7
+push local 0
+push constant 140
+eq
+not
+if-goto PongGame_run_L9
+push constant -1
+pop this 3
+label PongGame_run_L9
+label PongGame_run_L8
+label PongGame_run_L6
+label PongGame_run_L10
+push local 0
+push constant 0
+eq
+not
+push this 3
+not
+and
+not
+if-goto PongGame_run_L11
+call keyPressed 0
+pop local 0
+push this 0
+call bat.move 1
+call moveBall 0
+push constant 50
+call wait 1
+goto PongGame_run_L10
+label PongGame_run_L11
+goto PongGame_run_L1
+label PongGame_run_L2
+push this 3
+not
+if-goto PongGame_run_L12
+push constant 10
+push constant 27
+call moveCursor 2
+call printString 1
+label PongGame_run_L12
+push constant 0
+return
+label PongGame.moveBall
+pop pointer 0
+push this 1
+call ball.move 1
+pop this 2
+push this 2
+push constant 0
+gt
+push this 2
+push this 5
+eq
+not
+and
+not
+if-goto PongGame_moveBall_L1
+push this 2
+pop this 5
+push constant 0
+pop local 0
+push this 0
+call bat.getLeft 1
+pop local 1
+push this 0
+call bat.getRight 1
+pop local 2
+push this 1
+call ball.getLeft 1
+pop local 3
+push this 1
+call ball.getRight 1
+pop local 4
+push this 2
+push constant 4
+eq
+not
+if-goto PongGame_moveBall_L2
+push local 1
+push local 4
+gt
+push local 2
+push local 3
+lt
+or
+pop this 3
+push this 3
+not
+not
+if-goto PongGame_moveBall_L3
+push local 4
+push local 1
+push constant 10
+add
+lt
+not
+if-goto PongGame_moveBall_L4
+push constant 1
+neg
+pop local 0
+goto PongGame_moveBall_L5
+label PongGame_moveBall_L4
+push local 3
+push local 2
+push constant 10
+sub
+gt
+not
+if-goto PongGame_moveBall_L6
+push constant 1
+pop local 0
+label PongGame_moveBall_L6
+label PongGame_moveBall_L5
+push this 6
+push constant 2
+sub
+pop this 6
+push this 6
+push this 0
+call bat.setWidth 2
+push this 4
+push constant 1
+add
+pop this 4
+push constant 22
+push constant 7
+call moveCursor 2
+push this 4
+call printInt 1
+label PongGame_moveBall_L3
+label PongGame_moveBall_L2
+push local 0
+push this 1
+call ball.bounce 2
+label PongGame_moveBall_L1
+push constant 0
+return

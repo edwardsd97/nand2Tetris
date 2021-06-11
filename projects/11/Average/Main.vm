@@ -1,0 +1,42 @@
+label Main.main
+call readInt 1
+pop local 1
+push local 1
+call new 1
+pop local 0
+push constant 0
+pop local 2
+label Main_main_L1
+push local 2
+push local 1
+lt
+not
+if-goto Main_main_L2
+push constant 0
+add
+call readInt 1
+pop temp 0
+pop pointer 1
+push temp 0
+pop that 0
+push local 3
+push local 0
+push local 2
+add
+pop pointer 1
+push that 0
+add
+pop local 3
+push local 2
+push constant 1
+add
+pop local 2
+goto Main_main_L1
+label Main_main_L2
+call printString 1
+push local 3
+push local 1
+call Math.div 2
+call printInt 1
+push constant 0
+return

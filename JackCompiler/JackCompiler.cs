@@ -1798,6 +1798,28 @@ class CompilationEngine
         }
     }
 
+    public void CompileArrayAddress()
+    {
+        // Push the array indexed address onto stack
+        string varName;
+        ValidateTokenAdvance(Token.Type.IDENTIFIER, out varName);
+        mVMWriter.WritePush(SymbolTable.SegmentOf(varName), SymbolTable.OffsetOf(varName));
+        ValidateTokenAdvance('[');
+        CompileExpression();
+        ValidateTokenAdvance(']');
+        mVMWriter.WriteArithmetic(VMWriter.Command.ADD);
+    }
+
+    public void CompileArrayValue()
+    {
+        // Push the array indexed address onto stack
+        CompileArrayAddress();
+
+        // set THAT and push THAT[0]
+        mVMWriter.WritePop(VMWriter.Segment.POINTER, 1 );
+        mVMWriter.WritePush(VMWriter.Segment.THAT, 0);
+    }
+
     public void CompileStatementLet()
     {
         // letStatement: 'let' varName ('[' expression ']')? '=' expression ';'
@@ -1813,11 +1835,7 @@ class CompilationEngine
             isArray = true;
 
             // Push the array indexed address onto stack
-            mVMWriter.WritePush(SymbolTable.SegmentOf(varName), SymbolTable.OffsetOf(varName));
-            ValidateTokenAdvance('[');
-            CompileExpression();
-            ValidateTokenAdvance(']');
-            mVMWriter.WriteArithmetic(VMWriter.Command.ADD);
+            CompileArrayAddress();
         }
 
         ValidateTokenAdvance('=');
@@ -1954,6 +1972,8 @@ class CompilationEngine
 
     public bool CompileExpression()
     {
+        // Grammar:
+        // ---------
         // expression: term (op term)*
         // op: '+'|'-'|'*'|'/'|'&'|'|'|'<'|'>'|'='
         // opTerm: op term
@@ -1965,64 +1985,13 @@ class CompilationEngine
         // subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')
         // expressionList: ( expression (',' expression)* )?
 
-        /*
-        <expression>
-            <term>
-                <identifier> AbottomWall </identifier>
-            </term>
+        // Pseudo:
+        // --------
+        // if exp is a number n:
+        //   push constant n
 
-            <symbol> - </symbol>
-            <term>
-                <integerConstant> 6 </integerConstant>
-            </term>
-        </expression>
-        */
-        Token token = mTokens.Get();
-
-        if (token.type == Token.Type.IDENTIFIER)
-        {
-            // if exp is a number n:
-            //   push constant n
-            if (token.identifier[0] >= '0' && token.identifier[0] <= 9)
-            {
-                mVMWriter.WritePush(VMWriter.Segment.CONST, int.Parse(token.identifier));
-                mTokens.Advance();
-                return true;
-            }
-
-            // if exp is a variable var:
-            //   push segment i
-            if (SymbolTable.Exists(token.identifier))
-            {
-                mVMWriter.WritePush(SymbolTable.SegmentOf(token.identifier), SymbolTable.OffsetOf(token.identifier));
-                mTokens.Advance();
-                return true;
-            }
-        }
-
-        if (token.type == Token.Type.KEYWORD)
-        {
-            if (token.keyword == Token.Keyword.TRUE)
-            {
-                mVMWriter.WritePush(VMWriter.Segment.CONST, -1);
-                mTokens.Advance();
-                return true;
-            }
-            else if (token.keyword == Token.Keyword.FALSE || token.keyword == Token.Keyword.NULL)
-            {
-                mVMWriter.WritePush(VMWriter.Segment.CONST, 0);
-                mTokens.Advance();
-                return true;
-            }
-            else if (token.keyword == Token.Keyword.THIS)
-            {
-                mVMWriter.WritePush(VMWriter.Segment.POINTER, 0);
-                mTokens.Advance();
-                return true;
-            }
-        }
-
-        // FIXME
+        // if exp is a variable var:
+        //   push segment i
 
         // if exp is "exp1 op exp2":
         //   CompileExpression( exp1 );
@@ -2037,7 +2006,113 @@ class CompilationEngine
         //   N = CompileExpressionList()
         //   call f N
 
-        return false;
+        Token token = mTokens.GetAndAdvance();
+        Token tokenNext = mTokens.Get();
+        bool compiledExpression = false;
+
+        mTokens.Rollback(1);
+
+        if (token.symbol == '(')
+        {
+            // expressionParenth: '(' expression ')
+            ValidateTokenAdvance('(');
+            CompileExpression();
+            ValidateTokenAdvance(')');
+            compiledExpression = true;
+        }
+        else if (token.symbol == '~' || token.symbol == '-')
+        {
+            // unaryTerm: ('-'|'~') term
+            char symbol = token.symbol;
+            mTokens.Advance();
+            CompileExpression();
+            if (symbol == '~')
+            {
+                mVMWriter.WriteArithmetic(VMWriter.Command.NOT);
+            }
+            else // symbol == '-' )
+            {
+                mVMWriter.WriteArithmetic(VMWriter.Command.NEG);
+            }
+            compiledExpression = true;
+        }
+        else if ( token.type == Token.Type.STRING_CONST )
+        {
+            // string_const
+            mTokens.Advance(); // FIXME
+            compiledExpression = true;
+        }
+        else if (token.type == Token.Type.IDENTIFIER && (tokenNext.symbol == '.' || tokenNext.symbol == '('))
+        {
+            // subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')
+            CompileSubroutineCall();
+            compiledExpression = true;
+        }
+        else if (token.type == Token.Type.IDENTIFIER && tokenNext.symbol == '[')
+        {
+            // arrayValue: varName '[' expression ']'
+            CompileArrayValue();
+            compiledExpression = true;
+        }
+        else if (token.type == Token.Type.INT_CONST )
+        {
+            // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
+            mVMWriter.WritePush(VMWriter.Segment.CONST, token.intVal );
+            mTokens.Advance();
+            compiledExpression = true;
+        }
+        else if (token.type == Token.Type.IDENTIFIER && SymbolTable.Exists(token.identifier))
+        {
+            // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
+            mVMWriter.WritePush(SymbolTable.SegmentOf(token.identifier), SymbolTable.OffsetOf(token.identifier));
+            mTokens.Advance();
+            compiledExpression = true;
+        }
+        else if (token.type == Token.Type.KEYWORD && token.keyword == Token.Keyword.TRUE)
+        {
+            // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
+            mVMWriter.WritePush(VMWriter.Segment.CONST, -1);
+            mTokens.Advance();
+            compiledExpression = true;
+        }
+        else if (token.type == Token.Type.KEYWORD && ( token.keyword == Token.Keyword.FALSE || token.keyword == Token.Keyword.NULL ) )
+        {
+            // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
+            mVMWriter.WritePush(VMWriter.Segment.CONST, 0);
+            mTokens.Advance();
+            compiledExpression = true;
+        }
+        else if (token.type == Token.Type.KEYWORD && token.keyword == Token.Keyword.THIS )
+        {
+            // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
+            mVMWriter.WritePush(VMWriter.Segment.POINTER, 0);
+            mTokens.Advance();
+            compiledExpression = true;
+        }
+
+        if ( compiledExpression && Token.IsOp(mTokens.Get().symbol) )
+        {
+            // expression: term (op term)*
+            char op = mTokens.Get().symbol;
+
+            mTokens.Advance();
+            CompileExpression();
+
+            switch (op)
+            {
+                case '+': mVMWriter.WriteArithmetic(VMWriter.Command.ADD); break;
+                case '-': mVMWriter.WriteArithmetic(VMWriter.Command.SUB); break;
+                case '*': mVMWriter.WriteCall("Math.multiply", 2); break;
+                case '/': mVMWriter.WriteCall("Math.divide", 2); break;
+                case '|': mVMWriter.WriteArithmetic(VMWriter.Command.OR); break;
+                case '&': mVMWriter.WriteArithmetic(VMWriter.Command.AND); break;
+                case '<': mVMWriter.WriteArithmetic(VMWriter.Command.LT); break;
+                case '>': mVMWriter.WriteArithmetic(VMWriter.Command.GT); break;
+                case '=': mVMWriter.WriteArithmetic(VMWriter.Command.EQ); break;
+            }
+        }
+
+        return compiledExpression;
     }
 
     public int CompileExpressionList()
