@@ -1261,6 +1261,7 @@ class CompilationEngine
         {
             mVMWriter = new VMWriter(baseOutFile + ".vm");
         }
+
         if (JackCompiler.mDumpXmlFile)
         {
             mGrammarWriters.Add(new XMLWriter(baseOutFile + ".xml"));
@@ -1277,7 +1278,8 @@ class CompilationEngine
     {
         // FIXME
         Token token = mTokens.Get();
-        Console.WriteLine("ERROR: Line< " + token.lineNumber + " > Char< " + token.lineCharacter + " > " + msg);
+        string line = "ERROR: Line< " + token.lineNumber + " > Char< " + token.lineCharacter + " > " + msg;
+        Console.WriteLine(line);
     }
 
     public void WritersPreGrammarEntry(Grammar.Node nodeObj)
@@ -1798,11 +1800,14 @@ class CompilationEngine
         }
     }
 
-    public void CompileArrayAddress()
+    public void CompileArrayAddress( string varNameKnown = null )
     {
         // Push the array indexed address onto stack
-        string varName;
-        ValidateTokenAdvance(Token.Type.IDENTIFIER, out varName);
+        string varName = varNameKnown;
+        if ( varName == null )
+        {
+            ValidateTokenAdvance(Token.Type.IDENTIFIER, out varName);
+        }
         mVMWriter.WritePush(SymbolTable.SegmentOf(varName), SymbolTable.OffsetOf(varName));
         ValidateTokenAdvance('[');
         CompileExpression();
@@ -1835,7 +1840,7 @@ class CompilationEngine
             isArray = true;
 
             // Push the array indexed address onto stack
-            CompileArrayAddress();
+            CompileArrayAddress(varName);
         }
 
         ValidateTokenAdvance('=');

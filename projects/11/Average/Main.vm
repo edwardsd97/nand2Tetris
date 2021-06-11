@@ -12,7 +12,8 @@ push local 1
 lt
 not
 if-goto Main_main_L2
-push constant 0
+push local 0
+push local 2
 add
 call readInt 1
 pop temp 0
@@ -36,7 +37,7 @@ label Main_main_L2
 call printString 1
 push local 3
 push local 1
-call Math.div 2
+call Math.divide 2
 call printInt 1
 push constant 0
 return

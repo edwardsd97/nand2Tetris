@@ -115,19 +115,19 @@ pop this 9
 label Ball_setDestination_L2
 push constant 2
 push local 1
-call Math.mult 2
+call Math.multiply 2
 push local 0
 sub
 pop this 4
 push constant 2
 push local 1
-call Math.mult 2
+call Math.multiply 2
 pop this 5
 push constant 2
 push local 1
 push local 0
 sub
-call Math.mult 2
+call Math.multiply 2
 pop this 6
 push constant 0
 return
@@ -269,11 +269,11 @@ label Ball.bounce
 pop pointer 0
 push this 2
 push constant 10
-call Math.div 2
+call Math.divide 2
 pop local 2
 push this 3
 push constant 10
-call Math.div 2
+call Math.divide 2
 pop local 3
 push argument 0
 push constant 0
@@ -321,14 +321,14 @@ pop local 0
 push local 3
 push constant 50
 neg
-call Math.mult 2
+call Math.multiply 2
 push local 2
-call Math.div 2
+call Math.divide 2
 pop local 1
 push this 1
 push local 1
 push local 4
-call Math.mult 2
+call Math.multiply 2
 add
 pop local 1
 goto Ball_bounce_L6
@@ -342,14 +342,14 @@ push constant 0
 pop local 0
 push local 3
 push constant 50
-call Math.mult 2
+call Math.multiply 2
 push local 2
-call Math.div 2
+call Math.divide 2
 pop local 1
 push this 1
 push local 1
 push local 4
-call Math.mult 2
+call Math.multiply 2
 add
 pop local 1
 goto Ball_bounce_L8
@@ -364,14 +364,14 @@ pop local 1
 push local 2
 push constant 25
 neg
-call Math.mult 2
+call Math.multiply 2
 push local 3
-call Math.div 2
+call Math.divide 2
 pop local 0
 push this 0
 push local 0
 push local 4
-call Math.mult 2
+call Math.multiply 2
 add
 pop local 0
 goto Ball_bounce_L10
@@ -380,14 +380,14 @@ push constant 0
 pop local 1
 push local 2
 push constant 25
-call Math.mult 2
+call Math.multiply 2
 push local 3
-call Math.div 2
+call Math.divide 2
 pop local 0
 push this 0
 push local 0
 push local 4
-call Math.mult 2
+call Math.multiply 2
 add
 pop local 0
 label Ball_bounce_L10

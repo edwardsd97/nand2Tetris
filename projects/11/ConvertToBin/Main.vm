@@ -73,7 +73,7 @@ goto Main_nextMask_L2
 label Main_nextMask_L1
 push argument 0
 push constant 2
-call Math.mult 2
+call Math.multiply 2
 return
 label Main_nextMask_L2
 label Main.fillMemory
