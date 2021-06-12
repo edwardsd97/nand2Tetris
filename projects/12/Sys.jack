@@ -9,19 +9,31 @@
 class Sys {
 
     /** Performs all the initializations required by the OS. */
-    function void init() {
+    function void init() 
+    {
+        // FIXME
+        return 0;
     }
 
     /** Halts the program execution. */
-    function void halt() {
+    function void halt() 
+    {
+        // FIXME
+        return 0;
     }
 
     /** Waits approximately duration milliseconds and returns.  */
-    function void wait(int duration) {
+    function void wait(int duration) 
+    {
+        // FIXME
+        return 0;
     }
 
     /** Displays the given error code in the form "ERR<errorCode>",
      *  and halts the program's execution. */
-    function void error(int errorCode) {
+    function void error(int errorCode) 
+    {
+        // FIXME
+        return 0;
     }
 }

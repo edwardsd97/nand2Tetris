@@ -1,0 +1,7 @@
+function Screen.init 0
+function Screen.clearScreen 0
+function Screen.setColor 0
+function Screen.drawPixel 0
+function Screen.drawLine 0
+function Screen.drawRectangle 0
+function Screen.drawCircle 0

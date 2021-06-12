@@ -3,6 +3,10 @@
   "Id": "b2c9d888-b676-4ba0-ba7e-4703df78e0c6",
   "Items": [
     {
+      "Id": "8965ed4d-8147-41d9-8ceb-8de89b2e8f9f",
+      "Command": "C:\\Projects\\nand2Tetris\\projects\\12"
+    },
+    {
       "Id": "d050b4c8-8c3d-4054-8c70-6a6bc0f91228",
       "Command": "C:\\Projects\\nand2Tetris\\projects\\11\\Square"
     },
@@ -41,6 +45,10 @@
     {
       "Id": "f0d09aca-6fe8-4f53-8835-b27aed16bc24",
       "Command": "-v"
+    },
+    {
+      "Id": "ef16334c-9530-4d1d-8b2e-94fb4ded6f56",
+      "Command": "-r"
     }
   ]
 }

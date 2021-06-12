@@ -10,6 +10,8 @@ class JackCompiler
     static public bool mDumpTokenFile = false;
     static public bool mDumpXmlFile = false;
     static public bool mDumpVMFile = true;
+    static public bool mRecursiveFolders = false;
+
     static public Dictionary<string, Tokenizer> mTokenizerDic = new Dictionary<string, Tokenizer>();
 
     static void Main(string[] args)
@@ -27,6 +29,8 @@ class JackCompiler
                 JackCompiler.mDumpTokenFile = true;
             else if (lwrArg == "-x")
                 JackCompiler.mDumpXmlFile = true;
+            else if (lwrArg == "-r")
+                JackCompiler.mRecursiveFolders = true;
             else
                 paths.Add(arg);
         }
@@ -46,7 +50,8 @@ class JackCompiler
                 string[] files = Directory.GetFiles((string)paths[i], "*.jack");
                 foreach (string file in files)
                 {
-                    paths.Add(file);
+                    if ( JackCompiler.mRecursiveFolders || !File.GetAttributes(file).HasFlag(FileAttributes.Directory) )
+                        paths.Add(file);
                 }
                 paths.RemoveAt(i--);
             }

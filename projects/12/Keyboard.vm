@@ -1,0 +1,5 @@
+function Keyboard.init 0
+function Keyboard.keyPressed 0
+function Keyboard.readChar 0
+function Keyboard.readLine 0
+function Keyboard.readInt 0
