@@ -12,32 +12,53 @@
 class Screen {
 
     /** Initializes the Screen. */
-    function void init() {
+    function void init() 
+    {
+        // FIXME
+        return;
     }
 
     /** Erases the entire screen. */
-    function void clearScreen() {
+    function void clearScreen() 
+    {
+        // FIXME
+        return;
     }
 
     /** Sets the current color, to be used for all subsequent drawXXX commands.
      *  Black is represented by true, white by false. */
-    function void setColor(boolean b) {
+    function void setColor(boolean b) 
+    {
+        // FIXME
+        return;
     }
 
     /** Draws the (x,y) pixel, using the current color. */
-    function void drawPixel(int x, int y) {
+    function void drawPixel(int x, int y) 
+    {
+        // FIXME
+        return;
     }
 
     /** Draws a line from pixel (x1,y1) to pixel (x2,y2), using the current color. */
-    function void drawLine(int x1, int y1, int x2, int y2) {
+    function void drawLine(int x1, int y1, int x2, int y2) 
+    {
+        // FIXME
+        return;
     }
 
     /** Draws a filled rectangle whose top left corner is (x1, y1)
      * and bottom right corner is (x2,y2), using the current color. */
-    function void drawRectangle(int x1, int y1, int x2, int y2) {
+    function void drawRectangle(int x1, int y1, int x2, int y2) 
+    {
+        // FIXME
+        return;
     }
 
     /** Draws a filled circle of radius r<=181 around (x,y), using the current color. */
-    function void drawCircle(int x, int y, int r) {
+    function void drawCircle(int x, int y, int r) 
+    {
+        // FIXME
+        return;
     }
 }

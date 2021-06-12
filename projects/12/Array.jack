@@ -14,10 +14,14 @@
 class Array {
 
     /** Constructs a new Array of the given size. */
-    function Array new(int size) {
+    function Array new(int size) 
+    {
+        return this;
     }
 
     /** Disposes this array. */
-    method void dispose() {
+    method void dispose() 
+    {
+        return;
     }
 }

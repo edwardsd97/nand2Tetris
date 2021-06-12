@@ -7,18 +7,80 @@
  * A library of commonly used mathematical functions.
  * Note: Jack compilers implement multiplication and division using OS method calls.
  */
-class Math {
+class Math 
+{
+    static Array mBit;
 
     /** Initializes the library. */
     function void init() 
     {
+        let mBit = Array.new( 16 );
+
+        let mBit[ 0] =     1; // 0000 0000 0000 0001  
+        let mBit[ 1] =     2; // 0000 0000 0000 0010
+        let mBit[ 2] =     4; // 0000 0000 0000 0100
+        let mBit[ 3] =     8; // 0000 0000 0000 1000
+
+        let mBit[ 4] =    16; // 0000 0000 0001 0000
+        let mBit[ 5] =    32; // 0000 0000 0010 0000
+        let mBit[ 6] =    64; // 0000 0000 0100 0000
+        let mBit[ 7] =   128; // 0000 0000 1000 0000
+
+        let mBit[ 8] =   256; // 0000 0001 0000 0000
+        let mBit[ 9] =  1024; // 0000 0010 0000 0000
+        let mBit[10] =  2048; // 0000 0100 0000 0000
+        let mBit[11] =  4096; // 0000 1000 0000 0000
+
+        let mBit[12] =  8192; // 0001 0000 0000 0000
+        let mBit[13] = 16384; // 0010 0000 0000 0000
+        let mBit[14] = 32768; // 0100 0000 0000 0000
+        let mBit[15] = 65536; // 1000 0000 0000 0000
+
         return;
     }
 
     /** Returns the absolute value of x. */
     function int abs(int x) 
     {
-        // FIXME
+        if ( x < 0 )
+        {
+            return -x;
+        }
+
+        return x;
+    }
+
+    /** Returns x to the power of y */
+    function int pow(int x, int y) 
+    {
+        var int i;
+
+        if ( y < 1 ) // y <= 0 
+        {
+            // anything to the power of 0 is 1
+            return 1;
+        }
+        
+        if ( y = 1 )
+        {
+            // anything to the power of 1 is itself
+            return x;
+        }
+
+        if ( ( x = 2 ) & ( y < 16 ) )
+        {
+            // powers of 2 have a lookup table up to 16 bits
+            return mBit[y];
+        }
+
+        let y = y - 1;
+
+        while ( i < y )
+        {
+            let x = x * x;
+            let i = i + 1;
+        }
+
         return x;
     }
 
@@ -27,10 +89,46 @@ class Math {
      *  program's code, it handles it by invoking this method. In other words,
      *  the Jack expressions x*y and multiply(x,y) return the same value.
      */
-    function int multiply(int x, int y) 
+    function int multiply(int xIn, int yIn) 
     {
-        // FIXME
-        return x;
+        /** Pseudo **
+            sum = 0
+            shiftedX = x
+            for i = 0 ... w - 1 do
+                if ( (i'ths bit of y) == 1 )
+                    sum = sum + shiftedX
+                shiftedX = shiftedX * 2
+            return sum
+        */
+        var int x, y, sum, i, shiftedX, absY;
+
+        // Make sure y is the smaller of the two numbers ( just for efficiency )
+        if ( ( y > x ) & ( x > -1 ) )
+        {
+            let x = yIn;
+            let y = xIn;
+        }
+        else
+        {
+            let x = xIn;
+            let y = yIn;
+        }
+
+        let shiftedX = x;
+        let absY = abs( y );
+
+        while ( ( i < 16 ) & ( mBit[i] > absY ) )
+        {
+            if ( y & mBit[i] )
+            {
+                let sum = sum + shiftedX;
+            }
+
+            let shiftedX = shiftedX + shiftedX;
+            let i = i + 1;
+        }
+
+        return sum;
     }
 
     /** Returns the integer part of x/y.
@@ -40,28 +138,89 @@ class Math {
      */
     function int divide(int x, int y) 
     {
-        // FIXME
-        return x;
+        /** Pseudo **
+            if ( ( y > x ) | ( y < 0 ) )
+                return 0
+            q = divide( x, 2 * y )
+            if ( ( x - ( 2 * q * y ) ) < y )
+                return 2 * q
+            else
+                return ( 2 * q ) + 1
+        */
+        var int q;
+
+        if ( ( y > x ) | ( y < 0 ) )
+        {
+            return 0;
+        }
+
+        let q = divide( x, 2 * y );
+
+        if ( ( x - ( 2 * q * y ) ) < y )
+        {
+            return 2 * q;
+        }
+
+        return ( 2 * q ) + 1;
+    }
+
+    /** Returns the number squared. */
+    function int sqr(int x) 
+    {
+        return x * x;
     }
 
     /** Returns the integer part of the square root of x. */
     function int sqrt(int x) 
     {
-        // FIXME
-        return x;
+        /** Pseudo **
+            note: pow(2,j) is mBit[j] in initialized table
+            n = 16 ?
+            y = 0
+            for j = ((n/2) - 1) ... 0
+                exp = sqr(y + pow(2,j))
+                if exp <= x and exp > 0 
+                    y = y + pow(2,j)
+            return y
+        */
+
+        var int y, j, exp;
+
+        let j = 8;
+        let y = 0;
+
+        while ( j > -1 )
+        {
+            let exp = sqr( y + mBit[j] );
+            if ( ( exp < ( x + 1 ) ) & ( exp > 0 ) )
+            {
+                let y = y + mBit[j];
+            }
+            let j = j - 1;
+        }
+
+        return y;
     }
 
     /** Returns the greater number. */
     function int max(int a, int b) 
     {
-        // FIXME
+        if ( b > a )
+        {
+            return b;
+        }
+
         return a;
     }
 
     /** Returns the smaller number. */
     function int min(int a, int b) 
     {
-        // FIXME
+        if ( b < a )
+        {
+            return b;
+        }
+
         return a;
     }
 }

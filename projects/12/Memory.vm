@@ -1,5 +1,15 @@
 function Memory.init 0
+push constant 0
+return
 function Memory.peek 0
+push constant 0
+return
 function Memory.poke 0
+push constant 0
+return
 function Memory.alloc 0
+push constant 0
+return
 function Memory.deAlloc 0
+push constant 0
+return
