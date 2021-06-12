@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Projects\\nand2Tetris\\VMTranslator\\VMTranslator.csproj": {}
+    "C:\\Projects\\nand2tetris\\VMTranslator\\VMTranslator.csproj": {}
   },
   "projects": {
-    "C:\\Projects\\nand2Tetris\\VMTranslator\\VMTranslator.csproj": {
+    "C:\\Projects\\nand2tetris\\VMTranslator\\VMTranslator.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Projects\\nand2Tetris\\VMTranslator\\VMTranslator.csproj",
+        "projectUniqueName": "C:\\Projects\\nand2tetris\\VMTranslator\\VMTranslator.csproj",
         "projectName": "VMTranslator",
-        "projectPath": "C:\\Projects\\nand2Tetris\\VMTranslator\\VMTranslator.csproj",
+        "projectPath": "C:\\Projects\\nand2tetris\\VMTranslator\\VMTranslator.csproj",
         "packagesPath": "C:\\Users\\dedwards\\.nuget\\packages\\",
-        "outputPath": "C:\\Projects\\nand2Tetris\\VMTranslator\\obj\\",
+        "outputPath": "C:\\Projects\\nand2tetris\\VMTranslator\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages",

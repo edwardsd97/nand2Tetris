@@ -8,13 +8,15 @@ class VMTranslator
     {
         ArrayList paths = new ArrayList();
 
+        Console.WriteLine("VM Translator Arguments:");
         foreach (string arg in args)
         {
+            Console.WriteLine("  " + arg );
             string lwrArg = arg.ToLower();
             if (lwrArg == "-c")
                 CodeWriter.mComments = true;
             else if (lwrArg == "-v")
-                CodeWriter.mVerbose = true;
+                CodeWriter.mVerbose = false;
             else paths.Add(arg);
         }
 
@@ -46,10 +48,10 @@ class VMTranslator
             // Only write the bootstrap code if Sys.vm is present
             foreach (string file in vmFiles)
             {
-                string name = FilePathToName(file).ToLower();
-                if (name == "sys")
+                string lower = file.ToLower();
+                if ( lower.Contains( "sys.vm" ) )
                 {
-                    writer.WriteInit();
+                    writer.WriteBootstrapSysInit(outFile);
                     break;
                 }
             }
@@ -68,9 +70,10 @@ class VMTranslator
         {
             Parser parser = new Parser( vmFiles[i] );
 
-            writer.SetVMFileName( FilePathToName( vmFiles[i] ) );
+            string outVMName = FilePathToName(vmFiles[i]);
+            writer.SetVMFileName(outVMName);
 
-            Console.WriteLine( "  " + vmFiles[i]);
+            Console.WriteLine( "  " + vmFiles[i] + " -> " + outFile );
 
             while ( parser.HasMoreCommands() || commandNext != null )
             {
@@ -99,7 +102,7 @@ class VMTranslator
                             Console.WriteLine("ERROR: Line " + parser.mLine + " - " + writer.mError);
                         }
                         continue;
-                    }
+                    }                    
 
                     writer.WriteComment(command.mLineString);
 
@@ -162,7 +165,21 @@ class VMTranslator
         {
             // Directory is name of output file
             isDirectory = true;
-            return fileOrDirectory + "/" + FilePathToName( fileOrDirectory ) + ".asm";
+            string filePathToName = FilePathToName(fileOrDirectory);
+            string result = fileOrDirectory;
+
+            if (filePathToName != "")
+            {
+                // Directory is a path to a folder
+                result = result + "/" + filePathToName;
+            }
+            else
+            {
+                // Directory is a single folder name in current folder
+                result = result + "/" + fileOrDirectory;
+            }
+
+            return result + ".asm";
         }
         else
         {
@@ -221,16 +238,64 @@ public class Parser
         public CommandType  mCommandType;
         public string       mArg1;
         public int          mArg2;
-        public int          mLine;
-        public string       mLineString;
+
+        public int mLine;
+        public string mLineString;
+
+        public Command(string commandStr, string lineString, int line)
+        {
+            mLineString = lineString;
+            mLine = line;
+            mArg1 = commandStr;
+
+            string lower = commandStr.ToLower();
+
+            if (lower == "push")
+            {
+                mCommandType = CommandType.C_PUSH;
+            }
+            else if (lower == "pop")
+            {
+                mCommandType = CommandType.C_POP;
+            }
+            else if (lower == "label")
+            {
+                mCommandType = CommandType.C_LABEL;
+            }
+            else if (lower == "goto")
+            {
+                mCommandType = CommandType.C_GOTO;
+            }
+            else if (lower == "if-goto")
+            {
+                mCommandType = CommandType.C_IF;
+            }
+            else if (lower == "function")
+            {
+                mCommandType = CommandType.C_FUNCTION;
+            }
+            else if (lower == "call")
+            {
+                mCommandType = CommandType.C_CALL;
+            }
+            else if (lower == "return")
+            {
+                mCommandType = CommandType.C_RETURN;
+            }
+            else
+            {
+                mCommandType = CommandType.C_ARITHMETIC;
+            }
+        }
     };
 
     public System.IO.StreamReader   mFile;
+    public int mLine;
+    public string mLineString;
 
     public Parser( string fileName )
     {
         mFile = new System.IO.StreamReader( fileName );
-        mLine = 0;
     }
 
     ~Parser()
@@ -252,7 +317,7 @@ public class Parser
     {
         Command command = null;
 
-        while (!readCommand && HasMoreCommands())
+        while (command == null && HasMoreCommands())
         {
             mLineString = mFile.ReadLine();
             mLine++;
@@ -272,45 +337,8 @@ public class Parser
                 switch (i)
                 {
                     case 0:
-                        // Command (enum)
-                        command = new Command();
-                        if (lower == "push")
-                        {
-                            command.mCommandType = CommandType.C_PUSH;
-                        }
-                        else if (lower == "pop")
-                        {
-                            command.mCommandType = CommandType.C_POP;
-                        }
-                        else if (lower == "label")
-                        {
-                            command.mCommandType = CommandType.C_LABEL;
-                        }
-                        else if (lower == "goto")
-                        {
-                            command.mCommandType = CommandType.C_GOTO;
-                        }
-                        else if (lower == "if-goto")
-                        {
-                            command.mCommandType = CommandType.C_IF;
-                        }
-                        else if (lower == "function")
-                        {
-                            command.mCommandType = CommandType.C_FUNCTION;
-                        }
-                        else if (lower == "call")
-                        {
-                            command.mCommandType = CommandType.C_CALL;
-                        }
-                        else if (lower == "return")
-                        {
-                            command.mCommandType = CommandType.C_RETURN;
-                        }
-                        else
-                        {
-                            command.mCommandType = CommandType.C_ARITHMETIC;
-                            mArg1 = word;
-                        }
+                        // Create new command
+                        command = new Command( word, mLineString, mLine );
                         break;
 
                     case 1:
@@ -435,10 +463,10 @@ class CodeWriter
         }
     }
 
-    public void WriteInit()
+    public void WriteBootstrapSysInit(string outFile)
     {
         WriteComment("Bootstrap Code");
-        Console.WriteLine("  " + "Bootstrap Code" );
+        Console.WriteLine("  " + "Bootstrap Code -> " + outFile );
 
         // Set SP to 256
         FileWriteLine("@256"); // @256
@@ -772,12 +800,33 @@ class CodeWriter
 
         SegmentInfo(segment, ref index, out address, out isPointer, out isConstant);
 
-        // TODO: Optimize as follows
-        // put addr = 7 + RAM[LCL] into D  // 4 lines of code
-        // add the top of the stack to D  so that D holds val + addr (and //decrease stack pointer in the process // 3 lines of code
-        //  A = val + addr - val so A = addr  // 1 line of code
-        // RAM[addr] = val + addr - addr = val // 1 line of code
+        // Optimal - 9 instructions //
 
+        // put addr = index + RAM[segment] into D  // 4 lines of code
+        FileWriteLine("@" + index); // @index
+        FileWriteLine("D=A"); // D=A
+        FileWriteLine("@" + address); // @segment pointer
+        if (!isPointer)
+        {
+            FileWriteLine("D=D+A"); // A=D+A
+        }
+        else
+        {
+            FileWriteLine("D=D+M"); // A=D+M
+        }
+
+        // add the top of the stack to D so that D holds val + addr (and //decrease stack pointer in the process // 3 lines of code
+        FileWriteLine("@SP"); // @SP
+        FileWriteLine("AM=M-1"); // AM=M-1
+        FileWriteLine("D=D+M"); // D=D+M
+
+        //  A = (val + addr) - val ( addr ) // 1 line of code
+        FileWriteLine("A=D-M"); // A=D-M
+
+        // RAM[addr] = (val + addr) - addr ( val ) // 1 line of code
+        FileWriteLine("M=D-A"); // M=D-A
+
+        /* Original - 13 instructions //
         // Store target address at current stackpointer
         FileWriteLine("@" + index); // @index
         FileWriteLine("D=A"); // D=A
@@ -803,6 +852,7 @@ class CodeWriter
         FileWriteLine("A=A+1"); // A=A+1
         FileWriteLine("A=M"); // A=M
         FileWriteLine("M=D"); // M=D
+        */
     }
 
     public void WritePushPop( string segmentPush, int indexPush, string segmentPop, int indexPop )
@@ -819,6 +869,8 @@ class CodeWriter
         bool isConstantPop = false;
         string addressPop = "0";
 
+        // Push and Pop together that does not need to increment and decrement the SP
+
         SegmentInfo(segmentPush, ref indexPush, out addressPush, out isPointerPush, out isConstantPush);
         SegmentInfo(segmentPop, ref indexPop, out addressPop, out isPointerPop, out isConstantPop);
 
@@ -828,7 +880,7 @@ class CodeWriter
         if (!isConstantPush)
         {
             FileWriteLine("@" + addressPush); // @segment pointer
-            if (!isPointer)
+            if (!isPointerPush)
             {
                 FileWriteLine("A=D+A"); // A=D+A
             }
@@ -839,16 +891,15 @@ class CodeWriter
             FileWriteLine("D=M"); // D=M
         }
         FileWriteLine("@SP"); // @SP
-        FileWriteLine("M=M+1"); // M=M+1
-        FileWriteLine("A=M-1"); // A=M
+        FileWriteLine("A=M"); // A=M
         FileWriteLine("M=D"); // M=D
 
-        // POP - FIXME - optimize
-        // Store target address at current stack pointer
+        // POP
+        // put addr = index + RAM[segment] into D  // 4 lines of code
         FileWriteLine("@" + indexPop); // @index
         FileWriteLine("D=A"); // D=A
         FileWriteLine("@" + addressPop); // @segment pointer
-        if (!isPointer)
+        if (!isPointerPop)
         {
             FileWriteLine("D=D+A"); // A=D+A
         }
@@ -856,19 +907,17 @@ class CodeWriter
         {
             FileWriteLine("D=D+M"); // A=D+M
         }
-        FileWriteLine("@SP"); // @SP
-        FileWriteLine("A=M"); // M=D
-        FileWriteLine("M=D"); // M=D
 
-        // Fetch stack pointer - 1 value
+        // add the top of the stack to D so that D holds val + addr // 3 lines of code
         FileWriteLine("@SP"); // @SP
-        FileWriteLine("AM=M-1"); // AM=M-1
-        FileWriteLine("D=M"); // D=M
-
-        // Write it to stored address
-        FileWriteLine("A=A+1"); // A=A+1
         FileWriteLine("A=M"); // A=M
-        FileWriteLine("M=D"); // M=D
+        FileWriteLine("D=D+M"); // D=D+M
+
+        //  A = (val + addr) - val ( addr ) // 1 line of code
+        FileWriteLine("A=D-M"); // A=D-M
+
+        // RAM[addr] = (val + addr) - addr ( val ) // 1 line of code
+        FileWriteLine("M=D-A"); // M=D-A
     }
 
     public void WriteComment(string comment)

@@ -2,7 +2,7 @@
   "profiles": {
     "VMTranslator": {
       "commandName": "Project",
-      "commandLineArgs": "C:\\Projects\\nand2tetris\\projects\\08\\FunctionCalls\\StaticsTest C:\\Projects\\nand2tetris\\projects\\08\\FunctionCalls\\NestedCall C:\\Projects\\nand2tetris\\projects\\08\\FunctionCalls\\FibonacciElement C:\\Projects\\nand2tetris\\projects\\08\\FunctionCalls\\SimpleFunction C:\\Projects\\nand2tetris\\projects\\08\\ProgramFlow\\FibonacciSeries C:\\Projects\\nand2tetris\\projects\\08\\ProgramFlow\\BasicLoop C:\\Projects\\nand2tetris\\projects\\07\\StackArithmetic\\StackTest\\StackTest.vm C:\\Projects\\nand2tetris\\projects\\07\\StackArithmetic\\SimpleAdd\\SimpleAdd.vm C:\\Projects\\nand2tetris\\projects\\07\\MemoryAccess\\StaticTest\\StaticTest.vm C:\\Projects\\nand2tetris\\projects\\07\\MemoryAccess\\PointerTest\\PointerTest.vm C:\\Projects\\nand2tetris\\projects\\07\\MemoryAccess\\BasicTest\\BasicTest.vm"
+      "commandLineArgs": "C:\\Projects\\nand2tetris\\projects\\08\\FunctionCalls\\StaticsTest C:\\Projects\\nand2tetris\\projects\\08\\FunctionCalls\\NestedCall C:\\Projects\\nand2tetris\\projects\\08\\FunctionCalls\\FibonacciElement"
     }
   }
 }
