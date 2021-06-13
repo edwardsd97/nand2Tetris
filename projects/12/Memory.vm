@@ -1,15 +1,157 @@
 function Memory.init 0
 push constant 0
+pop static 0
+push constant 2048
+pop static 1
+push constant 0
+push static 1
+add
+push constant 0
+pop temp 0
+pop pointer 1
+push temp 0
+pop that 0
+push constant 1
+push static 1
+add
+push constant 14335
+pop temp 0
+pop pointer 1
+push temp 0
+pop that 0
+push static 1
+pop static 2
+push constant 0
 return
 function Memory.peek 0
-push constant 0
+push argument 0
+push static 0
+add
+pop pointer 1
+push that 0
 return
 function Memory.poke 0
+push argument 0
+push static 0
+add
+push argument 1
+pop temp 0
+pop pointer 1
+push temp 0
+pop that 0
 push constant 0
 return
-function Memory.alloc 0
+function Memory.alloc 2
+push constant 0
+pop local 1
+push static 2
+pop local 0
+label Memory_alloc_L1
+push local 1
+push constant 0
+eq
+push local 0
+push constant 0
+eq
+not
+and
+not
+if-goto Memory_alloc_L2
+push constant 1
+push local 0
+add
+pop pointer 1
+push that 0
+push argument 0
+push constant 1
+add
+gt
+not
+if-goto Memory_alloc_L3
+push local 0
+push constant 1
+push local 0
+add
+pop pointer 1
+push that 0
+push argument 0
+sub
+add
+pop local 1
+push constant 0
+push local 1
+add
+push constant 0
+pop temp 0
+pop pointer 1
+push temp 0
+pop that 0
+push constant 1
+push local 1
+add
+push argument 0
+pop temp 0
+pop pointer 1
+push temp 0
+pop that 0
+push constant 1
+push local 0
+add
+push constant 1
+push local 0
+add
+pop pointer 1
+push that 0
+push argument 0
+push constant 2
+add
+sub
+pop temp 0
+pop pointer 1
+push temp 0
+pop that 0
+label Memory_alloc_L3
+push constant 0
+push local 0
+add
+pop pointer 1
+push that 0
+pop local 0
+goto Memory_alloc_L1
+label Memory_alloc_L2
+push local 1
+push constant 0
+eq
+not
+if-goto Memory_alloc_L4
 push constant 0
 return
-function Memory.deAlloc 0
+label Memory_alloc_L4
+push local 1
+push constant 2
+add
+return
+function Memory.deAlloc 2
+push argument 0
+push constant 2
+sub
+pop local 0
+push static 2
+pop local 1
+push local 0
+pop static 2
+push constant 0
+push local 0
+add
+push local 1
+pop temp 0
+pop pointer 1
+push temp 0
+pop that 0
+call Memory.deFrag 0
+pop temp 0
+push constant 0
+return
+function Memory.deFrag 0
 push constant 0
 return

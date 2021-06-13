@@ -64,8 +64,8 @@ class Memory
 
                 // result block is allocated at the end of the free block's chunk of memory
                 let resultBlock = freeList + freeList[1] - size; // (+2) (-2) cancel out
-                resultBlock[0] = 0;
-                resultBlock[1] = size;
+                let resultBlock[0] = 0;
+                let resultBlock[1] = size;
 
                 // reduce the free memory size from this block we just pulled from
                 let freeList[1] = freeList[1] - (size + 2);

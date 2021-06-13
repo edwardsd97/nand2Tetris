@@ -1,21 +1,378 @@
 function Screen.init 0
+push constant 1
+pop this 0
 push constant 0
 return
 function Screen.clearScreen 0
 push constant 0
 return
 function Screen.setColor 0
+push argument 0
+pop this 0
 push constant 0
 return
-function Screen.drawPixel 0
+function Screen.drawPixel 5
+push argument 0
+push constant 16
+call Math.divide 2
+pop local 4
+push argument 0
+push local 4
+push constant 16
+call Math.multiply 2
+sub
+pop local 2
+push local 2
+call Math.bitMask 1
+pop local 3
+push constant 32
+push argument 1
+call Math.multiply 2
+push local 4
+add
+pop local 0
+push constant 16384
+push local 0
+add
+call Memory.peek 1
+pop local 1
+push this 0
+not
+if-goto Screen_drawPixel_L1
+push local 1
+push local 3
+or
+pop local 1
+goto Screen_drawPixel_L2
+label Screen_drawPixel_L1
+push local 3
+not
+pop local 3
+push local 1
+push local 3
+and
+pop local 1
+label Screen_drawPixel_L2
+push constant 16384
+push local 0
+add
+call Memory.poke 1
+pop temp 0
 push constant 0
 return
-function Screen.drawLine 0
+function Screen.drawLine 6
+push argument 0
+push argument 2
+gt
+not
+if-goto Screen_drawLine_L1
+push argument 2
+pop local 5
+push argument 0
+pop argument 2
+push local 5
+pop argument 0
+push argument 3
+pop local 5
+push argument 1
+pop argument 3
+push local 5
+pop argument 1
+label Screen_drawLine_L1
+push argument 3
+push argument 1
+eq
+not
+if-goto Screen_drawLine_L2
+label Screen_drawLine_L3
+push argument 0
+push argument 2
+push constant 1
+sub
+lt
+not
+if-goto Screen_drawLine_L4
+push argument 0
+push argument 1
+call Screen.drawPixel 2
+pop temp 0
+push argument 0
+push constant 1
+add
+pop argument 0
+goto Screen_drawLine_L3
+label Screen_drawLine_L4
 push constant 0
 return
-function Screen.drawRectangle 0
+label Screen_drawLine_L2
+push argument 2
+push argument 0
+eq
+not
+if-goto Screen_drawLine_L5
+push argument 1
+push argument 3
+gt
+not
+if-goto Screen_drawLine_L6
+push argument 3
+pop local 5
+push argument 1
+pop argument 3
+push local 5
+pop argument 1
+label Screen_drawLine_L6
+label Screen_drawLine_L7
+push argument 1
+push argument 3
+push constant 1
+sub
+lt
+not
+if-goto Screen_drawLine_L8
+push argument 0
+push argument 1
+call Screen.drawPixel 2
+pop temp 0
+push argument 1
+push constant 1
+add
+pop argument 1
+goto Screen_drawLine_L7
+label Screen_drawLine_L8
 push constant 0
 return
-function Screen.drawCircle 0
+label Screen_drawLine_L5
+push constant 0
+pop local 0
+push constant 0
+pop local 1
+push constant 0
+pop local 4
+push argument 2
+push argument 0
+sub
+pop local 2
+push argument 3
+push argument 1
+sub
+pop local 3
+push local 3
+push constant 1
+neg
+gt
+not
+if-goto Screen_drawLine_L9
+label Screen_drawLine_L10
+push local 0
+push local 2
+push constant 1
+add
+lt
+push local 1
+push local 3
+push constant 1
+add
+lt
+and
+not
+if-goto Screen_drawLine_L11
+push argument 0
+push local 0
+add
+push argument 1
+push local 1
+add
+call Screen.drawPixel 2
+pop temp 0
+push local 4
+push constant 0
+lt
+not
+if-goto Screen_drawLine_L12
+push local 0
+push constant 1
+add
+pop local 0
+push local 4
+push local 3
+add
+pop local 4
+goto Screen_drawLine_L13
+label Screen_drawLine_L12
+push local 1
+push constant 1
+add
+pop local 1
+push local 4
+push local 2
+sub
+pop local 4
+label Screen_drawLine_L13
+goto Screen_drawLine_L10
+label Screen_drawLine_L11
+goto Screen_drawLine_L14
+label Screen_drawLine_L9
+push local 3
+neg
+pop local 3
+label Screen_drawLine_L15
+push local 0
+push local 2
+push constant 1
+add
+lt
+push local 1
+push local 3
+push constant 1
+add
+lt
+neg
+and
+not
+if-goto Screen_drawLine_L16
+push argument 0
+push local 0
+add
+push argument 1
+push local 1
+add
+call Screen.drawPixel 2
+pop temp 0
+push local 4
+push constant 0
+lt
+not
+if-goto Screen_drawLine_L17
+push local 0
+push constant 1
+add
+pop local 0
+push local 4
+push local 3
+add
+pop local 4
+goto Screen_drawLine_L18
+label Screen_drawLine_L17
+push local 1
+push constant 1
+sub
+pop local 1
+push local 4
+push local 2
+sub
+pop local 4
+label Screen_drawLine_L18
+goto Screen_drawLine_L15
+label Screen_drawLine_L16
+label Screen_drawLine_L14
+push constant 0
+return
+function Screen.drawRectangle 1
+push argument 0
+push argument 2
+gt
+not
+if-goto Screen_drawRectangle_L1
+push argument 2
+pop local 0
+push argument 0
+pop argument 2
+push local 0
+pop argument 0
+label Screen_drawRectangle_L1
+push argument 1
+push argument 3
+gt
+not
+if-goto Screen_drawRectangle_L2
+push argument 3
+pop local 0
+push argument 1
+pop argument 3
+push local 0
+pop argument 1
+label Screen_drawRectangle_L2
+label Screen_drawRectangle_L3
+push argument 1
+push argument 3
+push constant 1
+sub
+lt
+not
+if-goto Screen_drawRectangle_L4
+push argument 0
+push argument 1
+push argument 2
+push argument 1
+call Screen.drawLine 4
+pop temp 0
+push argument 1
+push constant 1
+add
+pop argument 1
+goto Screen_drawRectangle_L3
+label Screen_drawRectangle_L4
+push constant 0
+return
+function Screen.drawCircle 4
+push argument 2
+push constant 1
+lt
+not
+if-goto Screen_drawCircle_L1
+push constant 0
+return
+label Screen_drawCircle_L1
+push argument 2
+push constant 181
+gt
+not
+if-goto Screen_drawCircle_L2
+push constant 181
+pop argument 2
+label Screen_drawCircle_L2
+push argument 2
+neg
+pop local 0
+push argument 2
+push argument 2
+call Math.multiply 2
+pop local 3
+label Screen_drawCircle_L3
+push local 0
+push argument 2
+push constant 1
+add
+lt
+not
+if-goto Screen_drawCircle_L4
+push local 3
+push local 0
+push local 0
+call Math.multiply 2
+sub
+call Math.sqrt 1
+pop local 2
+push argument 1
+push local 0
+add
+pop local 1
+push argument 0
+push local 2
+sub
+push local 1
+push argument 0
+push local 2
+add
+push local 1
+call Screen.drawLine 4
+pop temp 0
+push local 0
+push constant 1
+add
+pop local 0
+goto Screen_drawCircle_L3
+label Screen_drawCircle_L4
 push constant 0
 return

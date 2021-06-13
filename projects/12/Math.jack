@@ -39,6 +39,17 @@ class Math
         return;
     }
 
+    /** Returns word bit mask with only the bit indicated set to 1. */
+    function int bitMask(int bit) 
+    {
+        if ( ( bit > -1 ) & ( bit < 16 ) )
+        {
+            return mBit[bit];
+        }
+
+        return 0;
+    }
+
     /** Returns the absolute value of x. */
     function int abs(int x) 
     {

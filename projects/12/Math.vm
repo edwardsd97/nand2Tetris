@@ -132,6 +132,26 @@ push temp 0
 pop that 0
 push constant 0
 return
+function Math.bitMask 0
+push argument 0
+push constant 1
+neg
+gt
+push argument 0
+push constant 16
+lt
+and
+not
+if-goto Math_bitMask_L1
+push argument 0
+push static 0
+add
+pop pointer 1
+push that 0
+return
+label Math_bitMask_L1
+push constant 0
+return
 function Math.abs 0
 push argument 0
 push constant 0
@@ -142,61 +162,6 @@ push argument 0
 neg
 return
 label Math_abs_L1
-push argument 0
-return
-function Math.pow 1
-push argument 1
-push constant 1
-lt
-not
-if-goto Math_pow_L1
-push constant 1
-return
-label Math_pow_L1
-push argument 1
-push constant 1
-eq
-not
-if-goto Math_pow_L2
-push argument 0
-return
-label Math_pow_L2
-push argument 0
-push constant 2
-eq
-push argument 1
-push constant 16
-lt
-and
-not
-if-goto Math_pow_L3
-push argument 1
-push static 0
-add
-pop pointer 1
-push that 0
-return
-label Math_pow_L3
-push argument 1
-push constant 1
-sub
-pop argument 1
-label Math_pow_L4
-push local 0
-push argument 1
-lt
-not
-if-goto Math_pow_L5
-push argument 0
-push argument 0
-call Math.multiply 2
-pop argument 0
-push local 0
-push constant 1
-add
-pop local 0
-goto Math_pow_L4
-label Math_pow_L5
 push argument 0
 return
 function Math.multiply 6
@@ -307,11 +272,6 @@ call Math.multiply 2
 push constant 1
 add
 return
-function Math.sqr 0
-push argument 0
-push argument 0
-call Math.multiply 2
-return
 function Math.sqrt 3
 push constant 8
 pop local 1
@@ -381,5 +341,65 @@ if-goto Math_min_L1
 push argument 1
 return
 label Math_min_L1
+push argument 0
+return
+function Math.sqr 0
+push argument 0
+push argument 0
+call Math.multiply 2
+return
+function Math.pow 1
+push argument 1
+push constant 1
+lt
+not
+if-goto Math_pow_L1
+push constant 1
+return
+label Math_pow_L1
+push argument 1
+push constant 1
+eq
+not
+if-goto Math_pow_L2
+push argument 0
+return
+label Math_pow_L2
+push argument 0
+push constant 2
+eq
+push argument 1
+push constant 16
+lt
+and
+not
+if-goto Math_pow_L3
+push argument 1
+push static 0
+add
+pop pointer 1
+push that 0
+return
+label Math_pow_L3
+push argument 1
+push constant 1
+sub
+pop argument 1
+label Math_pow_L4
+push local 0
+push argument 1
+lt
+not
+if-goto Math_pow_L5
+push argument 0
+push argument 0
+call Math.multiply 2
+pop argument 0
+push local 0
+push constant 1
+add
+pop local 0
+goto Math_pow_L4
+label Math_pow_L5
 push argument 0
 return
