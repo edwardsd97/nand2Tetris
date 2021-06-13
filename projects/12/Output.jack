@@ -227,7 +227,7 @@ class Output {
             let screenAddress = 16384 + screenWord;
 
             let charMap = charMaps[c];
-            let shifted = ( x - ( ( x / 16 ) * 16 ) ) > 128;
+            let shifted = ( x - ( ( x / 16 ) * 16 ) ) > 255;
 
             do printCharScanLine(screenAddress+0, charMap[0], shifted );
             do printCharScanLine(screenAddress+32, charMap[1], shifted );
@@ -256,6 +256,7 @@ class Output {
         let mask = 255;
 
         let curValue = Memory.peek( wordAddress );
+
         if ( shifted )
         {
             let charLineValue = charLineValue * 256;
@@ -293,7 +294,7 @@ class Output {
     {
         var int digit;
         var int divisor;
-        var int wroteDigit;
+        var boolean wroteDigit;
 
         let wroteDigit = 0;
 
@@ -311,7 +312,7 @@ class Output {
             let digit = i / divisor;
             if ( ( digit > 0 ) | wroteDigit )
             {
-                let wroteDigit = -1;
+                let wroteDigit = true;
                 do printChar( 48 + digit );
                 let i = i - ( digit * divisor );
             }

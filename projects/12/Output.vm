@@ -1555,7 +1555,7 @@ call Math.divide 2
 push constant 16
 call Math.multiply 2
 sub
-push constant 128
+push constant 255
 gt
 pop local 5
 push local 3
@@ -1775,8 +1775,8 @@ push local 2
 or
 not
 if-goto Output_printInt_L4
-push constant 1
-neg
+push constant 0
+not
 pop local 2
 push constant 48
 push local 0

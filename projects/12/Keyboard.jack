@@ -37,8 +37,7 @@ class Keyboard {
      */
     function char keyPressed() 
     {
-        // FIXME
-        return 0;
+        return Memory.peek( 25476 );
     }
 
     /**								
@@ -48,8 +47,26 @@ class Keyboard {
      */
     function char readChar() 
     {
-        // FIXME
-        return 0;
+        var char pressed;
+
+        do Output.printChar( 0 ); // show cursor
+        do Output.printChar( 129 ); // backspace
+
+        while ( keyPressed() = 0 )
+        {
+            do Sys.wait( 1 );
+        }
+
+        let pressed = keyPressed();
+
+        while ( ~( keyPressed() = pressed ) )
+        {
+            do Sys.wait( 1 );
+        }
+
+        do Output.printChar( pressed );
+
+        return pressed;
     }
 
     /**								
@@ -59,8 +76,30 @@ class Keyboard {
      */
     function String readLine(String message) 
     {
-        // FIXME
-        return 0;
+        var String str;
+        var char c;
+
+        do Output.printString( message );
+
+        let str = String.new( 256 );
+
+        while ( ~( c = 128 ) ) // c != newline
+        {
+            let c = readChar();
+
+            if ( c = 129 ) // backspace
+            {
+                do Output.backSpace();
+                do str.eraseLastChar();
+            }
+
+            if ( c < 128 )
+            {
+                do str.appendChar( c );
+            }
+        }
+
+        return str;
     }   
 
     /**								
@@ -71,7 +110,15 @@ class Keyboard {
      */
     function int readInt(String message) 
     {
-        // FIXME
-        return 0;
+        var String str;
+        var int result;
+
+        let str = readline( message );
+
+        let result = str.intValue();
+
+        do str.dispose();
+
+        return result;
     }
 }
