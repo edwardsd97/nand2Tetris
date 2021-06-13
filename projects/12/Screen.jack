@@ -11,13 +11,13 @@
  */
 class Screen 
 {
-    field int mColor;
+    static int mColor;
 
     /** Initializes the Screen. */
     function void init() 
     {
-        let mColor = 1; // black
-        do clearScreen();
+        do Screen.setColor( 1 ); // black
+        do Screen.clearScreen();
         return;
     }
 
@@ -39,9 +39,9 @@ class Screen
 
     /** Sets the current color, to be used for all subsequent drawXXX commands.
      *  Black is represented by true, white by false. */
-    function void setColor(boolean b) 
+    function void setColor(int color) 
     {
-        let mColor = b; // 1 black, 0 white
+        let mColor = color; // 1 black, 0 white
         return;
     }
 
@@ -71,7 +71,7 @@ class Screen
             let mask = ~mask;
             let wordValue = wordValue & mask;
         }
-        do Memory.poke( 16384 + screenWord );
+        do Memory.poke( 16384 + screenWord, wordValue );
 
         return;
     }
@@ -101,7 +101,7 @@ class Screen
             // Line going straight to the right
             while ( x1 < ( x2 - 1 ) ) // x1 <= x2
             {
-                do drawPixel( x1, y1 );
+                do Screen.drawPixel( x1, y1 );
                 let x1 = x1 + 1;
             }
             return;
@@ -120,7 +120,7 @@ class Screen
             // Line going straight down
             while ( y1 < ( y2 - 1 ) ) // y1 <= y2
             {
-                do drawPixel( x1, y1 );
+                do Screen.drawPixel( x1, y1 );
                 let y1 = y1 + 1;
             }
 
@@ -139,7 +139,7 @@ class Screen
             // Line going from left to right - Y going downward (increasing)
             while ( ( a < ( dx + 1 ) ) & ( b < ( dy + 1 ) ) ) // while ( a <= dx ) and ( b <= dy )
             {
-                do drawPixel( x1 + a, y1 + b );
+                do Screen.drawPixel( x1 + a, y1 + b );
                 if ( diff < 0 )
                 {
                     let a = a + 1;
@@ -158,7 +158,7 @@ class Screen
             let dy = -dy;
             while ( ( a < ( dx + 1 ) ) & ( -b < ( dy + 1 ) ) ) // while ( a <= dx ) and ( -b <= dy )
             {
-                do drawPixel( x1 + a, y1 + b );
+                do Screen.drawPixel( x1 + a, y1 + b );
                 if ( diff < 0 )
                 {
                     let a = a + 1;
@@ -199,7 +199,7 @@ class Screen
 
         while ( y1 < ( y2 - 1 ) ) // y1 <= y2
         {
-            do drawLine( x1, y1, x2, y1 );
+            do Screen.drawLine( x1, y1, x2, y1 );
             let y1 = y1 + 1;
         }
 
@@ -236,7 +236,7 @@ class Screen
         {
             let exp = Math.sqrt( rSquared - ( dy * dy ) );
             let lineY = y + dy;
-            do drawLine( x - exp, lineY, x + exp, lineY );
+            do Screen.drawLine( x - exp, lineY, x + exp, lineY );
             let dy = dy + 1;
         }
 

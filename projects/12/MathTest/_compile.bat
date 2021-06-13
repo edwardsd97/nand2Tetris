@@ -1,0 +1,3 @@
+
+call ../../../tools/jackcompiler .
+pause

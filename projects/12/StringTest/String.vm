@@ -3,20 +3,37 @@ push constant 3
 call Memory.alloc 1
 pop pointer 0
 push argument 0
-call Array.new 1
-pop this 0
+pop this 2
 push constant 0
 pop this 1
-push argument 0
-pop this 2
+push constant 0
+pop this 0
+push this 2
+push constant 0
+gt
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
+push this 2
+call Array.new 1
+pop this 0
+label IF_FALSE0
 push pointer 0
 return
 function String.dispose 0
 push argument 0
 pop pointer 0
 push this 0
+push constant 0
+eq
+not
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
+push this 0
 call Memory.deAlloc 1
 pop temp 0
+label IF_FALSE0
 push constant 0
 return
 function String.length 0
@@ -35,15 +52,16 @@ push argument 1
 push this 1
 lt
 and
-not
-if-goto String_charAt_L1
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
 push argument 1
 push this 0
 add
 pop pointer 1
 push that 0
 return
-label String_charAt_L1
+label IF_FALSE0
 push constant 0
 return
 function String.setCharAt 0
@@ -57,8 +75,9 @@ push argument 1
 push this 1
 lt
 and
-not
-if-goto String_setCharAt_L1
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
 push argument 1
 push this 0
 add
@@ -67,7 +86,7 @@ pop temp 0
 pop pointer 1
 push temp 0
 pop that 0
-label String_setCharAt_L1
+label IF_FALSE0
 push constant 0
 return
 function String.appendChar 0
@@ -76,8 +95,9 @@ pop pointer 0
 push this 1
 push this 2
 lt
-not
-if-goto String_appendChar_L1
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
 push this 1
 push this 0
 add
@@ -90,7 +110,47 @@ push this 1
 push constant 1
 add
 pop this 1
-label String_appendChar_L1
+label IF_FALSE0
+push pointer 0
+return
+function String.append 2
+push argument 0
+pop pointer 0
+push constant 0
+pop local 0
+push argument 1
+call String.length 1
+pop local 1
+label WHILE_EXP0
+push this 1
+push this 2
+lt
+push local 0
+push local 1
+lt
+and
+not
+if-goto WHILE_END0
+push this 1
+push this 0
+add
+push argument 1
+push local 0
+call String.charAt 2
+pop temp 0
+pop pointer 1
+push temp 0
+pop that 0
+push this 1
+push constant 1
+add
+pop this 1
+push local 0
+push constant 1
+add
+pop local 0
+goto WHILE_EXP0
+label WHILE_END0
 push pointer 0
 return
 function String.eraseLastChar 0
@@ -99,13 +159,14 @@ pop pointer 0
 push this 1
 push constant 0
 gt
-not
-if-goto String_eraseLastChar_L1
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
 push this 1
 push constant 1
 sub
 pop this 1
-label String_eraseLastChar_L1
+label IF_FALSE0
 push constant 0
 return
 function String.intValue 4
@@ -117,47 +178,49 @@ sub
 pop local 0
 push constant 0
 pop local 1
-push constant 0
-pop local 2
 push constant 1
-pop local 3
-label String_intValue_L1
+pop local 2
+label WHILE_EXP0
 push local 0
 push constant 1
 neg
 gt
 not
-if-goto String_intValue_L2
+if-goto WHILE_END0
 push local 0
 push this 0
 add
 pop pointer 1
 push that 0
+pop local 3
+push local 3
 push constant 45
 eq
-not
-if-goto String_intValue_L3
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
 push local 1
 neg
 pop local 1
 push local 1
 return
-label String_intValue_L3
-push local 0
+label IF_FALSE0
+push local 3
 push constant 48
 lt
-push local 0
+push local 3
 push constant 57
 gt
 or
-not
-if-goto String_intValue_L4
+if-goto IF_TRUE1
+goto IF_FALSE1
+label IF_TRUE1
 push local 1
 return
-label String_intValue_L4
+label IF_FALSE1
 push local 1
+push local 2
 push local 3
-push local 0
 push constant 48
 sub
 call Math.multiply 2
@@ -165,14 +228,14 @@ add
 pop local 1
 push local 0
 push constant 1
-add
+sub
 pop local 0
-push local 3
+push local 2
 push constant 10
 call Math.multiply 2
-pop local 3
-goto String_intValue_L1
-label String_intValue_L2
+pop local 2
+goto WHILE_EXP0
+label WHILE_END0
 push local 1
 return
 function String.setInt 3
@@ -185,8 +248,9 @@ pop this 1
 push argument 1
 push constant 0
 lt
-not
-if-goto String_setInt_L1
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
 push argument 1
 neg
 pop argument 1
@@ -194,15 +258,15 @@ push pointer 0
 push constant 45
 call String.appendChar 2
 pop temp 0
-label String_setInt_L1
+label IF_FALSE0
 push constant 10000
 pop local 1
-label String_setInt_L2
+label WHILE_EXP0
 push local 1
 push constant 0
 gt
 not
-if-goto String_setInt_L3
+if-goto WHILE_END0
 push argument 1
 push local 1
 call Math.divide 2
@@ -212,8 +276,9 @@ push constant 0
 gt
 push local 2
 or
-not
-if-goto String_setInt_L4
+if-goto IF_TRUE1
+goto IF_FALSE1
+label IF_TRUE1
 push constant 0
 not
 pop local 2
@@ -229,23 +294,24 @@ push local 1
 call Math.multiply 2
 sub
 pop argument 1
-label String_setInt_L4
+label IF_FALSE1
 push local 1
 push constant 1
 eq
-not
-if-goto String_setInt_L5
+if-goto IF_TRUE2
+goto IF_FALSE2
+label IF_TRUE2
 push constant 0
 pop local 1
-goto String_setInt_L6
-label String_setInt_L5
+goto IF_END2
+label IF_FALSE2
 push local 1
 push constant 10
 call Math.divide 2
 pop local 1
-label String_setInt_L6
-goto String_setInt_L2
-label String_setInt_L3
+label IF_END2
+goto WHILE_EXP0
+label WHILE_END0
 push constant 0
 return
 function String.newLine 0

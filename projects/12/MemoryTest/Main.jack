@@ -47,6 +47,15 @@ class Main {
         
         do c.dispose();
         do b.dispose();
+
+        if ( ~( err = 0 ) )
+        {
+            do Output.printString( "* Error! *" );
+        }
+        else
+        {
+            do Output.printString( "Success!" );
+        }
         
         return;
     }

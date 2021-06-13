@@ -14,7 +14,7 @@ class Math
     /** Initializes the library. */
     function void init() 
     {
-        let mBit = Array.new( 16 );
+        let mBit = Array.new( 15 );
 
         let mBit[ 0] =     1; // 0000 0000 0000 0001  
         let mBit[ 1] =     2; // 0000 0000 0000 0010
@@ -34,7 +34,6 @@ class Math
         let mBit[12] =  4096; // 0001 0000 0000 0000
         let mBit[13] =  8192; // 0010 0000 0000 0000
         let mBit[14] = 16384; // 0100 0000 0000 0000
-        let mBit[15] = 32768; // 1000 0000 0000 0000
 
         return;
     }
@@ -42,7 +41,7 @@ class Math
     /** Returns word bit mask with only the bit indicated set to 1. */
     function int bitMask(int bit) 
     {
-        if ( ( bit > -1 ) & ( bit < 16 ) )
+        if ( ( bit > -1 ) & ( bit < 15 ) )
         {
             return mBit[bit];
         }
@@ -92,7 +91,7 @@ class Math
         }
 
         let shiftedX = x;
-        let absY = abs( y );
+        let absY = Math.abs( y );
 
         while ( ( i < 16 ) & ( mBit[i] > absY ) )
         {
@@ -131,7 +130,7 @@ class Math
             return 0;
         }
 
-        let q = divide( x, 2 * y );
+        let q = Math.divide( x, 2 * y );
 
         if ( ( x - ( 2 * q * y ) ) < y )
         {
@@ -162,7 +161,7 @@ class Math
 
         while ( j > -1 )
         {
-            let exp = sqr( y + mBit[j] );
+            let exp = Math.sqr( y + mBit[j] );
             if ( ( exp < ( x + 1 ) ) & ( exp > 0 ) )
             {
                 let y = y + mBit[j];

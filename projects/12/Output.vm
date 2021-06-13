@@ -1463,11 +1463,12 @@ push argument 0
 push constant 126
 gt
 or
-not
-if-goto Output_getMap_L1
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
 push constant 0
 pop argument 0
-label Output_getMap_L1
+label IF_FALSE0
 push argument 0
 push static 0
 add
@@ -1492,8 +1493,9 @@ function Output.printChar 6
 push argument 0
 push constant 128
 eq
-not
-if-goto Output_printChar_L1
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
 push constant 0
 pop static 1
 push static 2
@@ -1502,12 +1504,13 @@ add
 pop static 2
 push constant 0
 return
-label Output_printChar_L1
+label IF_FALSE0
 push argument 0
 push constant 129
 eq
-not
-if-goto Output_printChar_L2
+if-goto IF_TRUE1
+goto IF_FALSE1
+label IF_TRUE1
 push static 1
 push constant 1
 sub
@@ -1516,12 +1519,13 @@ call Math.max 2
 pop static 1
 push constant 0
 return
-label Output_printChar_L2
+label IF_FALSE1
 push argument 0
 push constant 127
 lt
-not
-if-goto Output_printChar_L3
+if-goto IF_TRUE2
+goto IF_FALSE2
+label IF_TRUE2
 push static 1
 push constant 8
 call Math.multiply 2
@@ -1683,7 +1687,7 @@ push static 1
 push constant 1
 add
 pop static 1
-label Output_printChar_L3
+label IF_FALSE2
 push constant 0
 return
 function Output.printCharScanLine 2
@@ -1693,8 +1697,9 @@ push argument 0
 call Memory.peek 1
 pop local 0
 push argument 2
-not
-if-goto Output_printCharScanLine_L1
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
 push argument 1
 push constant 256
 call Math.multiply 2
@@ -1703,7 +1708,7 @@ push argument 1
 push constant 256
 call Math.multiply 2
 pop local 1
-label Output_printCharScanLine_L1
+label IF_FALSE0
 push local 0
 push local 1
 and
@@ -1716,18 +1721,20 @@ push argument 0
 push local 0
 call Memory.poke 2
 pop temp 0
+push constant 0
+return
 function Output.printString 2
 push argument 0
 call String.length 1
 pop local 0
 push constant 0
 pop local 1
-label Output_printString_L1
+label WHILE_EXP0
 push local 1
 push local 0
 lt
 not
-if-goto Output_printString_L2
+if-goto WHILE_END0
 push argument 0
 push local 1
 call String.charAt 2
@@ -1737,75 +1744,24 @@ push local 1
 push constant 1
 add
 pop local 1
-goto Output_printString_L1
-label Output_printString_L2
+goto WHILE_EXP0
+label WHILE_END0
 push constant 0
 return
-function Output.printInt 3
-push constant 0
-pop local 2
-push argument 0
-push constant 0
-lt
-not
-if-goto Output_printInt_L1
-push argument 0
-neg
-pop argument 0
-push constant 45
-call Output.printChar 1
-pop temp 0
-label Output_printInt_L1
-push constant 10000
-pop local 1
-label Output_printInt_L2
-push local 1
-push constant 0
-gt
-not
-if-goto Output_printInt_L3
-push argument 0
-push local 1
-call Math.divide 2
+function Output.printInt 1
+push constant 6
+call String.new 1
 pop local 0
 push local 0
-push constant 0
-gt
-push local 2
-or
-not
-if-goto Output_printInt_L4
-push constant 0
-not
-pop local 2
-push constant 48
-push local 0
-add
-call Output.printChar 1
-pop temp 0
 push argument 0
+call String.setInt 2
+pop temp 0
 push local 0
-push local 1
-call Math.multiply 2
-sub
-pop argument 0
-label Output_printInt_L4
-push local 1
-push constant 1
-eq
-not
-if-goto Output_printInt_L5
-push constant 0
-pop local 1
-goto Output_printInt_L6
-label Output_printInt_L5
-push local 1
-push constant 10
-call Math.divide 2
-pop local 1
-label Output_printInt_L6
-goto Output_printInt_L2
-label Output_printInt_L3
+call Output.printString 1
+pop temp 0
+push local 0
+call String.dispose 1
+pop temp 0
 push constant 0
 return
 function Output.println 0

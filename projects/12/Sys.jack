@@ -19,7 +19,7 @@ class Sys
 
         do Main.main();
 
-        do halt();
+        do Sys.halt();
 
         return;
     }
@@ -38,9 +38,16 @@ class Sys
     /** Waits approximately duration milliseconds and returns.  */
     function void wait(int duration) 
     {
+        var int count;
+
         // FIXME - this is lame - will never be correct without a way to measure time properly
         while( duration > 0 )
         {
+            let count = 100;
+            while ( count > 0 )
+            {
+                let count = count - 1;
+            }
             let duration = duration - 1;
         }
 

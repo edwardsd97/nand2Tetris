@@ -26,12 +26,12 @@ class Main {
     
         let i = String.new(6);
         do i.setInt(12345);
-        do Output.printString("setInt: ");
+        do Output.printString("setInt<12345>: ");
         do Output.printString(i);                // setInt: 12345
         do Output.println();
 
         do i.setInt(-32767);
-        do Output.printString("setInt: ");
+        do Output.printString("setInt<-32767>: ");
         do Output.printString(i);                // setInt: -32767
         do Output.println();
         
@@ -54,12 +54,12 @@ class Main {
         do Output.println();
         
         let s = "456";
-        do Output.printString("intValue: ");
+        do Output.printString("intValue<456>: ");
         do Output.printInt(s.intValue());        // intValue: 456
         do Output.println();
         
         let s = "-32123";
-        do Output.printString("intValue: ");
+        do Output.printString("intValue<-32123>: ");
         do Output.printInt(s.intValue());        // intValue: -32123
         do Output.println();
         

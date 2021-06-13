@@ -3,6 +3,10 @@
   "Id": "b2c9d888-b676-4ba0-ba7e-4703df78e0c6",
   "Items": [
     {
+      "Id": "78aa4d95-65c3-46f6-b40d-a5d0fbafa76f",
+      "Command": "C:\\Projects\\nand2Tetris\\projects\\12\\ScreenTest"
+    },
+    {
       "Id": "8965ed4d-8147-41d9-8ceb-8de89b2e8f9f",
       "Command": "C:\\Projects\\nand2Tetris\\projects\\12"
     },

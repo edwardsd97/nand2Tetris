@@ -32,7 +32,7 @@ push constant 0
 gt
 not
 if-goto WHILE_END0
-push constant 100
+push constant 80
 pop local 0
 label WHILE_EXP1
 push local 0

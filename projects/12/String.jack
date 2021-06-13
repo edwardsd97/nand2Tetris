@@ -20,16 +20,25 @@ class String
      *  and initial length of 0. */
     constructor String new(int maxLength) 
     {
-        let mStr = Array.new( maxLength );
-        let mLen = 0;
         let mLenMax = maxLength;
+        let mLen = 0;
+        let mStr = 0;
+
+        if ( mLenMax > 0 )
+        {
+            let mStr = Array.new( mLenMax );
+        }
+
         return this;
     }
 
     /** Disposes this string. */
     method void dispose() 
     {
-        do Memory.deAlloc( mStr );
+        if ( ~(mStr = null) )
+        {
+            do Memory.deAlloc( mStr );
+        }
         return;
     }
 
@@ -73,6 +82,25 @@ class String
         return this;
     }
 
+    /** Appends string to this string's end and returns this string. */
+    method String append(String s) 
+    {
+        var int i;
+        var int sLen;
+
+        let i = 0;
+        let sLen = s.length();
+
+        while ( ( mLen < mLenMax ) & ( i < sLen ) )
+        {
+            let mStr[mLen] = s.charAt( i );
+            let mLen = mLen + 1;
+            let i = i + 1;
+        }
+
+        return this;
+    }
+
     /** Erases the last character from this string. */
     method void eraseLastChar() 
     {
@@ -89,31 +117,33 @@ class String
     {
         var int c;
         var int result;
-        var boolean neg;
         var int mult;
+        var int sc;
 
         let c = mLen - 1;
         let result = 0;
-        let neg = 0;
         let mult = 1;
 
         while ( c > -1 )
         {
-            if ( mStr[c] = 45 ) // '-'
+            let sc = mStr[c];
+
+            if ( sc = 45 ) // '-'
             {
                 let result = -result;
                 return result;
             }
 
-            if ( ( c < 48 ) | ( c > 57 ) )
+            // 0: 48 .... 9: 57
+            if ( ( sc < 48 ) | ( sc > 57 ) )
             {
                 // non number character
                 return result;
             }
 
-            let result = result + ( mult * ( c - 48 ) );
+            let result = result + ( mult * ( sc - 48 ) );
 
-            let c = c + 1;
+            let c = c - 1;
             let mult = mult * 10;
         }
 

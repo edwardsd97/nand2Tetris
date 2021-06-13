@@ -24,7 +24,7 @@ class Output {
     /** Initializes the screen, and locates the cursor at the screen's top-left. */
     function void init() 
     {
-        do initMap();
+        do Output.initMap();
         return;
     }
 
@@ -188,7 +188,7 @@ class Output {
     {
         let cursorX = i;
         let cursorY = j;
-        do printChar( 32 ); // space
+        do Output.printChar( 32 ); // space
         let cursorX = cursorX - 1;
         return;
     }
@@ -229,17 +229,17 @@ class Output {
             let charMap = charMaps[c];
             let shifted = ( x - ( ( x / 16 ) * 16 ) ) > 255;
 
-            do printCharScanLine(screenAddress+0, charMap[0], shifted );
-            do printCharScanLine(screenAddress+32, charMap[1], shifted );
-            do printCharScanLine(screenAddress+64, charMap[2], shifted );
-            do printCharScanLine(screenAddress+96, charMap[3], shifted );
-            do printCharScanLine(screenAddress+128, charMap[4], shifted );
-            do printCharScanLine(screenAddress+160, charMap[5], shifted );
-            do printCharScanLine(screenAddress+192, charMap[6], shifted );
-            do printCharScanLine(screenAddress+224, charMap[7], shifted );
-            do printCharScanLine(screenAddress+256, charMap[8], shifted );
-            do printCharScanLine(screenAddress+288, charMap[9], shifted );
-            do printCharScanLine(screenAddress+320, charMap[10], shifted );
+            do Output.printCharScanLine(screenAddress+0, charMap[0], shifted );
+            do Output.printCharScanLine(screenAddress+32, charMap[1], shifted );
+            do Output.printCharScanLine(screenAddress+64, charMap[2], shifted );
+            do Output.printCharScanLine(screenAddress+96, charMap[3], shifted );
+            do Output.printCharScanLine(screenAddress+128, charMap[4], shifted );
+            do Output.printCharScanLine(screenAddress+160, charMap[5], shifted );
+            do Output.printCharScanLine(screenAddress+192, charMap[6], shifted );
+            do Output.printCharScanLine(screenAddress+224, charMap[7], shifted );
+            do Output.printCharScanLine(screenAddress+256, charMap[8], shifted );
+            do Output.printCharScanLine(screenAddress+288, charMap[9], shifted );
+            do Output.printCharScanLine(screenAddress+320, charMap[10], shifted );
             
             let cursorX = cursorX + 1;
         }
@@ -267,6 +267,8 @@ class Output {
         let curValue = curValue | charLineValue;
 
         do Memory.poke( wordAddress, curValue );
+
+        return;
     }
 
     /** displays the given string starting at the cursor location,
@@ -281,7 +283,7 @@ class Output {
 
         while ( c < len )
         {
-            do printChar( s.charAt( c ) );
+            do Output.printChar( s.charAt( c ) );
             let c = c + 1;
         }
 
@@ -292,54 +294,25 @@ class Output {
      *  and advances the cursor appropriately. */
     function void printInt(int i) 
     {
-        var int digit;
-        var int divisor;
-        var boolean wroteDigit;
-
-        let wroteDigit = 0;
-
-        // number from 65535 to -65535
-        if ( i < 0 )
-        {
-            let i = -i;
-            do printChar( 45 ); // '-'
-        }
-
-        let divisor = 10000;
-
-        while ( divisor > 0 )
-        {
-            let digit = i / divisor;
-            if ( ( digit > 0 ) | wroteDigit )
-            {
-                let wroteDigit = true;
-                do printChar( 48 + digit );
-                let i = i - ( digit * divisor );
-            }
-            if ( divisor = 1 )
-            {
-                let divisor = 0;
-            }
-            else
-            {
-                let divisor = divisor / 10;
-            }
-        }
-
+        var String str;
+        let str = String.new( 6 ); // -65536 to 65536
+        do str.setInt( i );
+        do Output.printString( str );
+        do str.dispose();
         return;
     }
 
     /** Advances the cursor to the beginning of the next line. */
     function void println() 
     {
-        do printChar( 128 ); // newline
+        do Output.printChar( 128 ); // newline
         return;
     }
 
     /** Moves the cursor one column back. */
     function void backSpace() 
     {
-        do printChar( 129 ); // backspace
+        do Output.printChar( 129 ); // backspace
         return;
     }
 }

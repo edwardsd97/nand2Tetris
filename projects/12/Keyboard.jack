@@ -37,7 +37,7 @@ class Keyboard {
      */
     function char keyPressed() 
     {
-        return Memory.peek( 25476 );
+        return Memory.peek( 24576 );
     }
 
     /**								
@@ -50,20 +50,28 @@ class Keyboard {
         var char pressed;
 
         do Output.printChar( 0 ); // show cursor
+
+        // First wait for all keys to be released
+        while ( ~( Keyboard.keyPressed() = 0 ) )
+        {
+            // do nothing
+        }
+
+        // Then wait for key to be pressed
+        while ( Keyboard.keyPressed() = 0 )
+        {
+            // do nothing
+        }
+
+        let pressed = Keyboard.keyPressed();
+
+        // Finally wait for key to be released
+        while ( ~( Keyboard.keyPressed() = 0 ) )
+        {
+            // do nothing
+        }
+
         do Output.printChar( 129 ); // backspace
-
-        while ( keyPressed() = 0 )
-        {
-            // do nothing
-        }
-
-        let pressed = keyPressed();
-
-        while ( ~( keyPressed() = pressed ) )
-        {
-            // do nothing
-        }
-
         do Output.printChar( pressed );
 
         return pressed;
@@ -85,7 +93,7 @@ class Keyboard {
 
         while ( ~( c = 128 ) ) // c != newline
         {
-            let c = readChar();
+            let c = Keyboard.readChar();
 
             if ( c = 129 ) // backspace
             {
@@ -113,7 +121,7 @@ class Keyboard {
         var String str;
         var int result;
 
-        let str = readline( message );
+        let str = Keyboard.readLine( message );
 
         let result = str.intValue();
 
