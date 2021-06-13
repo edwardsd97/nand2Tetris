@@ -8,26 +8,38 @@
  * memory (RAM), and allocation and recycling of memory blocks. The Hack RAM
  * consists of 32,768 words, each holding a 16-bit binary number.
  */ 
-class Memory {
+class Memory 
+{
+    static Array ram;
+
+    static Array heap;
+    static Array heapFree;
 
     /** Initializes the class. */
     function void init() 
     {
-        // FIXME
-        return;
+        // Init peek/poke ram array
+        let ram = 0;
+
+        // Init heap
+        let heap    =  2048;    // baseHeap address: by convention in Hack architecture
+        let heap[0] =     0;    // next
+        let heap[1] = 14335;    // size : by convention in Hack architecture
+        let heapFree = heap;    // freeList points to heap
+
+        return;        
     }
 
     /** Returns the RAM value at the given address. */
     function int peek(int address) 
     {
-        // FIXME
-        return 0;
+        return ram[address];
     }
 
     /** Sets the RAM value at the given address to the given value. */
     function void poke(int address, int value) 
     {
-        // FIXME
+        let ram[address] = value;
         return;
     }
 
@@ -35,13 +47,68 @@ class Memory {
      *  a reference to its base address. */
     function int alloc(int size) 
     {
-        // FIXME
-        return 0;
+        var Array freeList;
+        var int resultBlock;
+
+        let resultBlock = 0;
+        let freeList = heapFree;
+
+        while ( ( resultBlock = 0 ) & ~( freeList = 0 ) )
+        {
+            // freeList[0]: next
+            // freeList[1]: size
+
+            if ( freeList[1] > ( size + 1 ) )
+            {
+                // Found first fit block that is big enough
+
+                // result block is allocated at the end of the free block's chunk of memory
+                let resultBlock = freeList + freeList[1] - size; // (+2) (-2) cancel out
+                resultBlock[0] = 0;
+                resultBlock[1] = size;
+
+                // reduce the free memory size from this block we just pulled from
+                let freeList[1] = freeList[1] - (size + 2);
+            }
+
+            let freeList = freeList[0];
+        }
+
+        if ( resultBlock = 0 )
+        {
+            // Could not allocate memory
+            return 0;
+        }
+
+        // return the usable memory part of the block
+        return resultBlock + 2;
     }
 
     /** De-allocates the given object (cast as an array) by making
      *  it available for future allocations. */
-    function void deAlloc(Array o) 
+    function void deAlloc(int addr) 
+    {
+        var Array block;
+        var int prevFreeList;
+
+        // block address is usable memory pointer - 2
+        let block = addr - 2;
+
+        // block[0]: next
+        // block[1]: size
+
+        // append the block to the freeList
+        let prevFreeList = heapFree;
+        let heapFree = block;
+        let block[0] = prevFreeList;
+
+        do deFrag();
+
+        return;
+    }    
+
+    /** Defragments the free list. */
+    function void deFrag()
     {
         // FIXME
         return;

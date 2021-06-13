@@ -27,14 +27,14 @@ class Math
         let mBit[ 7] =   128; // 0000 0000 1000 0000
 
         let mBit[ 8] =   256; // 0000 0001 0000 0000
-        let mBit[ 9] =  1024; // 0000 0010 0000 0000
-        let mBit[10] =  2048; // 0000 0100 0000 0000
-        let mBit[11] =  4096; // 0000 1000 0000 0000
+        let mBit[ 9] =   512; // 0000 0010 0000 0000
+        let mBit[10] =  1024; // 0000 0100 0000 0000
+        let mBit[11] =  2048; // 0000 1000 0000 0000
 
-        let mBit[12] =  8192; // 0001 0000 0000 0000
-        let mBit[13] = 16384; // 0010 0000 0000 0000
-        let mBit[14] = 32768; // 0100 0000 0000 0000
-        let mBit[15] = 65536; // 1000 0000 0000 0000
+        let mBit[12] =  4096; // 0001 0000 0000 0000
+        let mBit[13] =  8192; // 0010 0000 0000 0000
+        let mBit[14] = 16384; // 0100 0000 0000 0000
+        let mBit[15] = 32768; // 1000 0000 0000 0000
 
         return;
     }
@@ -44,41 +44,7 @@ class Math
     {
         if ( x < 0 )
         {
-            return -x;
-        }
-
-        return x;
-    }
-
-    /** Returns x to the power of y */
-    function int pow(int x, int y) 
-    {
-        var int i;
-
-        if ( y < 1 ) // y <= 0 
-        {
-            // anything to the power of 0 is 1
-            return 1;
-        }
-        
-        if ( y = 1 )
-        {
-            // anything to the power of 1 is itself
-            return x;
-        }
-
-        if ( ( x = 2 ) & ( y < 16 ) )
-        {
-            // powers of 2 have a lookup table up to 16 bits
-            return mBit[y];
-        }
-
-        let y = y - 1;
-
-        while ( i < y )
-        {
-            let x = x * x;
-            let i = i + 1;
+            return (-x);
         }
 
         return x;
@@ -164,12 +130,6 @@ class Math
         return ( 2 * q ) + 1;
     }
 
-    /** Returns the number squared. */
-    function int sqr(int x) 
-    {
-        return x * x;
-    }
-
     /** Returns the integer part of the square root of x. */
     function int sqrt(int x) 
     {
@@ -222,5 +182,45 @@ class Math
         }
 
         return a;
+    }
+
+    /** Returns x squared. */
+    function int sqr(int x) 
+    {
+        return x * x;
+    }
+
+    /** Returns x to the power of y */
+    function int pow(int x, int y) 
+    {
+        var int i;
+
+        if ( y < 1 ) // y <= 0 
+        {
+            // anything to the power of 0 is 1
+            return 1;
+        }
+        
+        if ( y = 1 )
+        {
+            // anything to the power of 1 is itself
+            return x;
+        }
+
+        if ( ( x = 2 ) & ( y < 16 ) )
+        {
+            // powers of 2 have a lookup table up to 16 bits
+            return mBit[y];
+        }
+
+        let y = y - 1;
+
+        while ( i < y )
+        {
+            let x = x * x;
+            let i = i + 1;
+        }
+
+        return x;
     }
 }
