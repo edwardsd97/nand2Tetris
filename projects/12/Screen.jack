@@ -16,15 +16,24 @@ class Screen
     /** Initializes the Screen. */
     function void init() 
     {
-        // FIXME
         let mColor = 1; // black
+        do clearScreen();
         return;
     }
 
     /** Erases the entire screen. */
     function void clearScreen() 
     {
-        // FIXME
+        var int word;
+
+        let word = 16384;
+
+        while ( word < 25476 )
+        {
+            do Memory.poke( word, 0 );
+            let word = word + 1;
+        }
+
         return;
     }
 

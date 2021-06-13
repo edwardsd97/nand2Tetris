@@ -1,9 +1,29 @@
 function Screen.init 0
 push constant 1
 pop this 0
+call Screen.clearScreen 0
+pop temp 0
 push constant 0
 return
-function Screen.clearScreen 0
+function Screen.clearScreen 1
+push constant 16384
+pop local 0
+label Screen_clearScreen_L1
+push local 0
+push constant 25476
+lt
+not
+if-goto Screen_clearScreen_L2
+push local 0
+push constant 0
+call Memory.poke 2
+pop temp 0
+push local 0
+push constant 1
+add
+pop local 0
+goto Screen_clearScreen_L1
+label Screen_clearScreen_L2
 push constant 0
 return
 function Screen.setColor 0
