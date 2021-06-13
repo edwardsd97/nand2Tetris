@@ -10,55 +10,76 @@
  * for appending a character to the string's end, and more typical
  * string-oriented operations.
  */
-class String {
+class String 
+{
+    field Array mStr;
+    field int mLen;
+    field int mLenMax;
 
     /** constructs a new empty string with a maximum length of maxLength
      *  and initial length of 0. */
     constructor String new(int maxLength) 
     {
-        // FIXME
-        return 0;
+        let mStr = Array.new( maxLength );
+        let mLen = 0;
+        let mLenMax = maxLength;
+        return this;
     }
 
     /** Disposes this string. */
     method void dispose() 
     {
-        // FIXME
+        do Memory.deAlloc( mStr );
         return;
     }
 
     /** Returns the current length of this string. */
     method int length() 
     {
-        // FIXME
-        return 0;
+        return mLen;
     }
 
     /** Returns the character at the j-th location of this string. */
     method char charAt(int j) 
     {
-        // FIXME
+        if ( ( j > -1 ) & ( j < mLen ) )
+        {
+            return mStr[j];
+        }
+
         return 0;
     }
 
     /** Sets the character at the j-th location of this string to c. */
     method void setCharAt(int j, char c) 
     {
-        // FIXME
+        if ( ( j > -1 ) & ( j < mLen ) )
+        {
+            let mStr[j] = c;
+        }
+        
         return;
     }
 
     /** Appends c to this string's end and returns this string. */
     method String appendChar(char c) 
     {
-        // FIXME
-        return 0;
+        if ( mLen < mLenMax )
+        {
+            let mStr[mLen] = c;
+            let mLen = mLen + 1;
+        }
+
+        return this;
     }
 
     /** Erases the last character from this string. */
     method void eraseLastChar() 
     {
-        // FIXME
+        if ( mLen > 0 )
+        {
+            let mLen = mLen - 1;
+        }
         return;
     }
 
@@ -66,35 +87,94 @@ class String {
      *  until a non-digit character is detected. */
     method int intValue() 
     {
-        // FIXME
-        return 0;
+        var int c;
+        var int result;
+        var boolean neg;
+        var int mult;
+
+        let c = mLen - 1;
+        let result = 0;
+        let neg = 0;
+        let mult = 1;
+
+        while ( c > -1 )
+        {
+            if ( mStr[c] = 45 ) // '-'
+            {
+                let result = -result;
+                return result;
+            }
+
+            if ( ( c < 48 ) | ( c > 57 ) )
+            {
+                // non number character
+                return result;
+            }
+
+            let result = result + ( mult * ( c - 48 ) );
+
+            let c = c + 1;
+            let mult = mult * 10;
+        }
+
+        return result;
     }
 
     /** Sets this string to hold a representation of the given value. */
-    method void setInt(int val) 
+    method void setInt(int i) 
     {
-        // FIXME
+        var int digit;
+        var int divisor;
+        var boolean wroteDigit;
+
+        let wroteDigit = 0;
+        let mLen = 0;
+
+        // number from 65535 to -65535
+        if ( i < 0 )
+        {
+            let i = -i;
+            do appendChar( 45 ); // '-'
+        }
+
+        let divisor = 10000;
+
+        while ( divisor > 0  )
+        {
+            let digit = i / divisor;
+            if ( ( digit > 0 ) | wroteDigit )
+            {
+                let wroteDigit = true;
+                do appendChar( 48 + digit );
+                let i = i - ( digit * divisor );
+            }
+            if ( divisor = 1 )
+            {
+                let divisor = 0;
+            }
+            else
+            {
+                let divisor = divisor / 10;
+            }
+        }
         return;
     }
 
     /** Returns the new line character. */
     function char newLine() 
     {
-        // FIXME
-        return 0;
+        return 128; // newline
     }
 
     /** Returns the backspace character. */
     function char backSpace() 
     {
-        // FIXME
-        return 0;
+        return 129; // backspace
     }
 
     /** Returns the double quote (") character. */
     function char doubleQuote() 
     {
-        // FIXME
-        return 0;
+        return 34; // '"'
     }
 }

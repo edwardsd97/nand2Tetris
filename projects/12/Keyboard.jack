@@ -11,7 +11,7 @@ class Keyboard {
     /** Initializes the keyboard. */
     function void init() 
     {
-        // FIXME
+        // nothing to do
         return;
     } 
 
