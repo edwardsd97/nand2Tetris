@@ -18,9 +18,6 @@ push constant 0
 eq
 not
 if-goto Keyboard_readChar_L2
-push constant 1
-call Sys.wait 1
-pop temp 0
 goto Keyboard_readChar_L1
 label Keyboard_readChar_L2
 call Keyboard.keyPressed 0
@@ -32,9 +29,6 @@ eq
 not
 not
 if-goto Keyboard_readChar_L4
-push constant 1
-call Sys.wait 1
-pop temp 0
 goto Keyboard_readChar_L3
 label Keyboard_readChar_L4
 push local 0

@@ -54,14 +54,14 @@ class Keyboard {
 
         while ( keyPressed() = 0 )
         {
-            do Sys.wait( 1 );
+            // do nothing
         }
 
         let pressed = keyPressed();
 
         while ( ~( keyPressed() = pressed ) )
         {
-            do Sys.wait( 1 );
+            // do nothing
         }
 
         do Output.printChar( pressed );

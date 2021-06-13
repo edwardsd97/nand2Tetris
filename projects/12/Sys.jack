@@ -6,34 +6,68 @@
 /**
  * A library that supports various program execution services.
  */
-class Sys {
-
+class Sys 
+{
     /** Performs all the initializations required by the OS. */
     function void init() 
     {
-        // FIXME
-        return 0;
+        do Memory.init();
+        do Math.init();
+        do Output.init();
+        do Keyboard.init();
+        do Screen.init();
+
+        do Main.main();
+
+        do halt();
+
+        return;
     }
 
     /** Halts the program execution. */
     function void halt() 
     {
-        // FIXME
-        return 0;
+        while ( true )
+        {
+            // do nothing
+        }
+
+        return;
     }
 
     /** Waits approximately duration milliseconds and returns.  */
     function void wait(int duration) 
     {
-        // FIXME
-        return 0;
+        // FIXME - this is lame - will never be correct without a way to measure time properly
+        while( duration > 0 )
+        {
+            let duration = duration - 1;
+        }
+
+        return;
     }
 
     /** Displays the given error code in the form "ERR<errorCode>",
      *  and halts the program's execution. */
     function void error(int errorCode) 
     {
-        // FIXME
-        return 0;
+        var String out;
+        var String code;
+
+        let out = String.new( 256 );
+        let code = String.new( 256 );
+
+        do code.setInt( errorCode );
+
+        do out.append( "ERR<" );
+        do out.append( code );
+        do out.append( ">" );
+
+        do Output.printString( out );
+
+        do out.dispose();
+        do code.dispose(); 
+
+        return;
     }
 }
