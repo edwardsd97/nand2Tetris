@@ -1,4 +1,8 @@
 function Output.init 0
+push constant 0
+pop static 1
+push constant 0
+pop static 2
 call Output.initMap 0
 pop temp 0
 push constant 0
@@ -455,20 +459,6 @@ push constant 0
 push constant 0
 call Output.create 12
 pop temp 0
-push constant 64
-push constant 30
-push constant 51
-push constant 51
-push constant 59
-push constant 59
-push constant 59
-push constant 27
-push constant 3
-push constant 30
-push constant 0
-push constant 0
-call Output.create 12
-pop temp 0
 push constant 63
 push constant 30
 push constant 51
@@ -484,6 +474,20 @@ push constant 0
 call Output.create 12
 pop temp 0
 push constant 64
+push constant 30
+push constant 51
+push constant 51
+push constant 59
+push constant 59
+push constant 59
+push constant 27
+push constant 3
+push constant 30
+push constant 0
+push constant 0
+call Output.create 12
+pop temp 0
+push constant 65
 push constant 12
 push constant 30
 push constant 51
@@ -1477,16 +1481,51 @@ push that 0
 return
 function Output.moveCursor 0
 push argument 0
-pop static 1
-push argument 1
 pop static 2
+push argument 1
+pop static 1
+push static 1
+push constant 63
+gt
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
+push constant 63
+pop static 1
+label IF_FALSE0
+push static 2
+push constant 22
+gt
+if-goto IF_TRUE1
+goto IF_FALSE1
+label IF_TRUE1
+push constant 22
+pop static 2
+label IF_FALSE1
+push static 1
+push constant 0
+lt
+if-goto IF_TRUE2
+goto IF_FALSE2
+label IF_TRUE2
+push constant 0
+pop static 1
+label IF_FALSE2
+push static 2
+push constant 0
+lt
+if-goto IF_TRUE3
+goto IF_FALSE3
+label IF_TRUE3
+push constant 0
+pop static 2
+label IF_FALSE3
 push constant 32
 call Output.printChar 1
 pop temp 0
-push static 1
-push constant 1
-sub
-pop static 1
+push constant 129
+call Output.printChar 1
+pop temp 0
 push constant 0
 return
 function Output.printChar 6
@@ -1502,196 +1541,255 @@ push static 2
 push constant 1
 add
 pop static 2
+push static 2
+push constant 22
+gt
+if-goto IF_TRUE1
+goto IF_FALSE1
+label IF_TRUE1
+push constant 0
+pop static 2
+label IF_FALSE1
 push constant 0
 return
 label IF_FALSE0
 push argument 0
 push constant 129
 eq
-if-goto IF_TRUE1
-goto IF_FALSE1
-label IF_TRUE1
-push static 1
-push constant 1
-sub
-push constant 0
-call Math.max 2
-pop static 1
-push constant 0
-return
-label IF_FALSE1
-push argument 0
-push constant 127
-lt
 if-goto IF_TRUE2
 goto IF_FALSE2
 label IF_TRUE2
+push static 1
+push constant 1
+sub
+pop static 1
+push static 1
+push constant 0
+lt
+if-goto IF_TRUE3
+goto IF_FALSE3
+label IF_TRUE3
+push constant 63
+pop static 1
+push static 2
+push constant 1
+sub
+pop static 2
+push static 2
+push constant 0
+lt
+if-goto IF_TRUE4
+goto IF_FALSE4
+label IF_TRUE4
+push constant 22
+pop static 2
+label IF_FALSE4
+label IF_FALSE3
+push constant 0
+return
+label IF_FALSE2
+push argument 0
+push constant 127
+lt
+push argument 0
+push constant 1
+neg
+gt
+and
+if-goto IF_TRUE5
+goto IF_FALSE5
+label IF_TRUE5
 push static 1
 push constant 8
 call Math.multiply 2
 pop local 0
 push static 2
-push constant 12
+push constant 11
 call Math.multiply 2
 pop local 1
-push constant 32
-push local 1
-call Math.multiply 2
 push local 0
 push constant 16
 call Math.divide 2
+pop local 5
+push static 1
+push static 1
+push constant 2
+call Math.divide 2
+push constant 2
+call Math.multiply 2
+sub
+pop local 4
+push local 5
+push constant 16
+call Math.multiply 2
+pop local 0
+push constant 16384
+push constant 32
+push local 1
+call Math.multiply 2
+push local 5
+add
 add
 pop local 2
-push constant 16384
-push local 2
-add
-pop local 3
 push argument 0
 push static 0
 add
 pop pointer 1
 push that 0
-pop local 4
-push local 0
-push local 0
-push constant 16
-call Math.divide 2
-push constant 16
-call Math.multiply 2
-sub
-push constant 255
-gt
-pop local 5
-push local 3
+pop local 3
+push local 2
 push constant 0
 add
 push constant 0
-push local 4
+push local 3
 add
 pop pointer 1
 push that 0
-push local 5
+push local 4
 call Output.printCharScanLine 3
 pop temp 0
-push local 3
+push local 2
 push constant 32
 add
 push constant 1
-push local 4
+push local 3
 add
 pop pointer 1
 push that 0
-push local 5
+push local 4
 call Output.printCharScanLine 3
 pop temp 0
-push local 3
+push local 2
 push constant 64
 add
 push constant 2
-push local 4
+push local 3
 add
 pop pointer 1
 push that 0
-push local 5
+push local 4
 call Output.printCharScanLine 3
 pop temp 0
-push local 3
+push local 2
 push constant 96
 add
 push constant 3
-push local 4
+push local 3
 add
 pop pointer 1
 push that 0
-push local 5
+push local 4
 call Output.printCharScanLine 3
 pop temp 0
-push local 3
+push local 2
 push constant 128
 add
 push constant 4
-push local 4
+push local 3
 add
 pop pointer 1
 push that 0
-push local 5
+push local 4
 call Output.printCharScanLine 3
 pop temp 0
-push local 3
+push local 2
 push constant 160
 add
 push constant 5
-push local 4
+push local 3
 add
 pop pointer 1
 push that 0
-push local 5
+push local 4
 call Output.printCharScanLine 3
 pop temp 0
-push local 3
+push local 2
 push constant 192
 add
 push constant 6
-push local 4
+push local 3
 add
 pop pointer 1
 push that 0
-push local 5
+push local 4
 call Output.printCharScanLine 3
 pop temp 0
-push local 3
+push local 2
 push constant 224
 add
 push constant 7
-push local 4
+push local 3
 add
 pop pointer 1
 push that 0
-push local 5
+push local 4
 call Output.printCharScanLine 3
 pop temp 0
-push local 3
+push local 2
 push constant 256
 add
 push constant 8
-push local 4
+push local 3
 add
 pop pointer 1
 push that 0
-push local 5
+push local 4
 call Output.printCharScanLine 3
 pop temp 0
-push local 3
+push local 2
 push constant 288
 add
 push constant 9
-push local 4
+push local 3
 add
 pop pointer 1
 push that 0
-push local 5
+push local 4
 call Output.printCharScanLine 3
 pop temp 0
-push local 3
+push local 2
 push constant 320
 add
 push constant 10
-push local 4
+push local 3
 add
 pop pointer 1
 push that 0
-push local 5
+push local 4
 call Output.printCharScanLine 3
 pop temp 0
 push static 1
 push constant 1
 add
 pop static 1
-label IF_FALSE2
+push static 1
+push constant 63
+gt
+if-goto IF_TRUE6
+goto IF_FALSE6
+label IF_TRUE6
+push constant 0
+pop static 1
+push static 2
+push constant 1
+add
+pop static 2
+push static 2
+push constant 22
+gt
+if-goto IF_TRUE7
+goto IF_FALSE7
+label IF_TRUE7
+push constant 0
+pop static 2
+label IF_FALSE7
+label IF_FALSE6
+label IF_FALSE5
 push constant 0
 return
 function Output.printCharScanLine 2
-push constant 255
+push constant 256
+neg
 pop local 1
 push argument 0
 call Memory.peek 1
@@ -1704,16 +1802,12 @@ push argument 1
 push constant 256
 call Math.multiply 2
 pop argument 1
-push argument 1
-push constant 256
-call Math.multiply 2
+push constant 255
 pop local 1
 label IF_FALSE0
 push local 0
 push local 1
 and
-pop local 0
-push local 0
 push argument 1
 or
 pop local 0

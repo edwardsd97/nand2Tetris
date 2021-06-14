@@ -24,7 +24,11 @@ class Output {
     /** Initializes the screen, and locates the cursor at the screen's top-left. */
     function void init() 
     {
+        let cursorX = 0;
+        let cursorY = 0;
+        
         do Output.initMap();
+
         return;
     }
 
@@ -74,10 +78,10 @@ class Output {
         do Output.create(60,0,0,24,12,6,3,6,12,24,0,0);      // <
         do Output.create(61,0,0,0,63,0,0,63,0,0,0,0);        // =
         do Output.create(62,0,0,3,6,12,24,12,6,3,0,0);       // >
-        do Output.create(64,30,51,51,59,59,59,27,3,30,0,0);  // @
         do Output.create(63,30,51,51,24,12,12,0,12,12,0,0);  // ?
+        do Output.create(64,30,51,51,59,59,59,27,3,30,0,0);  // @
 
-        do Output.create(64,12,30,51,51,63,51,51,51,51,0,0); // A
+        do Output.create(65,12,30,51,51,63,51,51,51,51,0,0); // A
         do Output.create(66,31,51,51,51,31,51,51,51,31,0,0); // B
         do Output.create(67,28,54,35,3,3,3,35,54,28,0,0);    // C
         do Output.create(68,15,27,51,51,51,51,51,27,15,0,0); // D
@@ -186,10 +190,32 @@ class Output {
      *  and erases the character displayed there. */
     function void moveCursor(int i, int j) 
     {
-        let cursorX = i;
-        let cursorY = j;
+        let cursorY = i;
+        let cursorX = j;
+
+        if ( cursorX > 63 )
+        {
+            let cursorX = 63;
+        }
+
+        if ( cursorY > 22 )
+        {
+            let cursorY = 22;
+        }
+
+        if ( cursorX < 0 )
+        {
+            let cursorX = 0;
+        }
+
+        if ( cursorY < 0 )
+        {
+            let cursorY = 0;
+        }
+
         do Output.printChar( 32 ); // space
-        let cursorX = cursorX - 1;
+        do Output.printChar( 129 ); // backspace
+
         return;
     }
 
@@ -198,36 +224,49 @@ class Output {
     function void printChar(char c) 
     {
         var int x, y;
-        var int screenWord;
         var int screenAddress;
         var Array charMap;
         var int shifted;
+        var int xDiv16;
 
         if ( c = 128 ) // newline
         {
             let cursorX = 0;
             let cursorY = cursorY + 1;
+            if ( cursorY > 22 )
+            {
+                let cursorY = 0;
+            }
             return;
         }
 
         if ( c = 129 ) // backspace
         {
-            let cursorX = Math.max( cursorX - 1, 0 );
+            let cursorX = cursorX - 1;
+            if ( cursorX < 0 )
+            {
+                let cursorX = 63;
+                let cursorY = cursorY - 1;
+                if ( cursorY < 0 )
+                {
+                    let cursorY = 22;
+                }
+            }
             return;
         }
 
         // Print the character
-        if ( c < 127 )
+        if ( ( c < 127 ) & ( c > -1 ) )
         {
             let x = cursorX * 8;
-            let y = cursorY * 12;
+            let y = cursorY * 11;
+            let xDiv16 = ( x / 16 );
+            let shifted = cursorX - ( ( cursorX / 2 ) * 2 ); // cursorX % 2
+            let x = xDiv16 * 16;
 
-            let screenWord = ( 32 * y ) + ( x / 16 );
-
-            let screenAddress = 16384 + screenWord;
+            let screenAddress = 16384 + ( ( 32 * y ) + xDiv16 );
 
             let charMap = charMaps[c];
-            let shifted = ( x - ( ( x / 16 ) * 16 ) ) > 255;
 
             do Output.printCharScanLine(screenAddress+0, charMap[0], shifted );
             do Output.printCharScanLine(screenAddress+32, charMap[1], shifted );
@@ -242,6 +281,17 @@ class Output {
             do Output.printCharScanLine(screenAddress+320, charMap[10], shifted );
             
             let cursorX = cursorX + 1;
+
+            if ( cursorX > 63 )
+            {
+                let cursorX = 0;
+                let cursorY = cursorY + 1;
+
+                if ( cursorY > 22 )
+                {
+                    let cursorY = 0;
+                }
+            }
         }
 
         return;
@@ -253,18 +303,16 @@ class Output {
         var int curValue;
         var int mask;
 
-        let mask = 255;
-
+        let mask = -256; // 1111 1111 0000 0000
         let curValue = Memory.peek( wordAddress );
 
         if ( shifted )
         {
-            let charLineValue = charLineValue * 256;
-            let mask = charLineValue * 256;
+            let charLineValue = charLineValue * 256; // charLineValue << 8
+            let mask = 255; // 0000 0000 1111 1111
         }
 
-        let curValue = curValue & mask;
-        let curValue = curValue | charLineValue;
+        let curValue = ( curValue & mask ) | charLineValue;
 
         do Memory.poke( wordAddress, curValue );
 

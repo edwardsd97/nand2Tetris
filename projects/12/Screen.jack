@@ -16,29 +16,19 @@ class Screen
     /** Initializes the Screen. */
     function void init() 
     {
-        do Screen.clearScreen();
-        do Screen.setColor( 1 ); // black
+        do Screen.setColor( -1 ); // black
         return;
     }
 
-    /** Erases the entire screen. */
+    /** Erases the entire screen with white. */
     function void clearScreen() 
     {
-        var int word;
-
-        let word = 16384;
-
-        while ( word < 24576 )
-        {
-            do Memory.poke( word, 0 );
-            let word = word + 1;
-        }
-
+        do Screen.fillScreen( 0 );
         return;
     }
 
-    /** Fills the entire screen. */
-    function void fillScreen() 
+    /** Fills the entire screen with word value. */
+    function void fillScreen( int wordValue ) 
     {
         var int word;
 
@@ -46,7 +36,7 @@ class Screen
 
         while ( word < 24576 )
         {
-            do Memory.poke( word, -1 );
+            do Memory.poke( word, wordValue );
             let word = word + 1;
         }
 
@@ -248,6 +238,48 @@ class Screen
         return;
     }
 
+    /** Draws a rectangle whose top left corner is (x1, y1)
+     * and bottom right corner is (x2,y2), using the current color. */
+    function void drawRectangleEmpty(int x1, int y1, int x2, int y2) 
+    {
+        var int temp;
+        var int yStart;
+
+        // Always draw the rectangle from left to right and top to bottom
+        if ( x1 > x2 )
+        {
+            let temp = x2;
+            let x2 = x1;
+            let x1 = temp;
+        }
+
+        if ( y1 > y2 )
+        {
+            let temp = y2;
+            let y2 = y1;
+            let y1 = temp;
+        }
+
+        let yStart = y1;
+
+        while ( y1 < ( y2 - 1 ) ) // y1 <= y2
+        {
+            if ( ( y1 = yStart ) | ( y1 = y2 ) )
+            {
+                do Screen.drawLine( x1, y1, x2, y1 );
+            }
+            else
+            {
+                do Screen.drawPixel( x1, y1 );
+                do Screen.drawPixel( x2, y1 );
+            }
+            
+            let y1 = y1 + 1;
+        }
+
+        return;
+    }
+
     /** Draws a filled circle of radius r<=181 around (x,y), using the current color. */
     function void drawCircle(int x, int y, int r) 
     {
@@ -279,6 +311,45 @@ class Screen
             let exp = Math.sqrt( rSquared - ( dy * dy ) );
             let lineY = y + dy;
             do Screen.drawLine( x - exp, lineY, x + exp, lineY );
+            let dy = dy + 1;
+        }
+
+        return;
+    }
+
+    /** Draws a circle of radius r<=181 around (x,y), using the current color. */
+    function void drawCircleEmpty(int x, int y, int r) 
+    {
+        // Pseudo
+        // for each dy = -r to r
+        //   drawPixel( x - sqrt( sqr(r) - sqr(dy) ), y + dy )
+        //   drawPixel( x + sqrt( sqr(r) - sqr(dy) ), y + dy )
+
+        var int dy, lineY;
+        var int exp;
+        var int rSquared;
+
+        // If r <= 0 nothing to do
+        if ( r < 1 )
+        {
+            return;
+        }
+
+        // Limit r to no more than 181
+        if ( r > 181 )
+        {
+            let r = 181;
+        }
+
+        let dy = -r;
+        let rSquared = r * r;
+
+        while ( dy < ( r + 1 ) ) // dy <= r
+        {
+            let exp = Math.sqrt( rSquared - ( dy * dy ) );
+            let lineY = y + dy;
+            do Screen.drawPixel( x - exp, lineY );
+            do Screen.drawPixel( x + exp, lineY );
             let dy = dy + 1;
         }
 
