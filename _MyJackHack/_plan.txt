@@ -1,26 +1,26 @@
 
 Jack languages extensions
 ------------------------------
-- remove requirement for do and let
-- allow multiple classes per file
-- fix up compiler to provide better error information and catch more errors like trying to call methods from a function
-- support operator priority ( 5 + 6 * 2 ) should be 17 not 60
-- allow for single line if/while/else blocks without {}
-- add support for switch statements
-- add support for for loop statements
-- add support for float type
-- add object inheritance - requires objects to have an function table pointer built in
-- OS implement Memory.deFrag()
+[x] remove requirement for do and let
+[ ] allow multiple classes per file
+[ ] fix up compiler to provide better error information and catch more errors like trying to call methods from a function
+[ ] support operator priority ( 5 + 6 * 2 ) should be 17 not 60
+[ ] allow for single line if/while/else blocks without {}
+[ ] add support for switch statements
+[ ] add support for for loop statements
+[ ] add support for float type
+[ ] add object inheritance - requires objects to have an function table pointer built in
+[ ] OS implement Memory.deFrag()
 
 VM projects
 ------------------------------
-- implement a class the emulates the VM machine ( without keyboard input or display )
+[ ] implement a class the emulates the VM machine ( without keyboard input or display )
    (useful as a script language for any game with a sufficient game interface API)
-- 
+
 
 Hardware projects
 ------------------------------
-- Build the hardware! 
+[ ] Build the hardware! 
   - Use VHDL or Verilog to rewrite the HDL programs from N2T1
   - Commit these programs to FPGA board (~$100)
   - Or use a free FPGA emulator software
