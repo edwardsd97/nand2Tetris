@@ -37,6 +37,22 @@ class Screen
         return;
     }
 
+    /** Fills the entire screen. */
+    function void fillScreen() 
+    {
+        var int word;
+
+        let word = 16384;
+
+        while ( word < 24576 )
+        {
+            do Memory.poke( word, -1 );
+            let word = word + 1;
+        }
+
+        return;
+    }
+
     /** Sets the current color, to be used for all subsequent drawXXX commands.
      *  Black is represented by true, white by false. */
     function void setColor(int color) 
@@ -218,7 +234,6 @@ class Screen
 
         if ( y1 > y2 )
         {
-
             let temp = y2;
             let y2 = y1;
             let y1 = temp;
