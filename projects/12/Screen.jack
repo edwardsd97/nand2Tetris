@@ -16,8 +16,8 @@ class Screen
     /** Initializes the Screen. */
     function void init() 
     {
-        do Screen.setColor( 1 ); // black
         do Screen.clearScreen();
+        do Screen.setColor( 1 ); // black
         return;
     }
 
@@ -41,7 +41,15 @@ class Screen
      *  Black is represented by true, white by false. */
     function void setColor(int color) 
     {
-        let mColor = color; // 1 black, 0 white
+        if ( color )
+        {
+           let mColor = -1; // -1 black
+        }
+        else
+        {
+           let mColor = 0; // 0 white
+        }
+
         return;
     }
 
@@ -83,6 +91,7 @@ class Screen
         var int dx, dy;
         var int diff;
         var int temp;
+        var int bit, xDiv16, screenWord;
 
         // Always draw the line from left to right
         if ( x1 > x2 )
@@ -99,11 +108,29 @@ class Screen
         if ( y2 = y1 )
         {
             // Line going straight to the right
+            while ( x1 < ( x2 - 17 ) ) // x1 <= x2 - 16
+            {
+                let xDiv16 = x1 / 16;
+                let bit = x1 - ( xDiv16 * 16 ); // x % 16
+                if ( bit = 0 )
+                {
+                    let screenWord = ( 32 * y1 ) + xDiv16;
+                    do Memory.poke( 16384 + screenWord, mColor );
+                    let x1 = x1 + 16;
+                }
+                else
+                {
+                    do Screen.drawPixel( x1, y1 );
+                    let x1 = x1 + 1;
+                }
+            }
+
             while ( x1 < ( x2 - 1 ) ) // x1 <= x2
             {
                 do Screen.drawPixel( x1, y1 );
                 let x1 = x1 + 1;
             }
+
             return;
         }
         
