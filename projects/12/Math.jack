@@ -14,7 +14,7 @@ class Math
     /** Initializes the library. */
     function void init() 
     {
-        let mBit = Array.new( 15 );
+        let mBit = Array.new( 16 );
 
         let mBit[ 0] =     1; // 0000 0000 0000 0001  
         let mBit[ 1] =     2; // 0000 0000 0000 0010
@@ -34,6 +34,7 @@ class Math
         let mBit[12] =  4096; // 0001 0000 0000 0000
         let mBit[13] =  8192; // 0010 0000 0000 0000
         let mBit[14] = 16384; // 0100 0000 0000 0000
+        let mBit[15] =     0; // 0000 0000 0000 0000 - not used
 
         return;
     }
@@ -76,32 +77,40 @@ class Math
                 shiftedX = shiftedX * 2
             return sum
         */
-        var int x, y, sum, i, shiftedX, absY;
+        var int temp, sum, shiftedX, absYPlusOne, bitMask;
+        var int absY, absX, negX, negY;
+
+        let absY = Math.abs( yIn );
+        let absX = Math.abs( xIn );
 
         // Make sure y is the smaller of the two numbers ( just for efficiency )
-        if ( ( y > x ) & ( x > -1 ) )
+        if ( absY > absX )
         {
-            let x = yIn;
-            let y = xIn;
-        }
-        else
-        {
-            let x = xIn;
-            let y = yIn;
+            let temp = absX;
+            let absX = absY;
+            let absY = temp;
         }
 
-        let shiftedX = x;
-        let absY = Math.abs( y );
+        let shiftedX = absX;
+        let absYPlusOne = absY + 1;
+        let bitMask = 1;
+        let negX = xIn < 0;
+        let negY = yIn < 0;
 
-        while ( ( i < 16 ) & ( mBit[i] > absY ) )
+        while ( bitMask < absYPlusOne )
         {
-            if ( y & mBit[i] )
+            if ( absY & bitMask )
             {
                 let sum = sum + shiftedX;
             }
 
             let shiftedX = shiftedX + shiftedX;
-            let i = i + 1;
+            let bitMask = bitMask + bitMask;
+        }
+
+        if ( ~(negX = negY) ) // negX != negY
+        {
+            return -sum;
         }
 
         return sum;
@@ -114,6 +123,26 @@ class Math
      */
     function int divide(int x, int y) 
     {
+        var int q;
+        var int absX, absY, negX, negY;
+
+        let absX = Math.abs( x );
+        let absY = Math.abs( y );
+        let negX = x < 0;
+        let negY = y < 0;
+
+        let q = Math.divideAbs( absX, absY );
+
+        if ( ~(negX = negY) ) // negX != negY
+        {
+            return -q;
+        }
+
+        return q;
+    }
+
+    function int divideAbs(int x, int y) 
+    {
         /** Pseudo **
             if ( ( y > x ) | ( y < 0 ) )
                 return 0
@@ -124,15 +153,17 @@ class Math
                 return ( 2 * q ) + 1
         */
         var int q;
+        var int dblY;
 
-        if ( ( y > x ) | ( y < 0 ) )
+        if ( y > x )
         {
             return 0;
         }
 
-        let q = Math.divide( x, 2 * y );
+        let dblY = 2 * y;
+        let q = Math.divideAbs( x, dblY );
 
-        if ( ( x - ( 2 * q * y ) ) < y )
+        if ( ( x - ( dblY * q ) ) < y )
         {
             return 2 * q;
         }
@@ -154,17 +185,28 @@ class Math
             return y
         */
 
-        var int y, j, exp;
+        var int y, j, exp, bit;
 
-        let j = 8;
+        let j = 7; // smallest possible bit that can be squared and remain within 16 bit word
         let y = 0;
+
+        let x = Math.abs( x );
+
+        if ( x = 32767 )
+        {
+            // handle case where x + 1 overflows and becomes negative
+            // 32767 + 1 is -32768 in 16 bit word architecture
+            // the below algorithm would fail because of "exp < ( x + 1 )"
+            return 181;
+        }
 
         while ( j > -1 )
         {
-            let exp = Math.sqr( y + mBit[j] );
+            let bit = mBit[j];
+            let exp = Math.sqr( y + bit );
             if ( ( exp < ( x + 1 ) ) & ( exp > 0 ) )
             {
-                let y = y + mBit[j];
+                let y = y + bit;
             }
             let j = j - 1;
         }

@@ -11,7 +11,11 @@ class Main {
         var Array r;          // stores the test results;
         
         let r = 8000;
-    
+
+        do Output.printString( "sqrt(32767) [181] = " );
+        do Output.printInt( Math.sqrt(32767) );
+        do Output.println();
+
         let r[0] = 2 * 3;                  // 6
         let r[1] = r[0] * (-30);           // 6 * (-30) = -180
         let r[2] = r[1] * 100;             // (-180) * 100 = -18000
