@@ -15,11 +15,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Projects\\nand2Tetris\\JackCompiler\\JackCompiler.csproj",
+      "projectUniqueName": "C:\\Projects\\nand2Tetris\\_MyJackHack\\JackCompiler\\JackCompiler.csproj",
       "projectName": "JackCompiler",
-      "projectPath": "C:\\Projects\\nand2Tetris\\JackCompiler\\JackCompiler.csproj",
+      "projectPath": "C:\\Projects\\nand2Tetris\\_MyJackHack\\JackCompiler\\JackCompiler.csproj",
       "packagesPath": "C:\\Users\\dedwards\\.nuget\\packages\\",
-      "outputPath": "C:\\Projects\\nand2Tetris\\JackCompiler\\obj\\",
+      "outputPath": "C:\\Projects\\nand2Tetris\\_MyJackHack\\JackCompiler\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages",

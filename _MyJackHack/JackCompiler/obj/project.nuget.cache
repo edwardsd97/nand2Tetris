@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "3cXe4hAB+FdBo9pT85twhNGy5an/y42RntI6VCkelfMGay5pTyjv5XZ9WF9hHVQxCBBDaXt5fc16iWn/VQGZ5g==",
+  "dgSpecHash": "BZRSEMizE1Y0ymaK5zSyK91NTbmQeVblhywM2KLkBG6swZxGKIxuju4ehPZz9kehUd59PfsaK4GC2daev4lp/g==",
   "success": true,
-  "projectFilePath": "C:\\Projects\\nand2Tetris\\JackCompiler\\JackCompiler.csproj",
+  "projectFilePath": "C:\\Projects\\nand2Tetris\\_MyJackHack\\JackCompiler\\JackCompiler.csproj",
   "expectedPackageFiles": [],
   "logs": []
 }

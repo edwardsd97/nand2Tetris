@@ -7,10 +7,8 @@ class JackCompiler
 {
     static public bool mComments = false;
     static public bool mVerbose = false;
-    static public bool mDumpTokenFile = false;
-    static public bool mDumpXmlFile = false;
-    static public bool mDumpVMFile = true;
     static public bool mRecursiveFolders = false;
+    static public bool mStaticStrings = false;
 
     static public Dictionary<string, Tokenizer> mTokenizerDic = new Dictionary<string, Tokenizer>();
 
@@ -25,12 +23,10 @@ class JackCompiler
                 JackCompiler.mComments = true;
             else if (lwrArg == "-v")
                 JackCompiler.mVerbose = true;
-            else if (lwrArg == "-t")
-                JackCompiler.mDumpTokenFile = true;
-            else if (lwrArg == "-x")
-                JackCompiler.mDumpXmlFile = true;
             else if (lwrArg == "-r")
                 JackCompiler.mRecursiveFolders = true;
+            else if (lwrArg == "-s")
+                JackCompiler.mStaticStrings = true;
             else
                 paths.Add(arg);
         }
@@ -87,20 +83,6 @@ class JackCompiler
         tokenizer.Close();
         tokenizer.Reset();
 
-        if (JackCompiler.mDumpTokenFile)
-        {
-            // Dump the tokens to token xml file
-            StreamWriter writer = new StreamWriter(GetOutTokenfile(path));
-            writer.AutoFlush = true;
-            writer.WriteLine("<tokens>");
-            foreach (Token token in tokenizer)
-            {
-                writer.WriteLine(token.GetXMLString());
-            }
-            writer.WriteLine("</tokens>");
-            tokenizer.Reset();
-        }
-
         mTokenizerDic.Add(path, tokenizer);
 
         CompilationEngine compiler = new CompilationEngine(tokenizer);
@@ -115,7 +97,6 @@ class JackCompiler
             CompilationEngine compiler = new CompilationEngine(tokenizer, GetOutBasefile(path));
 
             // Compile the tokens into output file
-            compiler.CompileGrammar("class");
             compiler.Reset();
             compiler.CompileClass();
         }
@@ -882,200 +863,47 @@ class Tokenizer : IEnumerable
     }
 }
 
-class Grammar
-{
-    static bool mInitialized;
-    static Dictionary<string, Node> mNodeDic;
+// GRAMMAR DEFINITION
 
-    public class Node : List<object> { }
+    // CLASS
+    // class: 'class' className '{' clasVarDec* subroutineDec* '}'
+    // classVarDec: ('static'|'field) type varName (',' varName)* ';'
 
-    public enum Gram
-    {
-        NONE,
-        ZERO_OR_MORE, // Zero or more of the following grammar nodeStep
-        OR,           // One of the N next nodes where N is the following entry
-        OPTIONAL,     // Next entry is optional
-        READ_AHEAD1   // Only outputs anything if the next 2 entries are valid in the token list
-    };
+    // FUNCTION
+    // varDecAdd: ',' varName
+    // type: 'int'|'char'|'boolean'|className
+    // subroutineDec: ('constructor'|'function'|'method') ('void'|type) subroutineName '(' paramaterList ')' subroutineBody
+    // parameter: type varName
+    // parameterAdd: ',' type varName
+    // parameterList: ( parameter (',' parameter)* )?
+    // subroutineBody: '{' varDec* statements '}'
+    // varDec: 'var' type varName (',' varName)* ';'
 
-    public enum Enclose
-    {
-        NEVER,        // never encloses this nodeStep in the xml <name> </name>
-        NOT_EMPTY,    // only encloses this nodeStep in the xml <name> </name> when there is something inside of it
-        ALWAYS        // always encloses this nodeStep in the xml <name> </name>  
-    };
+    // STATEMENTS
+    // statements: statement*
+    // statement: letStatement | ifStatement | whileStatement | doStatement | returnStatement
+    // arrayIndex: '[' expression ']'
+    // arrayValue: varName '[' expression ']'
+    // elseClause: 'else' '{' statements '}'
+    // letStatement: ('let')? varName ('[' expression ']')? '=' expression ';'
+    // ifStatement: 'if' '(' expression ')' '{' statements '}' ('else' '{' statements '}')?
+    // whileStatement: 'while' '(' expression ')' '{' statements '}'
+    // doStatement: ('do')? subroutineCall ';'
+    // returnStatement: 'return' expression? ';'
 
-    public static void InitIfNeeded()
-    {
-        if (Grammar.mInitialized)
-            return;
-
-        mNodeDic = new Dictionary<string, Node>();
-        int nodeIndex = 0;
-        bool done = false;
-        while (!done)
-        {
-            System.Type type = mParseLangNodeDefs[nodeIndex].GetType();
-            if (type == typeof(int) && (int)mParseLangNodeDefs[nodeIndex] == 0)
-            {
-                // End of list
-                done = true;
-            }
-            else if (type == typeof(string))
-            {
-                // Add entry point and advance to the next
-                Node nodeEntry = new Node();
-                mNodeDic.Add((string)mParseLangNodeDefs[nodeIndex], nodeEntry);
-                bool advanced = false;
-                while (!advanced)
-                {
-                    type = mParseLangNodeDefs[nodeIndex].GetType();
-                    if (type == typeof(int) && (int)mParseLangNodeDefs[nodeIndex] == 0)
-                    {
-                        advanced = true;
-                        break;
-                    }
-                    else
-                    {
-                        nodeEntry.Add(mParseLangNodeDefs[nodeIndex]);
-                    }
-                    nodeIndex++;
-                }
-            }
-
-            nodeIndex++;
-        }
-
-        Grammar.mInitialized = true;
-    }
-
-    static object[] mParseLangNodeDefs =
-    {
-        // Each entry consists of a
-        // nodeStep name,
-        // NEVER, NOT_EMPTY, ALWAYS enclose with <name> </name>,
-        // and then the definitions
-
-        // FIXME - this could be a data file
-
-        // CLASS
-
-        // class: 'class' className '{' clasVarDec* subroutineDec* '}'
-        "class", Enclose.ALWAYS, Token.Keyword.CLASS, Token.Type.IDENTIFIER, '{', Gram.ZERO_OR_MORE, "classVarDec", Gram.ZERO_OR_MORE, "subroutineDec", '}', 0,
-
-        // classVarDec: ('static'|'field) type varName (',' varName)* ';'
-        "classVarDec", Enclose.NOT_EMPTY, Gram.OR, 2, Token.Keyword.STATIC, Token.Keyword.FIELD, "type", Token.Type.IDENTIFIER,  Gram.ZERO_OR_MORE, "varDecAdd", ';', 0,
-
-        // varDecAdd: ',' varName
-        "varDecAdd", Enclose.NEVER, ',', Token.Type.IDENTIFIER, 0,
-
-        // type: 'int'|'char'|'boolean'|className
-        "type", Enclose.NEVER, Gram.OR, 4, Token.Keyword.INT, Token.Keyword.CHAR, Token.Keyword.BOOL, Token.Type.IDENTIFIER, 0,
-
-        // subroutineDec: ('constructor'|'function'|'method') ('void'|type) subroutineName '(' paramaterList ')' subroutineBody
-        "subroutineDec", Enclose.NOT_EMPTY, Gram.OR, 3, Token.Keyword.CONSTRUCTOR, Token.Keyword.FUNCTION, Token.Keyword.METHOD, Gram.OR, 2, Token.Keyword.VOID, "type", Token.Type.IDENTIFIER, '(', "parameterList", ')', "subroutineBody", 0,
-
-        // parameter: type varName
-        "parameter", Enclose.NEVER, "type", Token.Type.IDENTIFIER, 0,
-
-        // parameterAdd: ',' type varName
-        "parameterAdd", Enclose.NEVER, ',', "type", Token.Type.IDENTIFIER, 0,
-
-        // parameterList: ( parameter (',' parameter)* )?
-        "parameterList", Enclose.ALWAYS, Gram.OPTIONAL, "parameter", Gram.ZERO_OR_MORE, "parameterAdd", 0,
-
-        // subroutineBody: '{' varDec* statements '}'
-        "subroutineBody", Enclose.NOT_EMPTY, '{', Gram.ZERO_OR_MORE, "varDec", "statements", '}', 0,
-
-        // varDec: 'var' type varName (',' varName)* ';'
-        "varDec", Enclose.NOT_EMPTY, Token.Keyword.VAR, "type", Token.Type.IDENTIFIER, Gram.ZERO_OR_MORE, "varDecAdd", ';', 0,
-
-
-        // STATEMENTS
-
-        // statements: statement*
-        "statements", Enclose.ALWAYS, Gram.ZERO_OR_MORE, "statement", 0,
-
-        // statement: letStatement | ifStatement | whileStatement | doStatement | returnStatement
-        "statement", Enclose.NEVER, Gram.OR, 5, "letStatement", "ifStatement", "whileStatement", "doStatement", "returnStatement", 0,
-
-        // arrayIndex: '[' expression ']'
-        "arrayIndex", Enclose.NEVER, '[', "expression", ']', 0,
-
-        // arrayValue: varName '[' expression ']'
-        "arrayValue", Enclose.NEVER, Gram.READ_AHEAD1, Token.Type.IDENTIFIER, '[', "expression", ']', 0,
-
-        // elseClause: 'else' '{' statements '}'
-        "elseClause", Enclose.NEVER, Token.Keyword.ELSE, '{', "statements", '}', 0,
-
-        // letStatement: 'let' varName ('[' expression ']')? '=' expression ';'
-        "letStatement", Enclose.NOT_EMPTY, Token.Keyword.LET, Token.Type.IDENTIFIER, Gram.OPTIONAL, "arrayIndex", '=', "expression", ';', 0, 
-
-        // ifStatement: 'if' '(' expression ')' '{' statements '}' ('else' '{' statements '}')?
-        "ifStatement", Enclose.NOT_EMPTY, Token.Keyword.IF, '(', "expression", ')', '{', "statements", '}', Gram.OPTIONAL, "elseClause", 0, 
-
-        // whileStatement: 'while' '(' expression ')' '{' statements '}'
-        "whileStatement", Enclose.NOT_EMPTY, Token.Keyword.WHILE, '(', "expression", ')', '{', "statements", '}', 0,
-
-        // doStatement: 'do' subroutineCall ';'
-        "doStatement", Enclose.NOT_EMPTY, Token.Keyword.DO, "subroutineCall", ';', 0,
-
-        // returnStatement: 'return' expression? ';'
-        "returnStatement", Enclose.NOT_EMPTY, Token.Keyword.RETURN, Gram.OPTIONAL, "expression", ';', 0, 
-
-
-        // EXPRESSIONS
-
-        // opTerm: op term
-        "opTerm", Enclose.NEVER, "op", "term", 0,
-
-        // expressionAdd: ',' expression
-        "expressionAdd", Enclose.NEVER, ',', "expression", 0,
-
-        // expression: term (op term)*
-        "expression", Enclose.NOT_EMPTY, "term", Gram.ZERO_OR_MORE, "opTerm", 0,
-
-        // expressionParenth: '(' expression ')
-        "expressionParenth", Enclose.NEVER, '(', "expression", ')', 0,
-
-        // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
-        "term", Enclose.NOT_EMPTY, Gram.OR, 8, "expressionParenth", "unaryTerm", Token.Type.STRING_CONST, Token.Type.INT_CONST, "keywordConstant", "subroutineCall", "arrayValue", Token.Type.IDENTIFIER, 0,
-        
-        // unaryTerm: unaryOp term
-        "unaryTerm", Enclose.NEVER, "unaryOp", "term", 0,
-
-        // subroutineObject: ( className | varName ) '.'
-        "subroutineObject", Enclose.NEVER, Gram.READ_AHEAD1, Token.Type.IDENTIFIER, '.', 0,
-
-        // subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')
-        "subroutineCall", Enclose.NEVER, Gram.OPTIONAL, "subroutineObject", Gram.READ_AHEAD1, Token.Type.IDENTIFIER, '(', "expressionList", ')', 0,
-
-        // expressionList: ( expression (',' expression)* )?
-        "expressionList", Enclose.ALWAYS, Gram.OPTIONAL, "expression", Gram.ZERO_OR_MORE, "expressionAdd", 0, 
-
-        // op: '+'|'-'|'*'|'/'|'&'|'|'|'<'|'>'|'='
-        "op", Enclose.NEVER, Gram.OR, 9, '+', '-', '*', '/', '&', '|', '<', '>', '=', 0,
-
-        // unaryOp: '-'|'~'
-        "unaryOp", Enclose.NEVER, Gram.OR, 2, '-', '~', 0, 
-
-        // keywordConstant: 'true'|'false'|'null'|'this'
-        "keywordConstant", Enclose.NEVER, Gram.OR, 4, Token.Keyword.TRUE, Token.Keyword.FALSE, Token.Keyword.NULL, Token.Keyword.THIS, 0,
-
-        0
-    };
-
-    static public Node GetNode(string nodeName)
-    {
-        InitIfNeeded();
-
-        Node nodeStep;
-        if (mNodeDic.TryGetValue(nodeName, out nodeStep))
-            return nodeStep;
-
-        return null;
-    }
-}
+    // EXPRESSIONS
+    // opTerm: op term
+    // expressionAdd: ',' expression
+    // expression: term (op term)*
+    // expressionParenth: '(' expression ')
+    // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
+    // unaryTerm: unaryOp term
+    // subroutineObject: ( className | varName ) '.'
+    // subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')
+    // expressionList: ( expression (',' expression)* )?
+    // op: '+'|'-'|'*'|'/'|'&'|'|'|'<'|'>'|'='
+    // unaryOp: '-'|'~'
+    // keywordConstant: 'true'|'false'|'null'|'this'
 
 class Writer
 {
@@ -1097,105 +925,6 @@ class Writer
     }
 }
     
-class GrammarWriter : Writer
-{
-    public GrammarWriter( string outFile ) : base( outFile )
-    {
-    }
-
-    public virtual void PreGrammarEntry(Grammar.Node nodeObj, Tokenizer tokenStack) { }
-    public virtual void WriteGrammarEntry(Grammar.Node nodeObj, Tokenizer tokenStack) { }
-    public virtual void PostGrammarEntry(Grammar.Node nodeObj, Tokenizer tokenStack) { }
-}
-
-class XMLWriter : GrammarWriter
-{
-    ArrayList mQueueLine;
-    List<int> mLinesWrittenPrev;
-
-    public XMLWriter(string outFile) : base( outFile )
-    {
-        mQueueLine = new ArrayList();
-        mLinesWrittenPrev = new List<int>();
-    }
-
-    public void QueueLineAdd(string line)
-    {
-        mQueueLine.Add(line);
-    }
-
-    public void QueueLineRemove(string line)
-    {
-        for (int i = 0; i < mQueueLine.Count; i++)
-        {
-            if ((string)mQueueLine[i] == line)
-            {
-                mQueueLine.RemoveAt(i);
-                return;
-            }
-        }
-    }
-
-    public override void WriteLine(string line)
-    {
-        if (mQueueLine.Count > 0)
-        {
-            ArrayList queue = mQueueLine;
-            mQueueLine = new ArrayList();
-            foreach (string qline in queue)
-                WriteLine(qline);
-        }
-
-        base.WriteLine(line);
-    }
-
-    public override void PreGrammarEntry(Grammar.Node nodeObj, Tokenizer tokenStack)
-    {
-        string nodeName = (string) nodeObj[0];
-        Grammar.Enclose enclose = (Grammar.Enclose)nodeObj[1];
-
-        if (enclose == Grammar.Enclose.ALWAYS)
-        {
-            WriteLine("<" + nodeName + ">");
-        }
-        else if (enclose == Grammar.Enclose.NOT_EMPTY)
-        {
-            QueueLineAdd("<" + nodeName + ">");
-            mLinesWrittenPrev.Add( mLinesWritten );
-        }
-    }
-
-    public override void PostGrammarEntry(Grammar.Node nodeObj, Tokenizer tokenStack)
-    {
-        string nodeName = (string)nodeObj[0];
-        Grammar.Enclose enclose = (Grammar.Enclose)nodeObj[1];
-
-        int linesWrittenPrev = 0;
-        if (enclose == Grammar.Enclose.NOT_EMPTY)
-        {
-            linesWrittenPrev = mLinesWrittenPrev[mLinesWrittenPrev.Count - 1];
-            mLinesWrittenPrev.RemoveAt(mLinesWrittenPrev.Count - 1);
-        }
-
-        // Post process grammar node for each writer
-        if (enclose == Grammar.Enclose.ALWAYS || (enclose == Grammar.Enclose.NOT_EMPTY && mLinesWritten > linesWrittenPrev))
-        {
-            WriteLine("</" + nodeName + ">");
-        }
-        else if (enclose == Grammar.Enclose.NOT_EMPTY)
-        {
-            QueueLineRemove("<" + nodeName + ">");
-        }
-    }
-
-    public override void WriteGrammarEntry(Grammar.Node nodeObj, Tokenizer tokenStack)
-    {
-        Token token = tokenStack.Get();
-        string line = token.GetXMLString();
-        WriteLine(line);
-    }
-}
-
 class VMWriter : Writer
 {
     public enum Segment
@@ -1304,7 +1033,6 @@ class CompilationEngine
     static public Dictionary<string, int> mStrings = new Dictionary<string, int>();
 
     Tokenizer mTokens;
-    List<GrammarWriter> mGrammarWriters = new List<GrammarWriter>();
     VMWriter mVMWriter;
     string mClassName;
     string mFuncName;
@@ -1316,15 +1044,7 @@ class CompilationEngine
 
         Reset();
 
-        if (JackCompiler.mDumpVMFile)
-        {
-            mVMWriter = new VMWriter(baseOutFile + ".vm");
-        }
-
-        if (JackCompiler.mDumpXmlFile)
-        {
-            mGrammarWriters.Add(new XMLWriter(baseOutFile + ".xml"));
-        }
+        mVMWriter = new VMWriter(baseOutFile + ".vm");
     }
 
     public CompilationEngine(Tokenizer tokens)
@@ -1344,9 +1064,9 @@ class CompilationEngine
         {
             if (token.type == Token.Type.STRING_CONST)
             {
-                // 255, 254, 253, ... downward taking static base address 16 into account
+                // 24577, 24578, 24579, ... upward after keyboard register
                 if ( !mStrings.ContainsKey( token.stringVal ) )
-                    mStrings.Add(token.stringVal, 255 - mStrings.Count - 16);
+                    mStrings.Add(token.stringVal, 24577 + mStrings.Count);
             }
             else if (token.keyword == Token.Keyword.METHOD)
             {
@@ -1374,214 +1094,6 @@ class CompilationEngine
         Token token = mTokens.Get();
         string line = "ERROR: Line< " + token.lineNumber + " > Char< " + token.lineCharacter + " > " + msg;
         Console.WriteLine(line);
-    }
-
-    public void WritersPreGrammarEntry(Grammar.Node nodeObj)
-    {
-        Tokenizer.State state = mTokens.StateGet();
-        foreach (GrammarWriter writer in mGrammarWriters)
-        {
-            writer.PreGrammarEntry(nodeObj, mTokens);
-            mTokens.StateSet(state);
-        }
-    }
-
-    public void WritersWriteGrammarEntry(Grammar.Node nodeObj)
-    {
-        Tokenizer.State state = mTokens.StateGet();
-        foreach (GrammarWriter writer in mGrammarWriters)
-        {
-            writer.WriteGrammarEntry(nodeObj, mTokens);
-            mTokens.StateSet(state);
-        }
-    }
-
-    public void WritersPostGrammarEntry(Grammar.Node nodeObj)
-    {
-        Tokenizer.State state = mTokens.StateGet();
-        foreach (GrammarWriter writer in mGrammarWriters)
-        {
-            mTokens.StateSet(state);
-            writer.PostGrammarEntry(nodeObj, mTokens);
-        }
-    }
-
-    public bool CompileGrammar(string nodeName, bool optional = false, bool canWrite = true)
-    {
-        int nodeStep = 0;
-
-        Grammar.Node nodeObj = Grammar.GetNode(nodeName);
-
-        if (nodeObj == null)
-        {
-            Error("Internal - Missing grammar nodeStep");
-            return false;
-        }
-
-        nodeStep++;
-
-        Grammar.Enclose enclose = (Grammar.Enclose)nodeObj[nodeStep];
-
-        nodeStep++;
-
-        WritersPreGrammarEntry(nodeObj);
-
-        bool result = CompileGrammar(nodeName, nodeObj, nodeStep, optional, canWrite);
-
-        WritersPostGrammarEntry(nodeObj);
-
-        return result;
-    }
-
-    public bool CompileGrammar(string nodeName, Grammar.Node nodeObj, int nodeStart, bool optional, bool canWrite = true, int earlyTerminate = -1)
-    {
-        bool done = false;
-
-        int readAheadNode = -1;
-        Tokenizer.State tokenStateRestore = null;
-
-        for (int nodeStep = nodeStart; nodeStep < nodeObj.Count && !done; nodeStep++)
-        {
-            Token token = mTokens.Get();
-
-            System.Type type = nodeObj[nodeStep].GetType();
-
-            if (type == typeof(Token.Type))
-            {
-                if (token.type != (Token.Type)nodeObj[nodeStep])
-                {
-                    if (!optional)
-                        Error("Expected " + nodeName + " type " + Token.TypeString((Token.Type)nodeObj[nodeStep]));
-                    if (tokenStateRestore != null)
-                        mTokens.StateSet(tokenStateRestore);
-                    return false;
-                }
-
-                if (readAheadNode < 0 && canWrite)
-                    WritersWriteGrammarEntry(nodeObj);
-                token = mTokens.Advance();
-            }
-            else if (type == typeof(Token.Keyword))
-            {
-                if (token.type != Token.Type.KEYWORD || token.keyword != (Token.Keyword)nodeObj[nodeStep])
-                {
-                    if (!optional)
-                        Error("Expected " + nodeName + " keyword " + Token.KeywordString((Token.Keyword)nodeObj[nodeStep]));
-                    if (tokenStateRestore != null)
-                        mTokens.StateSet(tokenStateRestore);
-                    return false;
-                }
-
-                if (readAheadNode < 0 && canWrite)
-                    WritersWriteGrammarEntry(nodeObj);
-                token = mTokens.Advance();
-            }
-            else if (type == typeof(char))
-            {
-                if (token.type != Token.Type.SYMBOL || token.symbol != (char)nodeObj[nodeStep])
-                {
-                    if (!optional)
-                        Error("Expected " + nodeName + " symbol " + (char)nodeObj[nodeStep]);
-                    if (tokenStateRestore != null)
-                        mTokens.StateSet(tokenStateRestore);
-                    return false;
-                }
-
-                if (readAheadNode < 0 && canWrite)
-                    WritersWriteGrammarEntry(nodeObj);
-                token = mTokens.Advance();
-            }
-            else if (type == typeof(Grammar.Gram))
-            {
-                int optionalEnd = 0;
-                Grammar.Gram gram = (Grammar.Gram)nodeObj[nodeStep];
-                switch (gram)
-                {
-                    case Grammar.Gram.OPTIONAL:
-                        optionalEnd = nodeStep + 1;
-                        nodeStep++;
-                        break;
-
-                    case Grammar.Gram.OR:
-                        nodeStep++;
-                        optionalEnd = nodeStep + (int)nodeObj[nodeStep];
-                        nodeStep++;
-                        break;
-
-                    case Grammar.Gram.ZERO_OR_MORE:
-                        optionalEnd = -1;
-                        nodeStep++;
-                        break;
-                }
-
-                switch (gram)
-                {
-                    case Grammar.Gram.OR:
-                        while (!CompileGrammar(nodeName, nodeObj, nodeStep, nodeStep <= optionalEnd, readAheadNode < 0, nodeStep + 1))
-                        {
-                            nodeStep++;
-
-                            if (nodeStep > optionalEnd)
-                            {
-                                if (!optional)
-                                    Error();
-                                if (tokenStateRestore != null)
-                                    mTokens.StateSet(tokenStateRestore);
-                                return false;
-                            }
-                        }
-                        nodeStep = optionalEnd;
-                        break;
-
-                    case Grammar.Gram.OPTIONAL:
-                        CompileGrammar(nodeName, nodeObj, nodeStep, true, readAheadNode < 0, nodeStep + 1);
-                        break;
-
-                    case Grammar.Gram.ZERO_OR_MORE:
-                        while (CompileGrammar(nodeName, nodeObj, nodeStep, true, readAheadNode < 0, nodeStep + 1))
-                        {
-                            // do nothing
-                        }
-                        break;
-
-                    case Grammar.Gram.READ_AHEAD1:
-                        readAheadNode = nodeStep + 3;
-                        tokenStateRestore = mTokens.StateGet();
-                        break;
-                }
-
-                gram = Grammar.Gram.NONE;
-            }
-            else if (type == typeof(string))
-            {
-                if (!CompileGrammar((string)nodeObj[nodeStep], optional, readAheadNode < 0))
-                {
-                    if (!optional)
-                        Error("Expected " + nodeName + " " + (string)nodeObj[nodeStep]);
-                    if (tokenStateRestore != null)
-                        mTokens.StateSet(tokenStateRestore);
-                    return false;
-                }
-            }
-
-            if (!done && earlyTerminate > 0 && (nodeStep + 1) >= earlyTerminate)
-            {
-                // terminate
-                done = true;
-            }
-
-            if (readAheadNode > 0 && (nodeStep + 1) >= readAheadNode && tokenStateRestore != null)
-            {
-                // Rewind and write it for real now
-                mTokens.StateSet(tokenStateRestore);
-                tokenStateRestore = null;
-                nodeStep = readAheadNode - 3;
-                readAheadNode = -1;
-                done = false;
-            }
-        }
-
-        return true;
     }
 
     public Token ValidateTokenAdvance(object tokenCheck)
@@ -1900,27 +1412,45 @@ class CompilationEngine
         // statements: statement*
         // statement: letStatement | ifStatement | whileStatement | doStatement | returnStatement
 
-        while ( Token.IsStatement( mTokens.Get().keyword ) )
+        bool doneCompilingStatements = false;
+
+        while ( !doneCompilingStatements )
         {
-            switch ( mTokens.Get().keyword )
+            Token token = mTokens.GetAndAdvance();
+            Token tokenNext = mTokens.Get();
+            mTokens.Rollback(1);
+
+            switch ( token.keyword )
             {
-                case Token.Keyword.LET:
-                    CompileStatementLet();
-                    break;
                 case Token.Keyword.IF:
                     CompileStatementIf();
                     break;
                 case Token.Keyword.WHILE:
                     CompileStatementWhile();
                     break;
-                case Token.Keyword.DO:
-                    CompileStatementDo();
-                    break;
                 case Token.Keyword.RETURN:
                     CompileStatementReturn();
                     break;
+                case Token.Keyword.DO:
+                    CompileStatementDo( true );
+                    break;
+                case Token.Keyword.LET:
+                    CompileStatementLet( true );
+                    break;
                 default:
-                    Error("Expected let, do, while, if, or return");
+                    // Check for non-keyword do/let
+                    if (token.type == Token.Type.IDENTIFIER && (tokenNext.symbol == '=' || tokenNext.symbol == '['))
+                    {
+                        CompileStatementLet(false);
+                    }
+                    else if (token.type == Token.Type.IDENTIFIER && (tokenNext.symbol == '.' || tokenNext.symbol == '('))
+                    {
+                        CompileStatementDo(false);
+                    }
+                    else
+                    {
+                        doneCompilingStatements = true;
+                    }
                     break;
             }
         }
@@ -1951,11 +1481,14 @@ class CompilationEngine
         mVMWriter.WritePush(VMWriter.Segment.THAT, 0);
     }
 
-    public void CompileStatementLet()
+    public void CompileStatementLet(bool eatKeyword = true)
     {
         // letStatement: 'let' varName ('[' expression ']')? '=' expression ';'
 
-        ValidateTokenAdvance(Token.Keyword.LET);
+        if (eatKeyword)
+        {
+            ValidateTokenAdvance(Token.Keyword.LET);
+        }
 
         string varName;
         bool isArray = false;
@@ -1991,11 +1524,14 @@ class CompilationEngine
         ValidateTokenAdvance(';');
     }
 
-    public void CompileStatementDo()
+    public void CompileStatementDo( bool eatKeyword = true )
     {
         // doStatement: 'do' subroutineCall ';'
 
-        ValidateTokenAdvance(Token.Keyword.DO);
+        if (eatKeyword)
+        {
+            ValidateTokenAdvance(Token.Keyword.DO);
+        }
 
         CompileSubroutineCall();
 
@@ -2106,34 +1642,62 @@ class CompilationEngine
     public void CompileStringConst()
     {
         string str;
-        int staticIndex;
 
         ValidateTokenAdvance(Token.Type.STRING_CONST, out str);
-        if (CompilationEngine.mStrings.TryGetValue(str, out staticIndex))
-            mVMWriter.WritePush(VMWriter.Segment.STATIC, staticIndex);
+
+        if (JackCompiler.mStaticStrings)
+        {
+            // Precompiled static strings
+            int pointerAddress;
+
+            if (CompilationEngine.mStrings.TryGetValue(str, out pointerAddress))
+            {
+                mVMWriter.WritePush(VMWriter.Segment.CONST, pointerAddress);
+                mVMWriter.WriteCall("Memory.peek", 1);
+            }
+            else
+            {
+                Error("String not found '" + str + "'");
+            }
+        }
         else
-            Error("String not found '" + str + "'");
+        {
+            // On the fly string creation (HUGE MEMORY LEAK)
+            mVMWriter.WritePush(VMWriter.Segment.CONST, str.Length);
+            mVMWriter.WriteCall("String.new", 1);
+            for (int i = 0; i < str.Length; i++)
+            {
+                mVMWriter.WritePush(VMWriter.Segment.CONST, str[i]);
+                mVMWriter.WriteCall("String.appendChar", 2);
+            }
+        }
     }
 
     public void CompileStaticStrings()
     {
-        mVMWriter.WriteLine("/* Static String Allocation (Inserted by the compiler at the beginning of Main.main) */");
-
-        foreach (string staticString in CompilationEngine.mStrings.Keys)
+        if ( JackCompiler.mStaticStrings )
         {
-            int strLen = staticString.Length;
-            mVMWriter.WriteLine("// \"" + staticString + "\"");
-            mVMWriter.WritePush(VMWriter.Segment.CONST, strLen);
-            mVMWriter.WriteCall("String.new", 1);
-            for (int i = 0; i < strLen; i++)
-            {
-                mVMWriter.WritePush(VMWriter.Segment.CONST, staticString[i]);
-                mVMWriter.WriteCall("String.appendChar", 2);
-            }
-            mVMWriter.WritePop(VMWriter.Segment.STATIC, CompilationEngine.mStrings[staticString]);
-        }
+            mVMWriter.WriteLine("/* Static String Allocation (Inserted by the compiler at the beginning of Main.main) */");
 
-        mVMWriter.WriteLine("/* Main.main statements begin ... */" );
+            foreach (string staticString in CompilationEngine.mStrings.Keys)
+            {
+                int strLen = staticString.Length;
+                mVMWriter.WriteLine("// \"" + staticString + "\"");
+                mVMWriter.WritePush(VMWriter.Segment.CONST, strLen);
+                mVMWriter.WriteCall("String.new", 1);
+                for (int i = 0; i < strLen; i++)
+                {
+                    mVMWriter.WritePush(VMWriter.Segment.CONST, staticString[i]);
+                    mVMWriter.WriteCall("String.appendChar", 2);
+                }
+                mVMWriter.WritePop(VMWriter.Segment.TEMP, 0);
+                mVMWriter.WritePush(VMWriter.Segment.CONST, CompilationEngine.mStrings[staticString]);
+                mVMWriter.WritePush(VMWriter.Segment.TEMP, 0);
+                mVMWriter.WriteCall("Memory.poke", 2);
+            }
+
+            mVMWriter.WriteLine("/* Main.main statements begin ... */");
+        }
     }
 
     public bool CompileExpression()
