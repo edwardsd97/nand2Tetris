@@ -11,7 +11,7 @@ push constant 16384
 pop local 0
 label WHILE_EXP0
 push local 0
-push constant 25476
+push constant 24576
 lt
 not
 if-goto WHILE_END0

@@ -28,7 +28,7 @@ class Screen
 
         let word = 16384;
 
-        while ( word < 25476 )
+        while ( word < 24576 )
         {
             do Memory.poke( word, 0 );
             let word = word + 1;

@@ -125,7 +125,9 @@ pop that 0
 push constant 15
 push static 0
 add
-push constant 0
+push constant 32767
+push constant 1
+add
 pop temp 0
 pop pointer 1
 push temp 0
@@ -138,7 +140,7 @@ push constant 1
 neg
 gt
 push argument 0
-push constant 15
+push constant 16
 lt
 and
 if-goto IF_TRUE0
@@ -419,7 +421,7 @@ push argument 0
 push constant 2
 eq
 push argument 1
-push constant 16
+push constant 15
 lt
 and
 if-goto IF_TRUE2

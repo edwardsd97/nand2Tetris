@@ -16,25 +16,25 @@ class Math
     {
         let mBit = Array.new( 16 );
 
-        let mBit[ 0] =     1; // 0000 0000 0000 0001  
-        let mBit[ 1] =     2; // 0000 0000 0000 0010
-        let mBit[ 2] =     4; // 0000 0000 0000 0100
-        let mBit[ 3] =     8; // 0000 0000 0000 1000
+        let mBit[ 0] =       1; // 0000 0000 0000 0001  
+        let mBit[ 1] =       2; // 0000 0000 0000 0010
+        let mBit[ 2] =       4; // 0000 0000 0000 0100
+        let mBit[ 3] =       8; // 0000 0000 0000 1000
 
-        let mBit[ 4] =    16; // 0000 0000 0001 0000
-        let mBit[ 5] =    32; // 0000 0000 0010 0000
-        let mBit[ 6] =    64; // 0000 0000 0100 0000
-        let mBit[ 7] =   128; // 0000 0000 1000 0000
+        let mBit[ 4] =      16; // 0000 0000 0001 0000
+        let mBit[ 5] =      32; // 0000 0000 0010 0000
+        let mBit[ 6] =      64; // 0000 0000 0100 0000
+        let mBit[ 7] =     128; // 0000 0000 1000 0000
 
-        let mBit[ 8] =   256; // 0000 0001 0000 0000
-        let mBit[ 9] =   512; // 0000 0010 0000 0000
-        let mBit[10] =  1024; // 0000 0100 0000 0000
-        let mBit[11] =  2048; // 0000 1000 0000 0000
+        let mBit[ 8] =     256; // 0000 0001 0000 0000
+        let mBit[ 9] =     512; // 0000 0010 0000 0000
+        let mBit[10] =    1024; // 0000 0100 0000 0000
+        let mBit[11] =    2048; // 0000 1000 0000 0000
 
-        let mBit[12] =  4096; // 0001 0000 0000 0000
-        let mBit[13] =  8192; // 0010 0000 0000 0000
-        let mBit[14] = 16384; // 0100 0000 0000 0000
-        let mBit[15] =     0; // 0000 0000 0000 0000 - not used
+        let mBit[12] =    4096; // 0001 0000 0000 0000
+        let mBit[13] =    8192; // 0010 0000 0000 0000
+        let mBit[14] =   16384; // 0100 0000 0000 0000
+        let mBit[15] = 32767+1; // 1000 0000 0000 0000 (-32768 after overflow)
 
         return;
     }
@@ -42,7 +42,7 @@ class Math
     /** Returns word bit mask with only the bit indicated set to 1. */
     function int bitMask(int bit) 
     {
-        if ( ( bit > -1 ) & ( bit < 15 ) )
+        if ( ( bit > -1 ) & ( bit < 16 ) )
         {
             return mBit[bit];
         }
@@ -123,24 +123,15 @@ class Math
      */
     function int divide(int x, int y) 
     {
-        var int q;
-        var int absX, absY, negX, negY;
-
-        let absX = Math.abs( x );
-        let absY = Math.abs( y );
-        let negX = x < 0;
-        let negY = y < 0;
-
-        let q = Math.divideAbs( absX, absY );
-
-        if ( ~(negX = negY) ) // negX != negY
+        if ( ~((x < 0) = (y < 0)) ) // signX != signY
         {
-            return -q;
+            return -(Math.divideAbs( Math.abs( x ), Math.abs( y ) ));
         }
 
-        return q;
+        return Math.divideAbs( Math.abs( x ), Math.abs( y ) );
     }
 
+    /** Returns the integer part of x/y where x and y must be >= 0. */
     function int divideAbs(int x, int y) 
     {
         /** Pseudo **
@@ -259,7 +250,7 @@ class Math
             return x;
         }
 
-        if ( ( x = 2 ) & ( y < 16 ) )
+        if ( ( x = 2 ) & ( y < 15 ) )
         {
             // powers of 2 have a lookup table up to 16 bits
             return mBit[y];
