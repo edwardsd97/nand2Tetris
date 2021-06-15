@@ -2,8 +2,9 @@
 Jack languages extensions
 ------------------------------
 [x] remove requirement for do and let
+[x] compiler: to provide better error information and catch more errors like trying to call methods from a function
+[ ] compiler: support static string allocation
 [ ] allow multiple classes per file
-[ ] fix up compiler to provide better error information and catch more errors like trying to call methods from a function
 [ ] support operator priority ( 5 + 6 * 2 ) should be 17 not 60
 [ ] allow for single line if/while/else blocks without {}
 [ ] add support for switch statements
