@@ -13,7 +13,7 @@ pop this 3
 push constant 2
 pop this 4
 push pointer 0
-call Bat.show 1
+call show 1
 pop temp 0
 push pointer 0
 return
@@ -33,7 +33,7 @@ not
 call Screen.setColor 1
 pop temp 0
 push pointer 0
-call Bat.draw 1
+call draw 1
 pop temp 0
 push constant 0
 return
@@ -44,7 +44,7 @@ push constant 0
 call Screen.setColor 1
 pop temp 0
 push pointer 0
-call Bat.draw 1
+call draw 1
 pop temp 0
 push constant 0
 return
@@ -86,12 +86,12 @@ function Bat.setWidth 0
 push argument 0
 pop pointer 0
 push pointer 0
-call Bat.hide 1
+call hide 1
 pop temp 0
 push argument 1
 pop this 2
 push pointer 0
-call Bat.show 1
+call show 1
 pop temp 0
 push constant 0
 return

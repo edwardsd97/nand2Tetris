@@ -21,6 +21,6 @@ VM projects
 Hardware projects
 ------------------------------
 [ ] Build the hardware! 
-  - Use VHDL or Verilog to rewrite the HDL programs from N2T1
+  - Use VHDL / Verilog to rewrite the HDL programs from N2T1
   - Commit these programs to FPGA board (~$100)
   - Or use a free FPGA emulator software

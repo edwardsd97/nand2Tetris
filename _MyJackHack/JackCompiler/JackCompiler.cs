@@ -1029,7 +1029,7 @@ class VMWriter : Writer
 
 class CompilationEngine
 {
-    static public Dictionary<string, bool> mMethods = new Dictionary<string, bool>();
+    static public Dictionary<string, FuncSpec> mFunctions = new Dictionary<string, FuncSpec>();
     static public Dictionary<string, int> mStrings = new Dictionary<string, int>();
 
     Tokenizer mTokens;
@@ -1037,6 +1037,15 @@ class CompilationEngine
     string mClassName;
     string mFuncName;
     int mFuncLabel;
+
+    public class FuncSpec
+    {
+        public string          funcName;
+        public string          className;
+        public Token.Keyword   type;
+        public List<Token>     parmTypes;
+        public Token           returnType;
+    };
 
     public CompilationEngine(Tokenizer tokens, string baseOutFile)
     {
@@ -1062,19 +1071,27 @@ class CompilationEngine
 
         while ( token != null )
         {
-            if (token.type == Token.Type.STRING_CONST)
+            if ( token.type == Token.Type.STRING_CONST )
             {
                 // 24577, 24578, 24579, ... upward after keyboard register
                 if ( !mStrings.ContainsKey( token.stringVal ) )
-                    mStrings.Add(token.stringVal, 24577 + mStrings.Count);
+                    mStrings.Add( token.stringVal, 24577 + mStrings.Count );
             }
-            else if (token.keyword == Token.Keyword.METHOD)
+            else if ( token.keyword == Token.Keyword.METHOD || token.keyword == Token.Keyword.FUNCTION || token.keyword == Token.Keyword.CONSTRUCTOR )
             {
-                // Register which functions are methods so that we now how to call them when they are encountered while compiling
-                mTokens.Advance();
-                mTokens.Advance();
+                // Register which functions are methods vs functions so that we now how to call them when they are encountered while compiling
+                FuncSpec spec = new FuncSpec();
+                spec.className = mClassName;
+                spec.type = token.keyword;
 
-                mMethods.Add(mClassName + "." + mTokens.Get().identifier, true );
+                mTokens.Advance();
+                spec.returnType = mTokens.Get();
+                mTokens.Advance();
+                ValidateTokenAdvance(Token.Type.IDENTIFIER, out spec.funcName );
+                ValidateTokenAdvance( '(' );
+                spec.parmTypes = CompileParameterList( false );
+
+                mFunctions.Add( spec.className + "." + spec.funcName, spec );
             }
 
             token = mTokens.Advance();
@@ -1303,6 +1320,7 @@ class CompilationEngine
         string subroutineName = null;
         string objectName = null;
         int argCount = 0;
+        FuncSpec funcSpec = null;
 
         ValidateTokenAdvance(Token.Type.IDENTIFIER, out subroutineName);
         if (mTokens.Get().symbol == '.')
@@ -1311,29 +1329,65 @@ class CompilationEngine
             mTokens.Advance();
             ValidateTokenAdvance(Token.Type.IDENTIFIER, out subroutineName);
         }
-        else
-        {
-            // all calls without an object specified must be assumed to be the current class object
-            objectName = mClassName;
-        }
 
         ValidateTokenAdvance('(');
 
         // Only for functions that are methods, we need to push the this pointer as first argument
-        if ( objectName == mClassName && CompilationEngine.mMethods.ContainsKey(objectName + "." + subroutineName) )
+        if ( objectName == null && CompilationEngine.mFunctions.ContainsKey(mClassName + "." + subroutineName) )
         {
+            funcSpec = CompilationEngine.mFunctions[mClassName + "." + subroutineName];
+
+            if ( funcSpec.type != Token.Keyword.METHOD )
+            {
+                Error("Calling function as a method '" + subroutineName + "'");
+            }
+
             // push pointer to object (this for object)
             mVMWriter.WritePush(VMWriter.Segment.POINTER, 0); // this
             argCount = argCount + 1;
         }
-        else if ( SymbolTable.Exists(objectName) && CompilationEngine.mMethods.ContainsKey( SymbolTable.TypeOf( objectName ) + "." + subroutineName ) )
+        else if ( SymbolTable.Exists(objectName) && CompilationEngine.mFunctions.ContainsKey( SymbolTable.TypeOf( objectName ) + "." + subroutineName ) )
         {
+            funcSpec = CompilationEngine.mFunctions[SymbolTable.TypeOf(objectName) + "." + subroutineName];
+
+            if (funcSpec.type != Token.Keyword.METHOD)
+            {
+                Error("Calling function as a method '" + objectName + "." + subroutineName + "' (use " + SymbolTable.TypeOf(objectName) + "." + subroutineName + ")");
+            }
+
             // push pointer to object (this for object)
             mVMWriter.WritePush(SymbolTable.SegmentOf(objectName), SymbolTable.OffsetOf(objectName)); // object pointer
             argCount = argCount + 1;
         }
+        else if ( objectName != null && CompilationEngine.mFunctions.ContainsKey(objectName + "." + subroutineName))
+        {
+            funcSpec = CompilationEngine.mFunctions[objectName + "." + subroutineName];
+            if (funcSpec.type == Token.Keyword.METHOD )
+            {
+                Error("Calling method as a function '" + subroutineName + "'");
+            }
+        }
+        else if (objectName != null )
+        {
+            if ( objectName != "Memory" && objectName != "Keyboard" && objectName != "Output" && objectName != "Screen" && 
+                 objectName != "Sys" && objectName != "String" && objectName != "Array" && objectName != "Math" )
+            {
+                Error("Calling unknown function '" + objectName + "." + subroutineName + "' (check case)");
+            }
+        }
+        else
+        {
+            Error("Calling unknown function '" + subroutineName + "' (check case)");
+        }
 
-        argCount = argCount + CompileExpressionList();
+        int expressionCount = CompileExpressionList();
+
+        if ( funcSpec != null && funcSpec.parmTypes.Count != expressionCount )
+        {
+            Error( funcSpec.type.ToString() + " " + subroutineName + " expects " + funcSpec.parmTypes.Count + " parameters." );
+        }
+
+        argCount = argCount + expressionCount;
 
         ValidateTokenAdvance(')');
 
@@ -1350,8 +1404,10 @@ class CompilationEngine
         }
     }
 
-    public void CompileParameterList()
+    public List<Token> CompileParameterList( bool doCompile = true )
     {
+        List<Token> result = new List<Token>();
+
         // compiles a parameter list within () without dealing with the ()s
         // can be completely empty
 
@@ -1361,16 +1417,23 @@ class CompilationEngine
             // handle argument
             Token varType = mTokens.GetAndAdvance();
 
+            result.Add( varType );
+
             string varName;
             ValidateTokenAdvance(Token.Type.IDENTIFIER, out varName);
 
-            SymbolTable.Define(varName, varType, SymbolTable.Kind.ARG);
+            if ( doCompile )
+            {
+                SymbolTable.Define(varName, varType, SymbolTable.Kind.ARG);
+            }
 
             if (mTokens.Get().symbol != ',')
                 break;
 
             mTokens.Advance();
         }
+
+        return result;
     }
 
     public bool CompileVarDec()
