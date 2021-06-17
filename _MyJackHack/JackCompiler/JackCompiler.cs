@@ -929,45 +929,45 @@ class Tokenizer : IEnumerable
 
 // GRAMMAR DEFINITION
 
-    // CLASS
-    // class: 'class' className '{' clasVarDec* subroutineDec* '}'
-    // classVarDec: ('static'|'field) type varName (',' varName)* ';'
+// CLASS
+// class: 'class' className '{' clasVarDec* subroutineDec* '}'
+// classVarDec: ('static'|'field) type varName (',' varName)* ';'
 
-    // FUNCTION
-    // varDecAdd: ',' varName
-    // type: 'int'|'char'|'boolean'|className
-    // subroutineDec: ('constructor'|'function'|'method') ('void'|type) subroutineName '(' paramaterList ')' subroutineBody
-    // parameter: type varName
-    // parameterAdd: ',' type varName
-    // parameterList: ( parameter (',' parameter)* )?
-    // subroutineBody: '{' varDec* statements '}'
-    // varDec: 'var' type varName (',' varName)* ';'
+// FUNCTION
+// varDecAdd: ',' varName
+// type: 'int'|'char'|'boolean'|className
+// subroutineDec: ('constructor'|'function'|'method') ('void'|type) subroutineName '(' paramaterList ')' subroutineBody
+// parameter: type varName
+// parameterAdd: ',' type varName
+// parameterList: ( parameter (',' parameter)* )?
+// subroutineBody: '{' varDec* statements '}'
+// varDec: 'var' type varName (',' varName)* ';'
 
-    // STATEMENTS
-    // statements: statement*
-    // statement: letStatement | ifStatement | whileStatement | doStatement | returnStatement
-    // arrayIndex: '[' expression ']'
-    // arrayValue: varName '[' expression ']'
-    // elseClause: 'else' '{' statements '}'
-    // letStatement: ('let')? varName ('[' expression ']')? '=' expression ';'
-    // ifStatement: 'if' '(' expression ')' '{' statements '}' ('else' '{' statements '}')?
-    // whileStatement: 'while' '(' expression ')' '{' statements '}'
-    // doStatement: ('do')? subroutineCall ';'
-    // returnStatement: 'return' expression? ';'
+// STATEMENTS
+// statements: statement*
+// statement: letStatement | ifStatement | whileStatement | doStatement | returnStatement
+// arrayIndex: '[' expression ']'
+// arrayValue: varName '[' expression ']'
+// elseClause: 'else' '{' statements '}'
+// letStatement: ('let')? varName ('[' expression ']')? '=' expression ';'
+// ifStatement: 'if' '(' expression ')' ( statement | '{' statements '}' ) ('else' ( statement | '{' statements '}' ) )?
+// whileStatement: 'while' '(' expression ')' ( statement | '{' statements '}' )
+// doStatement: ('do')? subroutineCall ';'
+// returnStatement: 'return' expression? ';'
 
-    // EXPRESSIONS
-    // opTerm: op term
-    // expressionAdd: ',' expression
-    // expression: term (op term)*
-    // expressionParenth: '(' expression ')
-    // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
-    // unaryTerm: unaryOp term
-    // subroutineObject: ( className | varName ) '.'
-    // subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')
-    // expressionList: ( expression (',' expression)* )?
-    // op: '+'|'-'|'*'|'/'|'&'|'|'|'<'|'>'|'='
-    // unaryOp: '-'|'~'
-    // keywordConstant: 'true'|'false'|'null'|'this'
+// EXPRESSIONS
+// opTerm: op term
+// expressionAdd: ',' expression
+// expression: term (op term)*
+// expressionParenth: '(' expression ')
+// term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
+// unaryTerm: unaryOp term
+// subroutineObject: ( className | varName ) '.'
+// subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')
+// expressionList: ( expression (',' expression)* )?
+// op: '+'|'-'|'*'|'/'|'&'|'|'|'<'|'>'|'='
+// unaryOp: '-'|'~'
+// keywordConstant: 'true'|'false'|'null'|'this'
 
 class Writer
 {
@@ -1561,54 +1561,69 @@ class CompilationEngine
         // compiles a series of statements without handling the enclosing {}s
 
         // statements: statement*
-        // statement: letStatement | ifStatement | whileStatement | doStatement | returnStatement
 
-        bool doneCompilingStatements = false;
+        bool resultReturnCompiled = false;
         bool returnCompiled = false;
 
-        while ( !doneCompilingStatements )
+        while ( CompileStatementSingle( out returnCompiled ) )
         {
-            Token token = mTokens.GetAndAdvance();
-            Token tokenNext = mTokens.Get();
-            mTokens.Rollback(1);
-
-            switch ( token.keyword )
-            {
-                case Token.Keyword.IF:
-                    CompileStatementIf();
-                    break;
-                case Token.Keyword.WHILE:
-                    CompileStatementWhile();
-                    break;
-                case Token.Keyword.RETURN:
-                    CompileStatementReturn();
-                    returnCompiled = true;
-                    break;
-                case Token.Keyword.DO:
-                    CompileStatementDo( true );
-                    break;
-                case Token.Keyword.LET:
-                    CompileStatementLet( true );
-                    break;
-                default:
-                    // Check for non-keyword do/let
-                    if (token.type == Token.Type.IDENTIFIER && (tokenNext.symbol == '=' || tokenNext.symbol == '['))
-                    {
-                        CompileStatementLet(false);
-                    }
-                    else if (token.type == Token.Type.IDENTIFIER && (tokenNext.symbol == '.' || tokenNext.symbol == '('))
-                    {
-                        CompileStatementDo(false);
-                    }
-                    else
-                    {
-                        doneCompilingStatements = true;
-                    }
-                    break;
-            }
+            // keep compiling more statements
+            resultReturnCompiled = resultReturnCompiled || returnCompiled;
         }
 
-        return returnCompiled;
+        return resultReturnCompiled;
+    }
+
+    public bool CompileStatementSingle( out bool returnCompiled )
+    {
+        // compiles a series of statements without handling the enclosing {}s
+
+        // statement: letStatement | ifStatement | whileStatement | doStatement | returnStatement
+
+        returnCompiled = false;
+
+        Token token = mTokens.GetAndAdvance();
+        Token tokenNext = mTokens.Get();
+        mTokens.Rollback(1);
+
+        switch (token.keyword)
+        {
+            case Token.Keyword.IF:
+                CompileStatementIf();
+                return true;
+
+            case Token.Keyword.WHILE:
+                CompileStatementWhile();
+                return true;
+
+            case Token.Keyword.RETURN:
+                CompileStatementReturn();
+                returnCompiled = true;
+                return true;
+
+            case Token.Keyword.DO:
+                CompileStatementDo(true);
+                return true;
+
+            case Token.Keyword.LET:
+                CompileStatementLet(true);
+                return true;
+
+            default:
+                // Check for non-keyword do/let
+                if (token.type == Token.Type.IDENTIFIER && (tokenNext.symbol == '=' || tokenNext.symbol == '['))
+                {
+                    CompileStatementLet(false);
+                    return true;
+                }
+                else if (token.type == Token.Type.IDENTIFIER && (tokenNext.symbol == '.' || tokenNext.symbol == '('))
+                {
+                    CompileStatementDo(false);
+                    return true;
+                }
+
+                return false;
+        }
     }
 
     public void CompileArrayAddress( string varNameKnown = null )
@@ -1697,7 +1712,7 @@ class CompilationEngine
 
     public void CompileStatementIf()
     {
-        // ifStatement: 'if' '(' expression ')' '{' statements '}' ('else' '{' statements '}')?
+        // ifStatement: 'if' '(' expression ')' ( statement | '{' statements '}' ) ('else' ( statement | '{' statements '}' ) )?
 
         ValidateTokenAdvance(Token.Keyword.IF);
         ValidateTokenAdvance('(');
@@ -1725,11 +1740,20 @@ class CompilationEngine
             mVMWriter.WriteLabel(labelTrue);
         }
 
-        ValidateTokenAdvance('{');
+        bool returnCompiled;
 
-        CompileStatements();
+        if (mTokens.Get().symbol == '{')
+        {
+            ValidateTokenAdvance('{');
 
-        ValidateTokenAdvance('}');
+            CompileStatements();
+
+            ValidateTokenAdvance('}');
+        }
+        else
+        {
+            CompileStatementSingle( out returnCompiled );
+        }
 
         if (mTokens.Get().keyword == Token.Keyword.ELSE)
         {
@@ -1743,11 +1767,18 @@ class CompilationEngine
         {
             mTokens.Advance();
 
-            ValidateTokenAdvance('{');
+            if (mTokens.Get().symbol == '{')
+            {
+                ValidateTokenAdvance('{');
 
-            CompileStatements();
+                CompileStatements();
 
-            ValidateTokenAdvance('}');
+                ValidateTokenAdvance('}');
+            }
+            else
+            {
+                CompileStatementSingle( out returnCompiled );
+            }
 
             mVMWriter.WriteLabel(labelEnd);
         }
@@ -1755,7 +1786,7 @@ class CompilationEngine
 
     public void CompileStatementWhile()
     {
-        // whileStatement: 'while' '(' expression ')' '{' statements '}'
+        // whileStatement: 'while' '(' expression ')' ( statement | '{' statements '}' )
 
         ValidateTokenAdvance(Token.Keyword.WHILE);
 
@@ -1772,11 +1803,20 @@ class CompilationEngine
         mVMWriter.WriteArithmetic(VMWriter.Command.NOT);
         mVMWriter.WriteIfGoto(labelEnd);
 
-        ValidateTokenAdvance('{');
+        bool returnCompiled;
 
-        CompileStatements();
+        if (mTokens.Get().symbol == '{')
+        {
+            ValidateTokenAdvance('{');
 
-        ValidateTokenAdvance('}');
+            CompileStatements();
+
+            ValidateTokenAdvance('}');
+        }
+        else
+        {
+            CompileStatementSingle(out returnCompiled);
+        }
 
         mVMWriter.WriteGoto(labelExp);
 

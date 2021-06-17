@@ -21,12 +21,12 @@ class Bat {
 
     /** Constructs a new bat with the given location and width. */
     constructor Bat new(int Ax, int Ay, int Awidth, int Aheight) {
-         x = Ax;
-         y = Ay;
-         width = Awidth;
-         height = Aheight;
-         direction = 2;
-         show();
+        x = Ax;
+        y = Ay;
+        width = Awidth;
+        height = Aheight;
+        direction = 2;
+        show();
         return this;
     }
 
@@ -78,20 +78,26 @@ class Bat {
     /** Moves the bat one step in the bat's direction. */
     method void move() {
 	    if (direction = 1) {
-             x = x - 4;
-            if (x < 0) {  x = 0; }
-             Screen.setColor(false);
-             Screen.drawRectangle((x + width) + 1, y, (x + width) + 4, y + height);
-             Screen.setColor(true);
-             Screen.drawRectangle(x, y, x + 3, y + height);
+            x = x - 4;
+
+            if (x < 0)   
+                x = 0; 
+
+            Screen.setColor(false);
+            Screen.drawRectangle((x + width) + 1, y, (x + width) + 4, y + height);
+            Screen.setColor(true);
+            Screen.drawRectangle(x, y, x + 3, y + height);
         }
         else {
-             x = x + 4;
-            if ((x + width) > 511) {  x = 511 - width; }
-             Screen.setColor(false);
-             Screen.drawRectangle(x - 4, y, x - 1, y + height);
-             Screen.setColor(true);
-             Screen.drawRectangle((x + width) - 3, y, x + width, y + height);
+            x = x + 4;
+
+            if ((x + width) > 511)   
+                x = 511 - width; 
+
+            Screen.setColor(false);
+            Screen.drawRectangle(x - 4, y, x - 1, y + height);
+            Screen.setColor(true);
+            Screen.drawRectangle((x + width) - 3, y, x + width, y + height);
         }
     }
 }
