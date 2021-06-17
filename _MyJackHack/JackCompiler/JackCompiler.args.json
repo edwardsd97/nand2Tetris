@@ -39,14 +39,6 @@
       "Command": "C:\\Projects\\nand2Tetris\\projects\\11\\Pong"
     },
     {
-      "Id": "bbf39fc9-b8cb-4720-aec4-a724193a9b6d",
-      "Command": "-t"
-    },
-    {
-      "Id": "ea9b58d8-8c55-4580-b4b6-3c1cbbe5f5d4",
-      "Command": "-x"
-    },
-    {
       "Id": "f3d26d5f-c344-4d71-af6e-87e1f5b0e1a3",
       "Command": "-c"
     },
@@ -57,6 +49,18 @@
     {
       "Id": "ef16334c-9530-4d1d-8b2e-94fb4ded6f56",
       "Command": "-r"
+    },
+    {
+      "Id": "a3673300-660f-41f5-b4fc-d4f267d435de",
+      "Command": "-f"
+    },
+    {
+      "Id": "7d8acec4-7247-46b6-8120-1487854e5e5d",
+      "Command": "-o"
+    },
+    {
+      "Id": "7e041d6d-37ea-405c-9550-ba0939913b9b",
+      "Command": "-s"
     }
   ]
 }

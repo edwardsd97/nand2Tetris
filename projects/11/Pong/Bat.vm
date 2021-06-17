@@ -13,7 +13,7 @@ pop this 3
 push constant 2
 pop this 4
 push pointer 0
-call show 1
+call Bat.show 1
 pop temp 0
 push pointer 0
 return
@@ -23,7 +23,6 @@ pop pointer 0
 push pointer 0
 call Memory.deAlloc 1
 pop temp 0
-push constant 0
 return
 function Bat.show 0
 push argument 0
@@ -33,9 +32,8 @@ not
 call Screen.setColor 1
 pop temp 0
 push pointer 0
-call draw 1
+call Bat.draw 1
 pop temp 0
-push constant 0
 return
 function Bat.hide 0
 push argument 0
@@ -44,9 +42,8 @@ push constant 0
 call Screen.setColor 1
 pop temp 0
 push pointer 0
-call draw 1
+call Bat.draw 1
 pop temp 0
-push constant 0
 return
 function Bat.draw 0
 push argument 0
@@ -68,7 +65,6 @@ push argument 0
 pop pointer 0
 push argument 1
 pop this 4
-push constant 0
 return
 function Bat.getLeft 0
 push argument 0
@@ -86,14 +82,13 @@ function Bat.setWidth 0
 push argument 0
 pop pointer 0
 push pointer 0
-call hide 1
+call Bat.hide 1
 pop temp 0
 push argument 1
 pop this 2
 push pointer 0
-call show 1
+call Bat.show 1
 pop temp 0
-push constant 0
 return
 function Bat.move 0
 push argument 0
@@ -101,8 +96,9 @@ pop pointer 0
 push this 4
 push constant 1
 eq
-not
-if-goto Bat_move_L1
+if-goto Bat_move_IF_TRUE_L1
+goto Bat_move_IF_FALSE_L1
+label Bat_move_IF_TRUE_L1
 push this 0
 push constant 4
 sub
@@ -110,11 +106,12 @@ pop this 0
 push this 0
 push constant 0
 lt
-not
-if-goto Bat_move_L2
+if-goto Bat_move_IF_TRUE_L2
+goto Bat_move_IF_FALSE_L2
+label Bat_move_IF_TRUE_L2
 push constant 0
 pop this 0
-label Bat_move_L2
+label Bat_move_IF_FALSE_L2
 push constant 0
 call Screen.setColor 1
 pop temp 0
@@ -148,8 +145,8 @@ push this 3
 add
 call Screen.drawRectangle 4
 pop temp 0
-goto Bat_move_L3
-label Bat_move_L1
+goto Bat_move_IF_END_L1
+label Bat_move_IF_FALSE_L1
 push this 0
 push constant 4
 add
@@ -159,13 +156,14 @@ push this 2
 add
 push constant 511
 gt
-not
-if-goto Bat_move_L4
+if-goto Bat_move_IF_TRUE_L3
+goto Bat_move_IF_FALSE_L3
+label Bat_move_IF_TRUE_L3
 push constant 511
 push this 2
 sub
 pop this 0
-label Bat_move_L4
+label Bat_move_IF_FALSE_L3
 push constant 0
 call Screen.setColor 1
 pop temp 0
@@ -199,6 +197,5 @@ push this 3
 add
 call Screen.drawRectangle 4
 pop temp 0
-label Bat_move_L3
-push constant 0
+label Bat_move_IF_END_L1
 return

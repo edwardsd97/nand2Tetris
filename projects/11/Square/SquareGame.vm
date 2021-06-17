@@ -85,7 +85,7 @@ if-goto SquareGame_run_L4
 call Keyboard.keyPressed 0
 pop local 0
 push pointer 0
-call SquareGame.moveSquare 1
+call moveSquare 1
 pop temp 0
 goto SquareGame_run_L3
 label SquareGame_run_L4
@@ -158,7 +158,7 @@ if-goto SquareGame_run_L13
 call Keyboard.keyPressed 0
 pop local 0
 push pointer 0
-call SquareGame.moveSquare 1
+call moveSquare 1
 pop temp 0
 goto SquareGame_run_L12
 label SquareGame_run_L13

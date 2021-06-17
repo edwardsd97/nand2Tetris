@@ -1467,16 +1467,11 @@ push argument 0
 push constant 126
 gt
 or
-if-goto Output_getMap_IF_TRUE_L1
-goto Output_getMap_IF_FALSE_L1
-label Output_getMap_IF_TRUE_L1
+not
+if-goto Output_getMap_L1
 push constant 0
 pop argument 0
-goto Output_getMap_IF_END_L1
-label Output_getMap_IF_FALSE_L1
-push constant 0
-pop argument 0
-label Output_getMap_IF_END_L1
+label Output_getMap_L1
 push argument 0
 push static 0
 add
@@ -1491,39 +1486,35 @@ pop static 1
 push static 1
 push constant 63
 gt
-if-goto Output_moveCursor_IF_TRUE_L1
-goto Output_moveCursor_IF_FALSE_L1
-label Output_moveCursor_IF_TRUE_L1
+not
+if-goto Output_moveCursor_L1
 push constant 63
 pop static 1
-label Output_moveCursor_IF_FALSE_L1
+label Output_moveCursor_L1
 push static 2
 push constant 22
 gt
-if-goto Output_moveCursor_IF_TRUE_L2
-goto Output_moveCursor_IF_FALSE_L2
-label Output_moveCursor_IF_TRUE_L2
+not
+if-goto Output_moveCursor_L2
 push constant 22
 pop static 2
-label Output_moveCursor_IF_FALSE_L2
+label Output_moveCursor_L2
 push static 1
 push constant 0
 lt
-if-goto Output_moveCursor_IF_TRUE_L3
-goto Output_moveCursor_IF_FALSE_L3
-label Output_moveCursor_IF_TRUE_L3
+not
+if-goto Output_moveCursor_L3
 push constant 0
 pop static 1
-label Output_moveCursor_IF_FALSE_L3
+label Output_moveCursor_L3
 push static 2
 push constant 0
 lt
-if-goto Output_moveCursor_IF_TRUE_L4
-goto Output_moveCursor_IF_FALSE_L4
-label Output_moveCursor_IF_TRUE_L4
+not
+if-goto Output_moveCursor_L4
 push constant 0
 pop static 2
-label Output_moveCursor_IF_FALSE_L4
+label Output_moveCursor_L4
 push constant 32
 call Output.printChar 1
 pop temp 0
@@ -1536,9 +1527,8 @@ function Output.printChar 6
 push argument 0
 push constant 128
 eq
-if-goto Output_printChar_IF_TRUE_L1
-goto Output_printChar_IF_FALSE_L1
-label Output_printChar_IF_TRUE_L1
+not
+if-goto Output_printChar_L1
 push constant 0
 pop static 1
 push static 2
@@ -1548,21 +1538,19 @@ pop static 2
 push static 2
 push constant 22
 gt
-if-goto Output_printChar_IF_TRUE_L2
-goto Output_printChar_IF_FALSE_L2
-label Output_printChar_IF_TRUE_L2
+not
+if-goto Output_printChar_L2
 push constant 0
 pop static 2
-label Output_printChar_IF_FALSE_L2
+label Output_printChar_L2
 push constant 0
 return
-label Output_printChar_IF_FALSE_L1
+label Output_printChar_L1
 push argument 0
 push constant 129
 eq
-if-goto Output_printChar_IF_TRUE_L3
-goto Output_printChar_IF_FALSE_L3
-label Output_printChar_IF_TRUE_L3
+not
+if-goto Output_printChar_L3
 push static 1
 push constant 1
 sub
@@ -1570,9 +1558,8 @@ pop static 1
 push static 1
 push constant 0
 lt
-if-goto Output_printChar_IF_TRUE_L4
-goto Output_printChar_IF_FALSE_L4
-label Output_printChar_IF_TRUE_L4
+not
+if-goto Output_printChar_L4
 push constant 63
 pop static 1
 push static 2
@@ -1582,16 +1569,15 @@ pop static 2
 push static 2
 push constant 0
 lt
-if-goto Output_printChar_IF_TRUE_L5
-goto Output_printChar_IF_FALSE_L5
-label Output_printChar_IF_TRUE_L5
+not
+if-goto Output_printChar_L5
 push constant 22
 pop static 2
-label Output_printChar_IF_FALSE_L5
-label Output_printChar_IF_FALSE_L4
+label Output_printChar_L5
+label Output_printChar_L4
 push constant 0
 return
-label Output_printChar_IF_FALSE_L3
+label Output_printChar_L3
 push argument 0
 push constant 127
 lt
@@ -1600,9 +1586,8 @@ push constant 1
 neg
 gt
 and
-if-goto Output_printChar_IF_TRUE_L6
-goto Output_printChar_IF_FALSE_L6
-label Output_printChar_IF_TRUE_L6
+not
+if-goto Output_printChar_L6
 push static 1
 push constant 8
 call Math.multiply 2
@@ -1769,9 +1754,8 @@ pop static 1
 push static 1
 push constant 63
 gt
-if-goto Output_printChar_IF_TRUE_L7
-goto Output_printChar_IF_FALSE_L7
-label Output_printChar_IF_TRUE_L7
+not
+if-goto Output_printChar_L7
 push constant 0
 pop static 1
 push static 2
@@ -1781,14 +1765,13 @@ pop static 2
 push static 2
 push constant 22
 gt
-if-goto Output_printChar_IF_TRUE_L8
-goto Output_printChar_IF_FALSE_L8
-label Output_printChar_IF_TRUE_L8
+not
+if-goto Output_printChar_L8
 push constant 0
 pop static 2
-label Output_printChar_IF_FALSE_L8
-label Output_printChar_IF_FALSE_L7
-label Output_printChar_IF_FALSE_L6
+label Output_printChar_L8
+label Output_printChar_L7
+label Output_printChar_L6
 push constant 0
 return
 function Output.printCharScanLine 2
@@ -1799,16 +1782,15 @@ push argument 0
 call Memory.peek 1
 pop local 0
 push argument 2
-if-goto Output_printCharScanLine_IF_TRUE_L1
-goto Output_printCharScanLine_IF_FALSE_L1
-label Output_printCharScanLine_IF_TRUE_L1
+not
+if-goto Output_printCharScanLine_L1
 push argument 1
 push constant 256
 call Math.multiply 2
 pop argument 1
 push constant 255
 pop local 1
-label Output_printCharScanLine_IF_FALSE_L1
+label Output_printCharScanLine_L1
 push local 0
 push local 1
 and
@@ -1827,12 +1809,12 @@ call String.length 1
 pop local 0
 push constant 0
 pop local 1
-label Output_printString_WHILE_EXP_L1
+label Output_printString_L1
 push local 1
 push local 0
 lt
 not
-if-goto Output_printString_WHILE_END_L1
+if-goto Output_printString_L2
 push argument 0
 push local 1
 call String.charAt 2
@@ -1842,8 +1824,8 @@ push local 1
 push constant 1
 add
 pop local 1
-goto Output_printString_WHILE_EXP_L1
-label Output_printString_WHILE_END_L1
+goto Output_printString_L1
+label Output_printString_L2
 push constant 0
 return
 function Output.printInt 1

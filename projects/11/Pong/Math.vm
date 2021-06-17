@@ -271,9 +271,17 @@ call Math.abs 1
 call Math.divideAbs 2
 return
 function Math.divideAbs 2
+push argument 0
+push constant 0
+eq
 push argument 1
 push argument 0
 gt
+push argument 1
+push constant 1
+lt
+or
+or
 if-goto Math_divideAbs_IF_TRUE_L1
 goto Math_divideAbs_IF_FALSE_L1
 label Math_divideAbs_IF_TRUE_L1

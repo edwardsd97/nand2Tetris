@@ -12,11 +12,35 @@
 class Screen 
 {
     static int mColor;
+    static Array mBit;
 
     /** Initializes the Screen. */
     function void init() 
     {
+        let mBit = Array.new( 16 );
+
+        let mBit[ 0] =       1; // 0000 0000 0000 0001  
+        let mBit[ 1] =       2; // 0000 0000 0000 0010
+        let mBit[ 2] =       4; // 0000 0000 0000 0100
+        let mBit[ 3] =       8; // 0000 0000 0000 1000
+
+        let mBit[ 4] =      16; // 0000 0000 0001 0000
+        let mBit[ 5] =      32; // 0000 0000 0010 0000
+        let mBit[ 6] =      64; // 0000 0000 0100 0000
+        let mBit[ 7] =     128; // 0000 0000 1000 0000
+
+        let mBit[ 8] =     256; // 0000 0001 0000 0000
+        let mBit[ 9] =     512; // 0000 0010 0000 0000
+        let mBit[10] =    1024; // 0000 0100 0000 0000
+        let mBit[11] =    2048; // 0000 1000 0000 0000
+
+        let mBit[12] =    4096; // 0001 0000 0000 0000
+        let mBit[13] =    8192; // 0010 0000 0000 0000
+        let mBit[14] =   16384; // 0100 0000 0000 0000
+        let mBit[15] = 32767+1; // 1000 0000 0000 0000 (-32768 after overflow)
+
         do Screen.setColor( -1 ); // black
+
         return;
     }
 
@@ -70,7 +94,7 @@ class Screen
 
         let xDiv16 = x / 16;
         let bit = x - ( xDiv16 * 16 ); // x % 16
-        let mask = Math.bitMask( bit );
+        let mask = mBit[bit];
 
         let screenWord = ( 32 * y ) + xDiv16;
         let wordValue = Memory.peek( 16384 + screenWord );
@@ -114,7 +138,7 @@ class Screen
         if ( y2 = y1 )
         {
             // Line going straight to the right
-            while ( x1 < ( x2 - 17 ) ) // x1 <= x2 - 16
+            while ( x1 < ( x2 - 15 ) ) // x1 <= ( x2 - 16 )
             {
                 let xDiv16 = x1 / 16;
                 let bit = x1 - ( xDiv16 * 16 ); // x % 16
@@ -131,7 +155,7 @@ class Screen
                 }
             }
 
-            while ( x1 < ( x2 - 1 ) ) // x1 <= x2
+            while ( x1 < ( x2 + 1 ) ) // x1 <= x2
             {
                 do Screen.drawPixel( x1, y1 );
                 let x1 = x1 + 1;
@@ -189,7 +213,7 @@ class Screen
         {
             // Line going from left to right - Y going upward (decreasing)
             let dy = -dy;
-            while ( ( a < ( dx + 1 ) ) & ( -b < ( dy + 1 ) ) ) // while ( a <= dx ) and ( -b <= dy )
+            while ( ( a < ( dx + 1 ) ) & ( (-b) < ( dy + 1 ) ) ) // while ( a <= dx ) and ( -b <= dy )
             {
                 do Screen.drawPixel( x1 + a, y1 + b );
                 if ( diff < 0 )
@@ -212,24 +236,7 @@ class Screen
      * and bottom right corner is (x2,y2), using the current color. */
     function void drawRectangle(int x1, int y1, int x2, int y2) 
     {
-        var int temp;
-
-        // Always draw the rectangle from left to right and top to bottom
-        if ( x1 > x2 )
-        {
-            let temp = x2;
-            let x2 = x1;
-            let x1 = temp;
-        }
-
-        if ( y1 > y2 )
-        {
-            let temp = y2;
-            let y2 = y1;
-            let y1 = temp;
-        }
-
-        while ( y1 < ( y2 - 1 ) ) // y1 <= y2
+        while ( y1 < ( y2 + 1 ) ) // y1 <= y2
         {
             do Screen.drawLine( x1, y1, x2, y1 );
             let y1 = y1 + 1;
@@ -242,23 +249,7 @@ class Screen
      * and bottom right corner is (x2,y2), using the current color. */
     function void drawRectangleEmpty(int x1, int y1, int x2, int y2) 
     {
-        var int temp;
         var int yStart;
-
-        // Always draw the rectangle from left to right and top to bottom
-        if ( x1 > x2 )
-        {
-            let temp = x2;
-            let x2 = x1;
-            let x1 = temp;
-        }
-
-        if ( y1 > y2 )
-        {
-            let temp = y2;
-            let y2 = y1;
-            let y1 = temp;
-        }
 
         let yStart = y1;
 

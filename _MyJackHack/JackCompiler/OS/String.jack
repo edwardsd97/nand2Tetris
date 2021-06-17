@@ -12,6 +12,8 @@
  */
 class String 
 {
+    static Array mStaticStrings;
+
     field Array mStr;
     field int mLen;
     field int mLenMax;
@@ -32,12 +34,33 @@ class String
         return this;
     }
 
+    /** Allocates the set of static strings to be set later */
+    function void staticAlloc(int staticStrCount) 
+    {
+        let mStaticStrings = Array.new( staticStrCount );
+        return;
+    }
+
+    /** Sets a static string by index */
+    function void staticSet(String value, int staticIndex ) 
+    {
+        let mStaticStrings[staticIndex] = value;
+        return;
+    }
+
+    /** Gets a static string by index */
+    function int staticGet(int staticIndex ) 
+    {
+        return mStaticStrings[staticIndex];
+    }
+
     /** Disposes this string. */
     method void dispose() 
     {
         if ( ~(mStr = null) )
         {
             do Memory.deAlloc( mStr );
+            let mStr = null;
         }
         return;
     }
@@ -66,7 +89,6 @@ class String
         {
             let mStr[j] = c;
         }
-        
         return;
     }
 

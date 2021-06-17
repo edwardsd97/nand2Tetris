@@ -46,7 +46,7 @@ push constant 0
 pop local 1
 push static 2
 pop local 0
-label Memory_alloc_WHILE_EXP_L1
+label Memory_alloc_L1
 push local 1
 push constant 0
 eq
@@ -56,7 +56,7 @@ eq
 not
 and
 not
-if-goto Memory_alloc_WHILE_END_L1
+if-goto Memory_alloc_L2
 push constant 1
 push local 0
 add
@@ -66,9 +66,8 @@ push argument 0
 push constant 1
 add
 gt
-if-goto Memory_alloc_IF_TRUE_L1
-goto Memory_alloc_IF_FALSE_L1
-label Memory_alloc_IF_TRUE_L1
+not
+if-goto Memory_alloc_L3
 push local 0
 push constant 1
 push local 0
@@ -111,24 +110,23 @@ pop temp 0
 pop pointer 1
 push temp 0
 pop that 0
-label Memory_alloc_IF_FALSE_L1
+label Memory_alloc_L3
 push constant 0
 push local 0
 add
 pop pointer 1
 push that 0
 pop local 0
-goto Memory_alloc_WHILE_EXP_L1
-label Memory_alloc_WHILE_END_L1
+goto Memory_alloc_L1
+label Memory_alloc_L2
 push local 1
 push constant 0
 eq
-if-goto Memory_alloc_IF_TRUE_L2
-goto Memory_alloc_IF_FALSE_L2
-label Memory_alloc_IF_TRUE_L2
+not
+if-goto Memory_alloc_L4
 push constant 0
 return
-label Memory_alloc_IF_FALSE_L2
+label Memory_alloc_L4
 push local 1
 push constant 2
 add

@@ -2,6 +2,7 @@
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 
 class JackCompiler
 {
@@ -9,6 +10,8 @@ class JackCompiler
     static public bool mVerbose = false;
     static public bool mRecursiveFolders = false;
     static public bool mStaticStrings = false;
+    static public bool mOSClasses = false;
+    static public bool mInvertedConditions = false;
 
     static public Dictionary<string, Tokenizer> mTokenizerDic = new Dictionary<string, Tokenizer>();
 
@@ -27,6 +30,10 @@ class JackCompiler
                 JackCompiler.mRecursiveFolders = true;
             else if (lwrArg == "-s")
                 JackCompiler.mStaticStrings = true;
+            else if (lwrArg == "-o")
+                JackCompiler.mOSClasses = true;
+            else if (lwrArg == "-f")
+                JackCompiler.mInvertedConditions = true;
             else
                 paths.Add(arg);
         }
@@ -46,7 +53,7 @@ class JackCompiler
                 string[] files = Directory.GetFiles((string)paths[i], "*.jack");
                 foreach (string file in files)
                 {
-                    if ( JackCompiler.mRecursiveFolders || !File.GetAttributes(file).HasFlag(FileAttributes.Directory) )
+                    if ( !paths.Contains( file ) && ( JackCompiler.mRecursiveFolders || !File.GetAttributes(file).HasFlag(FileAttributes.Directory) ) )
                         paths.Add(file);
                 }
                 paths.RemoveAt(i--);
@@ -56,24 +63,70 @@ class JackCompiler
         // Setup global scope symbol table
         SymbolTable.ScopePush( "global" );
 
-        // Preprocess the files
+        // Pre-process the operating system classes that are part of the compiler itself
+        Assembly asm = Assembly.GetExecutingAssembly();
+        foreach (string osName in asm.GetManifestResourceNames())
+        {
+            if (!osName.Contains(".OS."))
+                continue;
+            Stream resourceStream = asm.GetManifestResourceStream( osName );
+            if (resourceStream != null)
+            {
+                Console.WriteLine("Preprocessing... " + osName);
+                StreamReader sRdr = new StreamReader(resourceStream);
+                PreProcessFile(osName, sRdr);
+            }
+        }
+
+        // Pre-process the target files
         for (int i = 0; i < paths.Count; i++)
         {
             Console.WriteLine("Preprocessing... " + (string)paths[i]);
-            PreProcessFile((string)paths[i]);
+            StreamReader sRdr = new StreamReader((string)paths[i]);
+            PreProcessFile((string)paths[i], sRdr);
         }
 
         // Process the files
+        List<string> destFolders = new List<string>();
         for (int i = 0; i < paths.Count; i++)
         {
             Console.WriteLine("Compiling... " + (string)paths[i]);
-            CompileFile((string)paths[i]);
+            CompileFile((string)paths[i], GetOutBasefile((string)paths[i]));
+            string destFolder = FileToPath( (string)paths[i] );
+            if ( !destFolders.Contains(destFolder))
+            {
+                destFolders.Add(destFolder);
+            }
+        }
+
+        // Finally compile any OS classes that were referenced and any other OS classes those reference as well
+        bool doneOS = false;
+        while ( !doneOS && JackCompiler.mOSClasses )
+        {
+            doneOS = true;
+            foreach (string osName in asm.GetManifestResourceNames())
+            {
+                if (!osName.Contains(".OS."))
+                    continue;
+                foreach( CompilationEngine.FuncSpec funcSpec in CompilationEngine.mFunctions.Values )
+                {
+                    if ( funcSpec.filePath == osName && funcSpec.referenced && !funcSpec.compiled )
+                    {
+                        Console.WriteLine("Compiling... " + osName);
+                        foreach ( string destFolder in destFolders )
+                        {
+                            CompileFile(osName, destFolder + FileToName(osName));
+                        }
+                        doneOS = false;
+                    }
+                }
+            }
         }
     }
 
-    static void PreProcessFile(string path)
+    static void PreProcessFile(string filePath, StreamReader streamReader)
     {
-        Tokenizer tokenizer = new Tokenizer(path);
+        Tokenizer tokenizer = new Tokenizer(streamReader);
 
         // Read all tokens into memory
         while (tokenizer.HasMoreTokens())
@@ -83,18 +136,19 @@ class JackCompiler
         tokenizer.Close();
         tokenizer.Reset();
 
-        mTokenizerDic.Add(path, tokenizer);
+        if ( !mTokenizerDic.ContainsKey( filePath ) )
+            mTokenizerDic.Add(filePath, tokenizer);
 
         CompilationEngine compiler = new CompilationEngine(tokenizer);
-        compiler.CompilePrePass();
+        compiler.CompilePrePass( filePath );
     }
 
-    static void CompileFile(string path)
+    static void CompileFile( string srcPath, string destPath )
     {
         Tokenizer tokenizer;
-        if (mTokenizerDic.TryGetValue(path, out tokenizer))
+        if (mTokenizerDic.TryGetValue(srcPath, out tokenizer))
         {
-            CompilationEngine compiler = new CompilationEngine(tokenizer, GetOutBasefile(path));
+            CompilationEngine compiler = new CompilationEngine( tokenizer, destPath );
 
             // Compile the tokens into output file
             compiler.Reset();
@@ -102,7 +156,7 @@ class JackCompiler
         }
         else
         {
-            Console.WriteLine("Tokens not found for " + path);
+            Console.WriteLine("Tokens not found for " + srcPath);
         }
     }
 
@@ -578,7 +632,7 @@ class Tokenizer : IEnumerable
     protected int mTokenCurrent;
 
     // Token parsing vars
-    protected System.IO.StreamReader mFile;
+    protected StreamReader mFile;
     protected int mLine;
     protected string mLineStr;
     protected int mLineChar;
@@ -597,7 +651,17 @@ class Tokenizer : IEnumerable
 
     public Tokenizer(string fileInput)
     {
-        mFile = new System.IO.StreamReader(fileInput);
+        Init(new StreamReader(fileInput));
+    }
+
+    public Tokenizer(StreamReader streamReader )
+    {
+        Init(streamReader);
+    }
+
+    protected void Init( StreamReader streamReader )
+    {
+        mFile = streamReader;
         mTokens = new List<Token>();
         mLineStr = "";
         mTokenStr = "";
@@ -1016,6 +1080,13 @@ class VMWriter : Writer
 
     public void WriteCall(string function, int argCount)
     {
+        // mark this function as referenced
+        CompilationEngine.FuncSpec funcSpec;
+        if ( CompilationEngine.mFunctions.TryGetValue( function, out funcSpec ) )
+        {
+            funcSpec.referenced = true;
+        }
+
         // call function argCount
         WriteLine("call " + function + " " + argCount);
     }
@@ -1036,15 +1107,18 @@ class CompilationEngine
     VMWriter mVMWriter;
     string mClassName;
     string mFuncName;
-    int mFuncLabel;
+    Dictionary<string, int> mFuncLabel = new Dictionary<string, int>();
 
     public class FuncSpec
     {
-        public string          funcName;
-        public string          className;
-        public Token.Keyword   type;
-        public List<Token>     parmTypes;
-        public Token           returnType;
+        public string           filePath;
+        public string           funcName;
+        public string           className;
+        public Token.Keyword    type;
+        public List<Token>      parmTypes;
+        public Token            returnType;
+        public bool             referenced;
+        public bool             compiled;
     };
 
     public CompilationEngine(Tokenizer tokens, string baseOutFile)
@@ -1062,7 +1136,7 @@ class CompilationEngine
         Reset();
     }
 
-    public void CompilePrePass()
+    public void CompilePrePass( string filePath )
     {
         ValidateTokenAdvance(Token.Keyword.CLASS);
         ValidateTokenAdvance(Token.Type.IDENTIFIER, out mClassName);
@@ -1073,9 +1147,8 @@ class CompilationEngine
         {
             if ( token.type == Token.Type.STRING_CONST )
             {
-                // 24577, 24578, 24579, ... upward after keyboard register
                 if ( !mStrings.ContainsKey( token.stringVal ) )
-                    mStrings.Add( token.stringVal, 24577 + mStrings.Count );
+                    mStrings.Add( token.stringVal, mStrings.Count );
             }
             else if ( token.keyword == Token.Keyword.METHOD || token.keyword == Token.Keyword.FUNCTION || token.keyword == Token.Keyword.CONSTRUCTOR )
             {
@@ -1083,6 +1156,7 @@ class CompilationEngine
                 FuncSpec spec = new FuncSpec();
                 spec.className = mClassName;
                 spec.type = token.keyword;
+                spec.filePath = filePath;
 
                 mTokens.Advance();
                 spec.returnType = mTokens.Get();
@@ -1091,7 +1165,8 @@ class CompilationEngine
                 ValidateTokenAdvance( '(' );
                 spec.parmTypes = CompileParameterList( false );
 
-                mFunctions.Add( spec.className + "." + spec.funcName, spec );
+                if ( !mFunctions.ContainsKey( spec.className + "." + spec.funcName ) )
+                    mFunctions.Add( spec.className + "." + spec.funcName, spec );
             }
 
             token = mTokens.Advance();
@@ -1171,9 +1246,11 @@ class CompilationEngine
         }
     }
 
-    public string NewFuncFlowLabel()
+    public string NewFuncFlowLabel( string info )
     {
-        string result = mClassName + "_" + mFuncName + "_L" + ++mFuncLabel;
+        if (!mFuncLabel.ContainsKey(info))
+            mFuncLabel.Add(info, 0);
+        string result = mClassName + "_" + mFuncName + "_" + info + "_L" + ++mFuncLabel[info];
         return result;
     }
     
@@ -1261,7 +1338,7 @@ class CompilationEngine
 
             ValidateTokenAdvance('(');
 
-            CompileParameterList();
+            List<Token> parameterTypes = CompileParameterList();
 
             ValidateTokenAdvance(')');
 
@@ -1273,7 +1350,7 @@ class CompilationEngine
             }
 
             // Compile function beginning
-            mFuncLabel = 0;
+            mFuncLabel = new Dictionary<string, int>();
             mVMWriter.WriteFunction(mClassName + "." + mFuncName, SymbolTable.KindSize( SymbolTable.Kind.VAR ) );
             if (funcCallType == Token.Keyword.CONSTRUCTOR || funcCallType == Token.Keyword.METHOD)
             {
@@ -1294,13 +1371,26 @@ class CompilationEngine
                 mVMWriter.WritePop(VMWriter.Segment.POINTER, 0);
             }
 
-            // Before starting with Main.main, inject the allocation of all the static string contants
+            // Before starting with Main.main, inject the allocation of all the static string constants
             if (mClassName == "Main" && mFuncName == "main")
             {
                 CompileStaticStrings();
             }
 
-            CompileStatements();
+            bool compiledReturn = CompileStatements();
+
+            FuncSpec funcSpec;
+            if (CompilationEngine.mFunctions.TryGetValue(mClassName + "." + mFuncName, out funcSpec))
+            {
+                funcSpec.compiled = true;
+
+                if (!compiledReturn)
+                {
+                    mVMWriter.WriteReturn();
+                    if ( funcSpec.returnType.keyword != Token.Keyword.VOID )
+                        Error("Subroutine " + mClassName + "." + mFuncName  + " missing return value");
+                }
+            }
 
             ValidateTokenAdvance('}');
 
@@ -1367,24 +1457,22 @@ class CompilationEngine
                 Error("Calling method as a function '" + subroutineName + "'");
             }
         }
-        else if (objectName != null )
-        {
-            if ( objectName != "Memory" && objectName != "Keyboard" && objectName != "Output" && objectName != "Screen" && 
-                 objectName != "Sys" && objectName != "String" && objectName != "Array" && objectName != "Math" )
-            {
-                Error("Calling unknown function '" + objectName + "." + subroutineName + "' (check case)");
-            }
-        }
         else
         {
-            Error("Calling unknown function '" + subroutineName + "' (check case)");
+            if ( objectName != null )
+                Error("Calling unknown function '" + objectName + "." + subroutineName + "' (check case)");
+            else
+                Error("Calling unknown function '" + subroutineName + "' (check case)");
         }
 
         int expressionCount = CompileExpressionList();
 
-        if ( funcSpec != null && funcSpec.parmTypes.Count != expressionCount )
+        if (funcSpec != null)
         {
-            Error( funcSpec.type.ToString() + " " + subroutineName + " expects " + funcSpec.parmTypes.Count + " parameters." );
+            if (funcSpec.parmTypes.Count != expressionCount)
+            {
+                Error(funcSpec.type.ToString() + " " + subroutineName + " expects " + funcSpec.parmTypes.Count + " parameters.");
+            }
         }
 
         argCount = argCount + expressionCount;
@@ -1400,7 +1488,7 @@ class CompilationEngine
         }
         else
         {
-            mVMWriter.WriteCall(subroutineName, argCount);
+            mVMWriter.WriteCall( mClassName + "." + subroutineName, argCount);
         }
     }
 
@@ -1468,7 +1556,7 @@ class CompilationEngine
         return false;
     }
 
-    public void CompileStatements()
+    public bool CompileStatements()
     {
         // compiles a series of statements without handling the enclosing {}s
 
@@ -1476,6 +1564,7 @@ class CompilationEngine
         // statement: letStatement | ifStatement | whileStatement | doStatement | returnStatement
 
         bool doneCompilingStatements = false;
+        bool returnCompiled = false;
 
         while ( !doneCompilingStatements )
         {
@@ -1493,6 +1582,7 @@ class CompilationEngine
                     break;
                 case Token.Keyword.RETURN:
                     CompileStatementReturn();
+                    returnCompiled = true;
                     break;
                 case Token.Keyword.DO:
                     CompileStatementDo( true );
@@ -1517,6 +1607,8 @@ class CompilationEngine
                     break;
             }
         }
+
+        return returnCompiled;
     }
 
     public void CompileArrayAddress( string varNameKnown = null )
@@ -1612,14 +1704,26 @@ class CompilationEngine
 
         // invert the expression to make the jumps simpler
         CompileExpression();
-        mVMWriter.WriteArithmetic(VMWriter.Command.NOT);
+        if ( JackCompiler.mInvertedConditions )
+            mVMWriter.WriteArithmetic(VMWriter.Command.NOT);
 
         ValidateTokenAdvance(')');
 
-        string label1 = NewFuncFlowLabel();
-        string label2 = null;
+        string labelFalse = NewFuncFlowLabel( "IF_FALSE" );
+        string labelTrue = null;
+        string labelEnd = null;
 
-        mVMWriter.WriteIfGoto( label1 );
+        if (JackCompiler.mInvertedConditions)
+        {
+            mVMWriter.WriteIfGoto(labelFalse);
+        }
+        else
+        {
+            labelTrue = NewFuncFlowLabel( "IF_TRUE" );
+            mVMWriter.WriteIfGoto(labelTrue);
+            mVMWriter.WriteGoto(labelFalse);
+            mVMWriter.WriteLabel(labelTrue);
+        }
 
         ValidateTokenAdvance('{');
 
@@ -1629,11 +1733,11 @@ class CompilationEngine
 
         if (mTokens.Get().keyword == Token.Keyword.ELSE)
         {
-            label2 = NewFuncFlowLabel();
-            mVMWriter.WriteGoto(label2);
+            labelEnd = NewFuncFlowLabel("IF_END");
+            mVMWriter.WriteGoto(labelEnd);
         }
 
-        mVMWriter.WriteLabel(label1);
+        mVMWriter.WriteLabel(labelFalse);
 
         if (mTokens.Get().keyword == Token.Keyword.ELSE)
         {
@@ -1645,7 +1749,7 @@ class CompilationEngine
 
             ValidateTokenAdvance('}');
 
-            mVMWriter.WriteLabel(label2);
+            mVMWriter.WriteLabel(labelEnd);
         }
     }
 
@@ -1655,18 +1759,18 @@ class CompilationEngine
 
         ValidateTokenAdvance(Token.Keyword.WHILE);
 
-        string label1 = NewFuncFlowLabel();
-        string label2 = NewFuncFlowLabel();
+        string labelExp = NewFuncFlowLabel( "WHILE_EXP" );
+        string labelEnd = NewFuncFlowLabel( "WHILE_END" );
 
-        mVMWriter.WriteLabel(label1);
+        mVMWriter.WriteLabel(labelExp);
 
         // invert the expression to make the jumps simpler
         ValidateTokenAdvance('(');
         CompileExpression();
-        mVMWriter.WriteArithmetic(VMWriter.Command.NOT);
         ValidateTokenAdvance(')');
 
-        mVMWriter.WriteIfGoto(label2);
+        mVMWriter.WriteArithmetic(VMWriter.Command.NOT);
+        mVMWriter.WriteIfGoto(labelEnd);
 
         ValidateTokenAdvance('{');
 
@@ -1674,9 +1778,9 @@ class CompilationEngine
 
         ValidateTokenAdvance('}');
 
-        mVMWriter.WriteGoto(label1);
+        mVMWriter.WriteGoto(labelExp);
 
-        mVMWriter.WriteLabel(label2);
+        mVMWriter.WriteLabel(labelEnd);
 
     }
 
@@ -1711,12 +1815,12 @@ class CompilationEngine
         if (JackCompiler.mStaticStrings)
         {
             // Precompiled static strings
-            int pointerAddress;
+            int strIndex;
 
-            if (CompilationEngine.mStrings.TryGetValue(str, out pointerAddress))
+            if (CompilationEngine.mStrings.TryGetValue(str, out strIndex))
             {
-                mVMWriter.WritePush(VMWriter.Segment.CONST, pointerAddress);
-                mVMWriter.WriteCall("Memory.peek", 1);
+                mVMWriter.WritePush(VMWriter.Segment.CONST, strIndex);
+                mVMWriter.WriteCall("String.staticGet", 1);
             }
             else
             {
@@ -1742,6 +1846,9 @@ class CompilationEngine
         {
             mVMWriter.WriteLine("/* Static String Allocation (Inserted by the compiler at the beginning of Main.main) */");
 
+            mVMWriter.WritePush(VMWriter.Segment.CONST, CompilationEngine.mStrings.Keys.Count );
+            mVMWriter.WriteCall("String.staticAlloc", 1);
+
             foreach (string staticString in CompilationEngine.mStrings.Keys)
             {
                 int strLen = staticString.Length;
@@ -1753,10 +1860,8 @@ class CompilationEngine
                     mVMWriter.WritePush(VMWriter.Segment.CONST, staticString[i]);
                     mVMWriter.WriteCall("String.appendChar", 2);
                 }
-                mVMWriter.WritePop(VMWriter.Segment.TEMP, 0);
                 mVMWriter.WritePush(VMWriter.Segment.CONST, CompilationEngine.mStrings[staticString]);
-                mVMWriter.WritePush(VMWriter.Segment.TEMP, 0);
-                mVMWriter.WriteCall("Memory.poke", 2);
+                mVMWriter.WriteCall("String.staticSet", 2);
             }
 
             mVMWriter.WriteLine("/* Main.main statements begin ... */");

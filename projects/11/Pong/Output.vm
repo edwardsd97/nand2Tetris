@@ -1472,11 +1472,7 @@ goto Output_getMap_IF_FALSE_L1
 label Output_getMap_IF_TRUE_L1
 push constant 0
 pop argument 0
-goto Output_getMap_IF_END_L1
 label Output_getMap_IF_FALSE_L1
-push constant 0
-pop argument 0
-label Output_getMap_IF_END_L1
 push argument 0
 push static 0
 add

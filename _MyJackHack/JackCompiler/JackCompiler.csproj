@@ -5,4 +5,25 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="OS\Keyboard.jack" />
+    <None Remove="OS\Math.jack" />
+    <None Remove="OS\Memory.jack" />
+    <None Remove="OS\Output.jack" />
+    <None Remove="OS\Screen.jack" />
+    <None Remove="OS\String.jack" />
+    <None Remove="OS\Sys.jack" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="OS\Array.jack" />
+    <EmbeddedResource Include="OS\Keyboard.jack" />
+    <EmbeddedResource Include="OS\Math.jack" />
+    <EmbeddedResource Include="OS\Memory.jack" />
+    <EmbeddedResource Include="OS\Output.jack" />
+    <EmbeddedResource Include="OS\Screen.jack" />
+    <EmbeddedResource Include="OS\String.jack" />
+    <EmbeddedResource Include="OS\Sys.jack" />
+  </ItemGroup>
+
 </Project>

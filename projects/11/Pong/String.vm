@@ -20,6 +20,30 @@ pop this 0
 label String_new_IF_FALSE_L1
 push pointer 0
 return
+function String.staticAlloc 0
+push argument 0
+call Array.new 1
+pop static 0
+push constant 0
+return
+function String.staticSet 0
+push argument 1
+push static 0
+add
+push argument 0
+pop temp 0
+pop pointer 1
+push temp 0
+pop that 0
+push constant 0
+return
+function String.staticGet 0
+push argument 0
+push static 0
+add
+pop pointer 1
+push that 0
+return
 function String.dispose 0
 push argument 0
 pop pointer 0
@@ -33,6 +57,8 @@ label String_dispose_IF_TRUE_L1
 push this 0
 call Memory.deAlloc 1
 pop temp 0
+push constant 0
+pop this 0
 label String_dispose_IF_FALSE_L1
 push constant 0
 return

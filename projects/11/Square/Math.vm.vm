@@ -143,29 +143,27 @@ push argument 0
 push constant 16
 lt
 and
-if-goto IF_TRUE0
-goto IF_FALSE0
-label IF_TRUE0
+not
+if-goto Math_bitMask_L1
 push argument 0
 push static 0
 add
 pop pointer 1
 push that 0
 return
-label IF_FALSE0
+label Math_bitMask_L1
 push constant 0
 return
 function Math.abs 0
 push argument 0
 push constant 0
 lt
-if-goto IF_TRUE0
-goto IF_FALSE0
-label IF_TRUE0
+not
+if-goto Math_abs_L1
 push argument 0
 neg
 return
-label IF_FALSE0
+label Math_abs_L1
 push argument 0
 return
 function Math.multiply 9
@@ -178,16 +176,15 @@ pop local 6
 push local 5
 push local 6
 gt
-if-goto IF_TRUE0
-goto IF_FALSE0
-label IF_TRUE0
+not
+if-goto Math_multiply_L1
 push local 6
 pop local 0
 push local 5
 pop local 6
 push local 0
 pop local 5
-label IF_FALSE0
+label Math_multiply_L1
 push local 6
 pop local 2
 push local 5
@@ -204,23 +201,22 @@ push argument 1
 push constant 0
 lt
 pop local 8
-label WHILE_EXP0
+label Math_multiply_L2
 push local 4
 push local 3
 lt
 not
-if-goto WHILE_END0
+if-goto Math_multiply_L3
 push local 5
 push local 4
 and
-if-goto IF_TRUE1
-goto IF_FALSE1
-label IF_TRUE1
+not
+if-goto Math_multiply_L4
 push local 1
 push local 2
 add
 pop local 1
-label IF_FALSE1
+label Math_multiply_L4
 push local 2
 push local 2
 add
@@ -229,19 +225,18 @@ push local 4
 push local 4
 add
 pop local 4
-goto WHILE_EXP0
-label WHILE_END0
+goto Math_multiply_L2
+label Math_multiply_L3
 push local 7
 push local 8
 eq
 not
-if-goto IF_TRUE2
-goto IF_FALSE2
-label IF_TRUE2
+not
+if-goto Math_multiply_L5
 push local 1
 neg
 return
-label IF_FALSE2
+label Math_multiply_L5
 push local 1
 return
 function Math.divide 0
@@ -253,9 +248,8 @@ push constant 0
 lt
 eq
 not
-if-goto IF_TRUE0
-goto IF_FALSE0
-label IF_TRUE0
+not
+if-goto Math_divide_L1
 push argument 0
 call Math.abs 1
 push argument 1
@@ -263,7 +257,7 @@ call Math.abs 1
 call Math.divideAbs 2
 neg
 return
-label IF_FALSE0
+label Math_divide_L1
 push argument 0
 call Math.abs 1
 push argument 1
@@ -274,12 +268,11 @@ function Math.divideAbs 2
 push argument 1
 push argument 0
 gt
-if-goto IF_TRUE0
-goto IF_FALSE0
-label IF_TRUE0
+not
+if-goto Math_divideAbs_L1
 push constant 0
 return
-label IF_FALSE0
+label Math_divideAbs_L1
 push constant 2
 push argument 1
 call Math.multiply 2
@@ -295,14 +288,13 @@ call Math.multiply 2
 sub
 push argument 1
 lt
-if-goto IF_TRUE1
-goto IF_FALSE1
-label IF_TRUE1
+not
+if-goto Math_divideAbs_L2
 push constant 2
 push local 0
 call Math.multiply 2
 return
-label IF_FALSE1
+label Math_divideAbs_L2
 push constant 2
 push local 0
 call Math.multiply 2
@@ -320,19 +312,18 @@ pop argument 0
 push argument 0
 push constant 32767
 eq
-if-goto IF_TRUE0
-goto IF_FALSE0
-label IF_TRUE0
+not
+if-goto Math_sqrt_L1
 push constant 181
 return
-label IF_FALSE0
-label WHILE_EXP0
+label Math_sqrt_L1
+label Math_sqrt_L2
 push local 1
 push constant 1
 neg
 gt
 not
-if-goto WHILE_END0
+if-goto Math_sqrt_L3
 push local 1
 push static 0
 add
@@ -353,44 +344,41 @@ push local 2
 push constant 0
 gt
 and
-if-goto IF_TRUE1
-goto IF_FALSE1
-label IF_TRUE1
+not
+if-goto Math_sqrt_L4
 push local 0
 push local 3
 add
 pop local 0
-label IF_FALSE1
+label Math_sqrt_L4
 push local 1
 push constant 1
 sub
 pop local 1
-goto WHILE_EXP0
-label WHILE_END0
+goto Math_sqrt_L2
+label Math_sqrt_L3
 push local 0
 return
 function Math.max 0
 push argument 1
 push argument 0
 gt
-if-goto IF_TRUE0
-goto IF_FALSE0
-label IF_TRUE0
+not
+if-goto Math_max_L1
 push argument 1
 return
-label IF_FALSE0
+label Math_max_L1
 push argument 0
 return
 function Math.min 0
 push argument 1
 push argument 0
 lt
-if-goto IF_TRUE0
-goto IF_FALSE0
-label IF_TRUE0
+not
+if-goto Math_min_L1
 push argument 1
 return
-label IF_FALSE0
+label Math_min_L1
 push argument 0
 return
 function Math.sqr 0
@@ -402,21 +390,19 @@ function Math.pow 1
 push argument 1
 push constant 1
 lt
-if-goto IF_TRUE0
-goto IF_FALSE0
-label IF_TRUE0
+not
+if-goto Math_pow_L1
 push constant 1
 return
-label IF_FALSE0
+label Math_pow_L1
 push argument 1
 push constant 1
 eq
-if-goto IF_TRUE1
-goto IF_FALSE1
-label IF_TRUE1
+not
+if-goto Math_pow_L2
 push argument 0
 return
-label IF_FALSE1
+label Math_pow_L2
 push argument 0
 push constant 2
 eq
@@ -424,26 +410,25 @@ push argument 1
 push constant 15
 lt
 and
-if-goto IF_TRUE2
-goto IF_FALSE2
-label IF_TRUE2
+not
+if-goto Math_pow_L3
 push argument 1
 push static 0
 add
 pop pointer 1
 push that 0
 return
-label IF_FALSE2
+label Math_pow_L3
 push argument 1
 push constant 1
 sub
 pop argument 1
-label WHILE_EXP0
+label Math_pow_L4
 push local 0
 push argument 1
 lt
 not
-if-goto WHILE_END0
+if-goto Math_pow_L5
 push argument 0
 push argument 0
 call Math.multiply 2
@@ -452,7 +437,16 @@ push local 0
 push constant 1
 add
 pop local 0
-goto WHILE_EXP0
-label WHILE_END0
+goto Math_pow_L4
+label Math_pow_L5
 push argument 0
+return
+function Math.mod 0
+push argument 0
+push argument 0
+push argument 1
+call Math.divide 2
+push argument 1
+call Math.multiply 2
+sub
 return
