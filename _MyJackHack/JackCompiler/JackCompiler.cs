@@ -65,29 +65,35 @@ class JackCompiler
         // Setup global scope symbol table
         SymbolTable.ScopePush( "global" );
 
-        // Pre-process the operating system classes that are part of the compiler itself
+        // Pre-process in 2 phases - this allows the compiler to realize all possible class names before compiling 
         Assembly asm = Assembly.GetExecutingAssembly();
-        foreach (string osName in asm.GetManifestResourceNames())
+        for ( int phase = 0; phase < 2; phase++ )
         {
-            if (!osName.Contains(HACK_OS))
-                continue;
-            if (ClassInList(osName, paths))
-                continue;
-            Stream resourceStream = asm.GetManifestResourceStream(osName);
-            if (resourceStream != null)
+            // Pre-process the operating system classes that are part of the compiler itself
+            foreach (string osName in asm.GetManifestResourceNames())
             {
-                Console.WriteLine("Preprocessing... " + osName);
-                StreamReader sRdr = new StreamReader(resourceStream);
-                PreProcessFile(osName, sRdr);
+                if (!osName.Contains(HACK_OS))
+                    continue;
+                if (ClassInList(osName, paths))
+                    continue;
+                Stream resourceStream = asm.GetManifestResourceStream(osName);
+                if (resourceStream != null)
+                {
+                    if (phase == 0)
+                        Console.WriteLine("Preprocessing... " + osName);
+                    StreamReader sRdr = new StreamReader(resourceStream);
+                    PreProcessFile(osName, sRdr, phase);
+                }
             }
-        }
 
-        // Pre-process the target files
-        for (int i = 0; i < paths.Count; i++)
-        {
-            Console.WriteLine("Preprocessing... " + paths[i]);
-            StreamReader sRdr = new StreamReader(paths[i]);
-            PreProcessFile(paths[i], sRdr);
+            // Pre-process the target files
+            for (int i = 0; i < paths.Count; i++)
+            {
+                if ( phase == 0 )
+                    Console.WriteLine("Preprocessing... " + paths[i]);
+                StreamReader sRdr = new StreamReader(paths[i]);
+                PreProcessFile(paths[i], sRdr, phase);
+            }
         }
 
         // Process the files
@@ -134,23 +140,31 @@ class JackCompiler
         }
     }
 
-    static void PreProcessFile(string filePath, StreamReader streamReader)
+    static void PreProcessFile(string filePath, StreamReader streamReader, int phase )
     {
-        Tokenizer tokenizer = new Tokenizer(streamReader);
+        Tokenizer tokenizer;
 
-        // Read all tokens into memory
-        while (tokenizer.HasMoreTokens())
+        if (mTokenizerDic.ContainsKey(filePath))
         {
-            tokenizer.Advance();
+            tokenizer = mTokenizerDic[filePath];
         }
-        tokenizer.Close();
-        tokenizer.Reset();
+        else
+        {
+            tokenizer = new Tokenizer(streamReader);
 
-        if ( !mTokenizerDic.ContainsKey( filePath ) )
+            // Read all tokens into memory
+            while (tokenizer.HasMoreTokens())
+            {
+                tokenizer.Advance();
+            }
+            tokenizer.Close();
+            tokenizer.Reset();
+
             mTokenizerDic.Add(filePath, tokenizer);
+        }
 
         CompilationEngine compiler = new CompilationEngine(tokenizer);
-        compiler.CompilePrePass( filePath );
+        compiler.CompilePrePass( filePath, phase );
     }
 
     static void CompileFile( string srcPath, string destPath )
@@ -224,6 +238,7 @@ class SymbolTable
 {
     static List<SymbolScope> mScopes = new List<SymbolScope>();
     static SymbolTable mTheTable = new SymbolTable();
+    static int mVarSize;
 
     public class Symbol
     {
@@ -248,6 +263,18 @@ class SymbolTable
     public enum Kind
     {
         NONE, GLOBAL, STATIC, FIELD, ARG, VAR
+    }
+
+    public static void VarSizeBegin()
+    {
+        // Begins tracking the high water mark of VAR kind variables
+        SymbolTable.mVarSize = 0;
+    }
+
+    public static int VarSizeEnd()
+    {
+        // Returns high water mark of VAR kind variables
+        return SymbolTable.mVarSize;
     }
 
     public static void ScopePush( string name, bool isMethod = false )
@@ -275,15 +302,20 @@ class SymbolTable
         newVar.mVarName = varName;
         newVar.mOffset = 0;
 
-        foreach (Symbol symbol in mScopes[mScopes.Count - 1].mSymbols.Values)
+        foreach (SymbolScope scope in mScopes)
         {
-            if (symbol.mKind == newVar.mKind)
+            foreach (Symbol symbol in scope.mSymbols.Values)
             {
-                newVar.mOffset = newVar.mOffset + 1;
+                if (symbol.mKind == newVar.mKind)
+                {
+                    newVar.mOffset = newVar.mOffset + 1;
+                }
             }
         }
 
         mScopes[mScopes.Count - 1].mSymbols.Add(varName, newVar);
+
+        mVarSize = Math.Max( mVarSize, SymbolTable.KindSize(SymbolTable.Kind.VAR ) );
     }
 
     public static bool Exists(string varName)
@@ -984,7 +1016,7 @@ class Tokenizer : IEnumerable
 
 // CLASS
 // class: 'class' className '{' classVarDec* subroutineDec* '}'
-// classVarDec: ('static'|'field')? type varName (',' varName)* ';'
+// classVarDec: ('static'|'field')? type varName ('=' expression)? (',' varName ('=' expression)? )* ';'
 
 // FUNCTION
 // type: 'int'|'char'|'boolean'|className
@@ -992,12 +1024,12 @@ class Tokenizer : IEnumerable
 // parameter: type varName
 // parameterAdd: ',' type varName
 // parameterList: ( parameter (',' parameter)* )?
-// varDec: 'var'? type varName (',' varName)* ';'
+// varDec: 'var'? type varName ('=' expression)? (',' varName ('=' expression)? )* ';'
 // subroutineBody: '{' varDec* statements '}'
 
 // STATEMENTS
 // statements: statement*
-// statement: letStatement | ifStatement | whileStatement | forStatement | doStatement | returnStatement
+// statement: letStatement | ifStatement | whileStatement | forStatement | doStatement | returnStatement | varDec
 // letStatement: ('let')? varName ('[' expression ']')? '=' expression ';'
 // ifStatement: 'if' '(' expression ')' ( statement | '{' statements '}' ) ('else' ( statement | '{' statements '}' ) )?
 // whileStatement: 'while' '(' expression ')' ( statement | '{' statements '}' )
@@ -1024,6 +1056,7 @@ class Writer
 {
     protected StreamWriter mFile;
     public int mLinesWritten = 0;
+    protected bool mEnabled = true;
 
     public Writer(string outFile)
     {
@@ -1033,13 +1066,26 @@ class Writer
 
     public virtual void WriteLine(string line)
     {
-        if (JackCompiler.mVerbose)
-            Console.WriteLine(line);
-        mFile.WriteLine(line);
-        mLinesWritten++;
+        if( mEnabled )
+        {
+            if (JackCompiler.mVerbose)
+                Console.WriteLine(line);
+            mFile.WriteLine(line);
+            mLinesWritten++;
+        }
+    }
+
+    public void Enable()
+    {
+        mEnabled = true;
+    }
+
+    public void Disable()
+    {
+        mEnabled = false;
     }
 }
-    
+
 class VMWriter : Writer
 {
     public enum Segment
@@ -1188,13 +1234,16 @@ class CompilationEngine
         Reset();
     }
 
-    public void CompilePrePass( string filePath )
+    public void CompilePrePass( string filePath, int phase )
     {
         ValidateTokenAdvance(Token.Keyword.CLASS);
         ValidateTokenAdvance(Token.Type.IDENTIFIER, out mClassName);
 
         if (!mClasses.Contains(mClassName))
             mClasses.Add(mClassName);
+
+        if (phase == 0)
+            return;
 
         Token token = mTokens.Advance();
 
@@ -1282,23 +1331,10 @@ class CompilationEngine
 
     public bool ValidateFunctionReturnType(Token varType)
     {
-        if (ValidateVarType(varType))
+        if ( varType.IsType() )
             return true;
 
         return varType.keyword == Token.Keyword.VOID;
-    }
-
-    public bool ValidateVarType(Token varType)
-    {
-        switch (varType.keyword)
-        {
-            case Token.Keyword.INT:
-            case Token.Keyword.BOOL:
-            case Token.Keyword.CHAR:
-                return true;
-            default:
-                return varType.type == Token.Type.IDENTIFIER;
-        }
     }
 
     public string NewFuncFlowLabel( string info )
@@ -1336,6 +1372,30 @@ class CompilationEngine
         SymbolTable.ScopePop();
     }
 
+    public void CompileVarDecSet(Token varType, SymbolTable.Kind varKind, bool defineVars = true )
+    {
+        do
+        {
+            mTokens.Advance();
+
+            string varName;
+            ValidateTokenAdvance(Token.Type.IDENTIFIER, out varName);
+
+            if ( defineVars )
+                SymbolTable.Define(varName, varType, varKind);
+
+            if (mTokens.Get().symbol == '=')
+            {
+                ValidateTokenAdvance('=');
+
+                CompileExpression(); // push value onto stack
+
+                mVMWriter.WritePop(SymbolTable.SegmentOf(varName), SymbolTable.OffsetOf(varName));
+            }
+
+        } while (mTokens.Get().symbol == ',');
+    }
+
     public bool CompileClassVarDec()
     {
         // compiles class fields and static vars
@@ -1356,16 +1416,7 @@ class CompilationEngine
         {
             Token varType = mTokens.Get();
 
-            do
-            {
-                mTokens.Advance();
-
-                string varName;
-                ValidateTokenAdvance(Token.Type.IDENTIFIER, out varName);
-
-                SymbolTable.Define(varName, varType, varKind);
-
-            } while (mTokens.Get().symbol == ',');
+            CompileVarDecSet( varType, varKind );
 
             token = ValidateTokenAdvance(';');
 
@@ -1375,7 +1426,7 @@ class CompilationEngine
         return false;
     }
 
-    public bool CompileVarDec()
+    public bool CompileVarDec( bool eatSemiColon = true, bool defineVars = true )
     {
         // handles local variables in a subroutine
         // varDec: 'var'? type varName (',' varName)* ';'
@@ -1393,18 +1444,10 @@ class CompilationEngine
         {
             Token varType = mTokens.Get();
 
-            do
-            {
-                mTokens.Advance();
+            CompileVarDecSet(varType, SymbolTable.Kind.VAR, defineVars );
 
-                string varName;
-                ValidateTokenAdvance(Token.Type.IDENTIFIER, out varName);
-
-                SymbolTable.Define(varName, varType, SymbolTable.Kind.VAR);
-
-            } while (mTokens.Get().symbol == ',');
-
-            token = ValidateTokenAdvance(';');
+            if ( eatSemiColon )
+                ValidateTokenAdvance(';');
 
             return true;
         }
@@ -1432,7 +1475,7 @@ class CompilationEngine
 
             ValidateTokenAdvance(Token.Type.IDENTIFIER, out mFuncName);
 
-            SymbolTable.ScopePush( "function", funcCallType == Token.Keyword.METHOD );
+            SymbolTable.ScopePush("function", funcCallType == Token.Keyword.METHOD);
 
             ValidateTokenAdvance('(');
 
@@ -1442,57 +1485,74 @@ class CompilationEngine
 
             ValidateTokenAdvance('{');
 
-            while (CompileVarDec())
-            {
-                // keep going with more varDec
-            }
+            Tokenizer.State tokenStart = null;
+            int varSize = 0;
 
-            // Compile function beginning
-            mFuncLabel = new Dictionary<string, int>();
-            mVMWriter.WriteFunction(mClassName + "." + mFuncName, SymbolTable.KindSize( SymbolTable.Kind.VAR ) );
-            if (funcCallType == Token.Keyword.CONSTRUCTOR || funcCallType == Token.Keyword.METHOD)
+            for (int stage = 0; stage < 2; stage++)
             {
-                if (funcCallType == Token.Keyword.CONSTRUCTOR)
+                switch (stage)
                 {
-                    // Alloc "this" ( and it is pushed onto the stack )
-                    mVMWriter.WritePush(VMWriter.Segment.CONST, SymbolTable.KindSize(SymbolTable.Kind.FIELD));
-                    mVMWriter.WriteCall("Memory.alloc", 1);
-                }
+                    case 0: // pre-compile to find out how much local var space is needed
+                        tokenStart = mTokens.StateGet();
+                        mVMWriter.Disable();
+                        SymbolTable.VarSizeBegin();
+                        CompileStatements( true );
+                        varSize = SymbolTable.VarSizeEnd();
+                        break;
 
-                if ( funcCallType == Token.Keyword.METHOD)
-                {
-                    // grab argument 0 (this) and push it on the stack
-                    mVMWriter.WritePush(VMWriter.Segment.ARG, 0);
-                }
+                    case 1: // compile the function
+                        mTokens.StateSet(tokenStart);
+                        mVMWriter.Enable();
 
-                // pop "this" off the stack
-                mVMWriter.WritePop(VMWriter.Segment.POINTER, 0);
-            }
+                        // Compile function beginning
+                        mVMWriter.WriteFunction(mClassName + "." + mFuncName, varSize);
+                        if (funcCallType == Token.Keyword.CONSTRUCTOR || funcCallType == Token.Keyword.METHOD)
+                        {
+                            if (funcCallType == Token.Keyword.CONSTRUCTOR)
+                            {
+                                // Alloc "this" ( and it is pushed onto the stack )
+                                mVMWriter.WritePush( VMWriter.Segment.CONST, SymbolTable.KindSize(SymbolTable.Kind.FIELD) );
+                                mVMWriter.WriteCall("Memory.alloc", 1);
+                            }
 
-            // Before starting with Main.main, inject the allocation of all the static string constants
-            if (mClassName == "Main" && mFuncName == "main")
-            {
-                CompileStaticStrings();
-            }
+                            if (funcCallType == Token.Keyword.METHOD)
+                            {
+                                // grab argument 0 (this) and push it on the stack
+                                mVMWriter.WritePush(VMWriter.Segment.ARG, 0);
+                            }
 
-            bool compiledReturn = CompileStatements();
+                            // pop "this" off the stack
+                            mVMWriter.WritePop(VMWriter.Segment.POINTER, 0);
+                        }
 
-            FuncSpec funcSpec;
-            if (CompilationEngine.mFunctions.TryGetValue(mClassName + "." + mFuncName, out funcSpec))
-            {
-                funcSpec.compiled = true;
+                        // Before starting with Main.main, inject the allocation of all the static string constants
+                        if ( mClassName == "Main" && mFuncName == "main" )
+                        {
+                            CompileStaticStrings();
+                        }
 
-                if (!compiledReturn)
-                {
-                    mVMWriter.WriteReturn();
-                    if ( funcSpec.returnType.keyword != Token.Keyword.VOID )
-                        Error("Subroutine " + mClassName + "." + mFuncName  + " missing return value");
+                        bool compiledReturn = CompileStatements( false );
+
+                        FuncSpec funcSpec;
+                        if (CompilationEngine.mFunctions.TryGetValue(mClassName + "." + mFuncName, out funcSpec))
+                        {
+                            funcSpec.compiled = true;
+
+                            if (!compiledReturn)
+                            {
+                                mVMWriter.WriteReturn();
+                                if (funcSpec.returnType.keyword != Token.Keyword.VOID)
+                                    Error("Subroutine " + mClassName + "." + mFuncName + " missing return value");
+                            }
+                        }
+
+                        break;
                 }
             }
 
             ValidateTokenAdvance('}');
 
-            SymbolTable.ScopePop();
+            SymbolTable.ScopePop(); // "function"
 
             return true;
         }
@@ -1598,7 +1658,7 @@ class CompilationEngine
         // can be completely empty
 
         // parameterList: ( type varName (',' type varName)* )?
-        while (ValidateVarType(mTokens.Get()))
+        while ( mTokens.Get().IsType() )
         {
             // handle argument
             Token varType = mTokens.GetAndAdvance();
@@ -1622,7 +1682,7 @@ class CompilationEngine
         return result;
     }
 
-    public bool CompileStatements()
+    public bool CompileStatements( bool defineVars = true )
     {
         // compiles a series of statements without handling the enclosing {}s
 
@@ -1631,7 +1691,7 @@ class CompilationEngine
         bool resultReturnCompiled = false;
         bool returnCompiled = false;
 
-        while ( CompileStatementSingle( out returnCompiled ) )
+        while ( CompileStatementSingle( out returnCompiled, true, defineVars ) )
         {
             // keep compiling more statements
             resultReturnCompiled = resultReturnCompiled || returnCompiled;
@@ -1640,17 +1700,16 @@ class CompilationEngine
         return resultReturnCompiled;
     }
 
-    public bool CompileStatementSingle( out bool returnCompiled, bool eatSemiColon = true )
+    public bool CompileStatementSingle( out bool returnCompiled, bool eatSemiColon = true, bool defineVars = true )
     {
         // compiles a series of statements without handling the enclosing {}s
 
-        // statement: letStatement | ifStatement | whileStatement | forStatement | doStatement | returnStatement
+        // statement: letStatement | ifStatement | whileStatement | forStatement | doStatement | returnStatement | varDec
 
         returnCompiled = false;
 
         Token token = mTokens.GetAndAdvance();
-        Token tokenNext = mTokens.Get();
-        mTokens.Rollback(1);
+        Token tokenNext = mTokens.GetAndRollback();
 
         switch (token.keyword)
         {
@@ -1680,8 +1739,13 @@ class CompilationEngine
                 return true;
 
             default:
-                // Check for non-keyword do/let
-                if (token.type == Token.Type.IDENTIFIER && (tokenNext.symbol == '=' || tokenNext.symbol == '['))
+                // Check for non-keyword do/let/varDec
+                if ( token.keyword == Token.Keyword.VAR || ( token.IsType() && tokenNext.type == Token.Type.IDENTIFIER ) )
+                {
+                    CompileVarDec( eatSemiColon, defineVars );
+                    return true;
+                }
+                else if (token.type == Token.Type.IDENTIFIER && (tokenNext.symbol == '=' || tokenNext.symbol == '['))
                 {
                     CompileStatementLet(false, eatSemiColon);
                     return true;
@@ -1818,7 +1882,11 @@ class CompilationEngine
         {
             ValidateTokenAdvance('{');
 
+            SymbolTable.ScopePush( "statements", false );
+
             CompileStatements();
+
+            SymbolTable.ScopePop();
 
             ValidateTokenAdvance('}');
         }
@@ -1843,7 +1911,11 @@ class CompilationEngine
             {
                 ValidateTokenAdvance('{');
 
+                SymbolTable.ScopePush("statements", false);
+
                 CompileStatements();
+
+                SymbolTable.ScopePop();
 
                 ValidateTokenAdvance('}');
             }
@@ -1881,7 +1953,11 @@ class CompilationEngine
         {
             ValidateTokenAdvance('{');
 
+            SymbolTable.ScopePush("statements", false);
+
             CompileStatements();
+
+            SymbolTable.ScopePop();
 
             ValidateTokenAdvance('}');
         }
@@ -1909,6 +1985,8 @@ class CompilationEngine
         string labelEnd = NewFuncFlowLabel("FOR_END");
         string labelInc = NewFuncFlowLabel("FOR_INC");
         string labelBody = NewFuncFlowLabel("FOR_BODY");
+
+        SymbolTable.ScopePush("forStatement", false);
 
         CompileStatementSingle(out returnCompiled, false);
 
@@ -1938,7 +2016,11 @@ class CompilationEngine
         {
             ValidateTokenAdvance('{');
 
+            SymbolTable.ScopePush("statements", false);
+
             CompileStatements();
+
+            SymbolTable.ScopePop();
 
             ValidateTokenAdvance('}');
         }
@@ -1950,6 +2032,8 @@ class CompilationEngine
         mVMWriter.WriteGoto(labelInc);
 
         mVMWriter.WriteLabel(labelEnd);
+
+        SymbolTable.ScopePop(); // "forStatement"
     }
 
     public void CompileStatementReturn()
@@ -1980,7 +2064,7 @@ class CompilationEngine
 
         ValidateTokenAdvance(Token.Type.STRING_CONST, out str);
 
-        if (JackCompiler.mStaticStrings)
+        if ( JackCompiler.mStaticStrings && JackCompiler.mOSClasses )
         {
             // Precompiled static strings
             int strIndex;
@@ -2010,7 +2094,7 @@ class CompilationEngine
 
     public void CompileStaticStrings()
     {
-        if ( JackCompiler.mStaticStrings )
+        if ( JackCompiler.mStaticStrings && JackCompiler.mOSClasses )
         {
             mVMWriter.WriteLine("/* Static String Allocation (Inserted by the compiler at the beginning of Main.main) */");
 

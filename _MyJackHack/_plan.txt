@@ -8,7 +8,8 @@ Jack languages extensions
 [x] add support for 'for' loop statements
 [x] allow function variable declarations without "var"
 [x] allow class variable declarations without "field"
-[ ] allow function variable declarations while compiling any statement (push and pop symbol table scope within each {} )
+[x] allow variable declarations to also assign them to initial values (treat as let statement) int x = 5;
+[x] allow function variable declarations while compiling any statement (push and pop symbol table scope within each {} )
 [ ] support operator priority ( 5 + 6 * 2 ) should be 17 not 22
 [ ] add support for switch statements
 [ ] add support for float type
