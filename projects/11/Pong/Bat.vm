@@ -103,14 +103,6 @@ push this 0
 push constant 4
 sub
 pop this 0
-label Bat_move_WHILE_EXP_L1
-push constant 1
-not
-if-goto Bat_move_WHILE_END_L1
-push constant 0
-pop this 0
-goto Bat_move_WHILE_EXP_L1
-label Bat_move_WHILE_END_L1
 push this 0
 push constant 0
 lt

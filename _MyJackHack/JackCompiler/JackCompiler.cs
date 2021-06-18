@@ -393,7 +393,7 @@ class Token
         CLASS, METHOD, FUNCTION, CONSTRUCTOR,
         INT, BOOL, CHAR, VOID,
         VAR, STATIC, FIELD, LET,
-        DO, IF, ELSE, WHILE,
+        DO, IF, ELSE, WHILE, FOR,
         RETURN, TRUE, FALSE, NULL,
         THIS
     };
@@ -436,6 +436,7 @@ class Token
         strToKeyword.Add("if", Token.Keyword.IF);
         strToKeyword.Add("else", Token.Keyword.ELSE);
         strToKeyword.Add("while", Token.Keyword.WHILE);
+        strToKeyword.Add("for", Token.Keyword.FOR);
         strToKeyword.Add("return", Token.Keyword.RETURN);
         strToKeyword.Add("true", Token.Keyword.TRUE);
         strToKeyword.Add("false", Token.Keyword.FALSE);
@@ -473,6 +474,7 @@ class Token
         statements.Add(Token.Keyword.IF, true);
         statements.Add(Token.Keyword.ELSE, true);
         statements.Add(Token.Keyword.WHILE, true);
+        statements.Add(Token.Keyword.FOR, true);
         statements.Add(Token.Keyword.RETURN, true);
 
         Token.mInitialized = true;
@@ -945,13 +947,14 @@ class Tokenizer : IEnumerable
 
 // STATEMENTS
 // statements: statement*
-// statement: letStatement | ifStatement | whileStatement | doStatement | returnStatement
+// statement: letStatement | ifStatement | whileStatement | forStatement | doStatement | returnStatement
 // arrayIndex: '[' expression ']'
 // arrayValue: varName '[' expression ']'
 // elseClause: 'else' '{' statements '}'
 // letStatement: ('let')? varName ('[' expression ']')? '=' expression ';'
 // ifStatement: 'if' '(' expression ')' ( statement | '{' statements '}' ) ('else' ( statement | '{' statements '}' ) )?
 // whileStatement: 'while' '(' expression ')' ( statement | '{' statements '}' )
+// forStatement: 'for' '(' statements ';' expression; statements ')' ( statement | '{' statements '}' )
 // doStatement: ('do')? subroutineCall ';'
 // returnStatement: 'return' expression? ';'
 
@@ -1574,11 +1577,11 @@ class CompilationEngine
         return resultReturnCompiled;
     }
 
-    public bool CompileStatementSingle( out bool returnCompiled )
+    public bool CompileStatementSingle( out bool returnCompiled, bool eatSemiColon = true )
     {
         // compiles a series of statements without handling the enclosing {}s
 
-        // statement: letStatement | ifStatement | whileStatement | doStatement | returnStatement
+        // statement: letStatement | ifStatement | whileStatement | forStatement | doStatement | returnStatement
 
         returnCompiled = false;
 
@@ -1596,29 +1599,33 @@ class CompilationEngine
                 CompileStatementWhile();
                 return true;
 
+            case Token.Keyword.FOR:
+                CompileStatementFor();
+                return true;
+
             case Token.Keyword.RETURN:
                 CompileStatementReturn();
                 returnCompiled = true;
                 return true;
 
             case Token.Keyword.DO:
-                CompileStatementDo(true);
+                CompileStatementDo(true, eatSemiColon);
                 return true;
 
             case Token.Keyword.LET:
-                CompileStatementLet(true);
+                CompileStatementLet(true, eatSemiColon);
                 return true;
 
             default:
                 // Check for non-keyword do/let
                 if (token.type == Token.Type.IDENTIFIER && (tokenNext.symbol == '=' || tokenNext.symbol == '['))
                 {
-                    CompileStatementLet(false);
+                    CompileStatementLet(false, eatSemiColon);
                     return true;
                 }
                 else if (token.type == Token.Type.IDENTIFIER && (tokenNext.symbol == '.' || tokenNext.symbol == '('))
                 {
-                    CompileStatementDo(false);
+                    CompileStatementDo(false, eatSemiColon);
                     return true;
                 }
 
@@ -1651,7 +1658,7 @@ class CompilationEngine
         mVMWriter.WritePush(VMWriter.Segment.THAT, 0);
     }
 
-    public void CompileStatementLet(bool eatKeyword = true)
+    public void CompileStatementLet(bool eatKeyword = true, bool eatSemiColon = true )
     {
         // letStatement: 'let' varName ('[' expression ']')? '=' expression ';'
 
@@ -1691,10 +1698,11 @@ class CompilationEngine
             mVMWriter.WritePop(SymbolTable.SegmentOf(varName), SymbolTable.OffsetOf(varName));
         }
 
-        ValidateTokenAdvance(';');
+        if ( eatSemiColon )
+            ValidateTokenAdvance(';');
     }
 
-    public void CompileStatementDo( bool eatKeyword = true )
+    public void CompileStatementDo( bool eatKeyword = true, bool eatSemiColon = true )
     {
         // doStatement: 'do' subroutineCall ';'
 
@@ -1707,7 +1715,8 @@ class CompilationEngine
 
         mVMWriter.WritePop( VMWriter.Segment.TEMP, 0 ); // ignore return value
 
-        ValidateTokenAdvance(';');
+        if (eatSemiColon)
+            ValidateTokenAdvance(';');
     }
 
     public void CompileStatementIf()
@@ -1822,6 +1831,62 @@ class CompilationEngine
 
         mVMWriter.WriteLabel(labelEnd);
 
+    }
+
+    public void CompileStatementFor()
+    {
+        // forStatement: 'for' '(' statements ';' expression; statements ')' ( statement | '{' statements '}' )
+
+        bool returnCompiled = false;
+
+        ValidateTokenAdvance(Token.Keyword.FOR);
+        ValidateTokenAdvance('(');
+
+        string labelExp = NewFuncFlowLabel("FOR_EXP");
+        string labelEnd = NewFuncFlowLabel("FOR_END");
+        string labelInc = NewFuncFlowLabel("FOR_INC");
+        string labelBody = NewFuncFlowLabel("FOR_BODY");
+
+        CompileStatementSingle(out returnCompiled, false);
+
+        ValidateTokenAdvance(';');
+
+        mVMWriter.WriteLabel(labelExp);
+
+        CompileExpression();
+
+        mVMWriter.WriteIfGoto( labelBody );
+
+        mVMWriter.WriteGoto(labelEnd);
+
+        ValidateTokenAdvance(';');
+
+        mVMWriter.WriteLabel(labelInc);
+
+        CompileStatementSingle( out returnCompiled, false );
+
+        mVMWriter.WriteGoto(labelExp);
+
+        ValidateTokenAdvance(')');
+
+        mVMWriter.WriteLabel(labelBody);
+
+        if (mTokens.Get().symbol == '{')
+        {
+            ValidateTokenAdvance('{');
+
+            CompileStatements();
+
+            ValidateTokenAdvance('}');
+        }
+        else
+        {
+            CompileStatementSingle(out returnCompiled);
+        }
+
+        mVMWriter.WriteGoto(labelInc);
+
+        mVMWriter.WriteLabel(labelEnd);
     }
 
     public void CompileStatementReturn()

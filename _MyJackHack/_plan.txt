@@ -5,19 +5,22 @@ Jack languages extensions
 [x] compiler: to provide better error information and catch more errors like trying to call methods from a function
 [x] compiler: support static string allocation (uses String OS class to do so)
 [x] allow for single line if/while/else blocks without {}s
-[ ] support operator priority ( 5 + 6 * 2 ) should be 17 not 60
+[x] add support for for loop statements
+[ ] allow function variable declarations without "var"
+[ ] allow class variable declarations without "field"
+[ ] allow function variable declarations while compiling any statement (push and pop symbol table scope within each {} )
+[ ] support operator priority ( 5 + 6 * 2 ) should be 17 not 22
 [ ] add support for switch statements
-[ ] add support for for loop statements
 [ ] add support for float type
 [ ] allow multiple classes per file
-[ ] add object inheritance - requires objects to have an function table pointer built in
+[ ] allow class variable read/write without accessor functions > object.fieldValue = 5; x = object.fieldValue;
+[ ] add object inheritance - requires virtual objects to have a function table pointer built in
 [ ] OS implement Memory.deFrag()
 
 VM projects
 ------------------------------
 [ ] implement a class the emulates the VM machine ( without keyboard input or display )
    (useful as a script language for any game with a sufficient game interface API)
-
 
 Hardware projects
 ------------------------------
