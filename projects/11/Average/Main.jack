@@ -6,23 +6,26 @@
 // (Same as projects/09/Average/Main.jack)
 
 // Inputs some numbers and computes their average
-class Main {
-   function void main() {
-     var Array a; 
-     var int length;
-     var int i, sum;
+class Main 
+{
+   function void main() 
+   {
+     Array a; 
+     int length;
+     int i, sum;
 
-     let length = Keyboard.readInt("How many numbers? ");
-     let a = Array.new(length); // constructs the array
+     length = Keyboard.readInt("How many numbers? ");
+     a = Array.new(length); // constructs the array
      
      for ( i = 0; i < length; i = i + 1) 
      {
-        let a[i] = Keyboard.readInt("Enter a number: ");
-        let sum = sum + a[i];
+        a[i] = Keyboard.readInt("Enter a number: ");
+        sum = sum + a[i];
      }
      
-     do Output.printString("The average is ");
-     do Output.printInt(sum / length);
+     Output.printString("The average is ");
+     Output.printInt(sum / length);
+
      return;
    }
 }

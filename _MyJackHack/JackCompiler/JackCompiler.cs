@@ -17,7 +17,7 @@ class JackCompiler
 
     static void Main(string[] args)
     {
-        ArrayList paths = new ArrayList();
+        List<string> paths = new List<string>();
 
         foreach (string arg in args)
         {
@@ -47,10 +47,10 @@ class JackCompiler
         // Convert directories to actual files recursively
         for (int i = 0; i < paths.Count; i++)
         {
-            FileAttributes attrib = File.GetAttributes((string)paths[i]);
+            FileAttributes attrib = File.GetAttributes(paths[i]);
             if (attrib.HasFlag(FileAttributes.Directory))
             {
-                string[] files = Directory.GetFiles((string)paths[i], "*.jack");
+                string[] files = Directory.GetFiles(paths[i], "*.jack");
                 foreach (string file in files)
                 {
                     if ( !paths.Contains( file ) && ( JackCompiler.mRecursiveFolders || !File.GetAttributes(file).HasFlag(FileAttributes.Directory) ) )
@@ -69,7 +69,9 @@ class JackCompiler
         {
             if (!osName.Contains(".OS."))
                 continue;
-            Stream resourceStream = asm.GetManifestResourceStream( osName );
+            if (ClassInList(osName, paths))
+                continue;
+            Stream resourceStream = asm.GetManifestResourceStream(osName);
             if (resourceStream != null)
             {
                 Console.WriteLine("Preprocessing... " + osName);
@@ -81,18 +83,18 @@ class JackCompiler
         // Pre-process the target files
         for (int i = 0; i < paths.Count; i++)
         {
-            Console.WriteLine("Preprocessing... " + (string)paths[i]);
-            StreamReader sRdr = new StreamReader((string)paths[i]);
-            PreProcessFile((string)paths[i], sRdr);
+            Console.WriteLine("Preprocessing... " + paths[i]);
+            StreamReader sRdr = new StreamReader(paths[i]);
+            PreProcessFile(paths[i], sRdr);
         }
 
         // Process the files
         List<string> destFolders = new List<string>();
         for (int i = 0; i < paths.Count; i++)
         {
-            Console.WriteLine("Compiling... " + (string)paths[i]);
-            CompileFile((string)paths[i], GetOutBasefile((string)paths[i]));
-            string destFolder = FileToPath( (string)paths[i] );
+            Console.WriteLine("Compiling... " + paths[i]);
+            CompileFile(paths[i], GetOutBasefile(paths[i]));
+            string destFolder = FileToPath( paths[i] );
             if ( !destFolders.Contains(destFolder))
             {
                 destFolders.Add(destFolder);
@@ -101,6 +103,7 @@ class JackCompiler
 
         // Finally compile any OS classes that were referenced and any other OS classes those reference as well
         bool doneOS = false;
+        Dictionary<string, bool> compiled = new Dictionary<string, bool>();
         while ( !doneOS && JackCompiler.mOSClasses )
         {
             doneOS = true;
@@ -108,14 +111,19 @@ class JackCompiler
             {
                 if (!osName.Contains(".OS."))
                     continue;
-                foreach( CompilationEngine.FuncSpec funcSpec in CompilationEngine.mFunctions.Values )
+                if (ClassInList(osName, paths))
+                    continue;
+                foreach ( CompilationEngine.FuncSpec funcSpec in CompilationEngine.mFunctions.Values )
                 {
+                    if ( compiled.ContainsKey( osName ) )
+                        break;
                     if ( funcSpec.filePath == osName && funcSpec.referenced && !funcSpec.compiled )
                     {
                         Console.WriteLine("Compiling... " + osName);
                         foreach ( string destFolder in destFolders )
                         {
                             CompileFile(osName, destFolder + FileToName(osName));
+                            compiled.Add(osName, true);
                         }
                         doneOS = false;
                     }
@@ -196,6 +204,17 @@ class JackCompiler
                 result = result + fileParts[i] + "/";
         }
         return result;
+    }
+
+    public static bool ClassInList(string classFile, List<string> files)
+    {
+        string fileName = FileToName(classFile).ToLower();
+        foreach (string file in files)
+        {
+            if ( fileName == FileToName(file).ToLower() )
+                return true;
+        }
+        return false;
     }
 }
 
@@ -540,6 +559,15 @@ class Token
         return false;
     }
 
+    public bool IsType()
+    {
+        if (type == Type.KEYWORD && ( keyword == Keyword.INT || keyword == Keyword.BOOL || keyword == Keyword.CHAR ) )
+            return true;
+        if (type == Type.IDENTIFIER && CompilationEngine.mClasses.Contains(identifier) )
+            return true;
+        return false;
+    }
+
     public static bool IsUnaryOp(char c)
     {
         return c == '~' || c == '-';
@@ -743,6 +771,22 @@ class Tokenizer : IEnumerable
         return result;
     }
 
+    public Token GetAndRollback( int count = 1 )
+    {
+        Token result = null;
+        if (mTokenCurrent < mTokens.Count)
+            result = mTokens[mTokenCurrent];
+        Rollback(count);
+        return result;
+    }
+
+    public Token AdvanceAndRollback(int count = 1)
+    {
+        Token result = Advance();
+        Rollback(count);
+        return result;
+    }
+
     public Token Advance()
     {
         if (mTokenCurrent < mTokens.Count - 1)
@@ -938,7 +982,7 @@ class Tokenizer : IEnumerable
 
 // CLASS
 // class: 'class' className '{' classVarDec* subroutineDec* '}'
-// classVarDec: ('static'|'field') type varName (',' varName)* ';'
+// classVarDec: ('static'|'field')? type varName (',' varName)* ';'
 
 // FUNCTION
 // type: 'int'|'char'|'boolean'|className
@@ -946,7 +990,7 @@ class Tokenizer : IEnumerable
 // parameter: type varName
 // parameterAdd: ',' type varName
 // parameterList: ( parameter (',' parameter)* )?
-// varDec: 'var' type varName (',' varName)* ';'
+// varDec: 'var'? type varName (',' varName)* ';'
 // subroutineBody: '{' varDec* statements '}'
 
 // STATEMENTS
@@ -1105,8 +1149,9 @@ class VMWriter : Writer
 
 class CompilationEngine
 {
-    static public Dictionary<string, FuncSpec> mFunctions = new Dictionary<string, FuncSpec>();
-    static public Dictionary<string, int> mStrings = new Dictionary<string, int>();
+    static public List<string> mClasses = new List<string>(); // list of known class types
+    static public Dictionary<string, FuncSpec> mFunctions = new Dictionary<string, FuncSpec>(); // dictionary of function specs
+    static public Dictionary<string, int> mStrings = new Dictionary<string, int>(); // static strings
 
     Tokenizer mTokens;
     VMWriter mVMWriter;
@@ -1145,6 +1190,9 @@ class CompilationEngine
     {
         ValidateTokenAdvance(Token.Keyword.CLASS);
         ValidateTokenAdvance(Token.Type.IDENTIFIER, out mClassName);
+
+        if (!mClasses.Contains(mClassName))
+            mClasses.Add(mClassName);
 
         Token token = mTokens.Advance();
 
@@ -1289,15 +1337,21 @@ class CompilationEngine
     public bool CompileClassVarDec()
     {
         // compiles class fields and static vars
-        // classVarDec: ('static'|'field) type varName (',' varName)* ';'
+        // classVarDec: ('static'|'field)? type varName (',' varName)* ';'
 
-        Token token = mTokens.Get();
+        SymbolTable.Kind varKind = SymbolTable.Kind.FIELD;
+        Token token = mTokens.GetAndAdvance();
+        Token tokenNext = mTokens.GetAndRollback();
 
         if (token.type == Token.Type.KEYWORD && (token.keyword == Token.Keyword.FIELD || token.keyword == Token.Keyword.STATIC))
         {
-            SymbolTable.Kind varKind = (token.keyword == Token.Keyword.STATIC) ? SymbolTable.Kind.STATIC : SymbolTable.Kind.FIELD;
-            mTokens.Advance();
-
+            varKind = (token.keyword == Token.Keyword.STATIC) ? SymbolTable.Kind.STATIC : SymbolTable.Kind.FIELD;
+            token = mTokens.Advance();
+            tokenNext = mTokens.AdvanceAndRollback();
+        }
+        
+        if ( token.IsType() && tokenNext.type == Token.Type.IDENTIFIER )
+        {
             Token varType = mTokens.Get();
 
             do
@@ -1308,6 +1362,43 @@ class CompilationEngine
                 ValidateTokenAdvance(Token.Type.IDENTIFIER, out varName);
 
                 SymbolTable.Define(varName, varType, varKind);
+
+            } while (mTokens.Get().symbol == ',');
+
+            token = ValidateTokenAdvance(';');
+
+            return true;
+        }
+
+        return false;
+    }
+
+    public bool CompileVarDec()
+    {
+        // handles local variables in a subroutine
+        // varDec: 'var'? type varName (',' varName)* ';'
+
+        Token token = mTokens.GetAndAdvance();
+        Token tokenNext = mTokens.GetAndRollback();
+
+        if (token.keyword == Token.Keyword.VAR)
+        {
+            token = mTokens.Advance();
+            tokenNext = mTokens.AdvanceAndRollback();
+        }
+
+        if (token.IsType() && tokenNext.type == Token.Type.IDENTIFIER)
+        {
+            Token varType = mTokens.Get();
+
+            do
+            {
+                mTokens.Advance();
+
+                string varName;
+                ValidateTokenAdvance(Token.Type.IDENTIFIER, out varName);
+
+                SymbolTable.Define(varName, varType, SymbolTable.Kind.VAR);
 
             } while (mTokens.Get().symbol == ',');
 
@@ -1527,38 +1618,6 @@ class CompilationEngine
         }
 
         return result;
-    }
-
-    public bool CompileVarDec()
-    {
-        // handles local variables in a subroutine
-        // varDec: 'var' type varName (',' varName)* ';'
-
-        Token token = mTokens.Get();
-
-        if (token.keyword == Token.Keyword.VAR)
-        {
-            mTokens.Advance();
-
-            Token varType = mTokens.Get();
-
-            do
-            {
-                mTokens.Advance();
-
-                string varName;
-                ValidateTokenAdvance(Token.Type.IDENTIFIER, out varName);
-
-                SymbolTable.Define(varName, varType, SymbolTable.Kind.VAR);
-
-            } while (mTokens.Get().symbol == ',');
-
-            token = ValidateTokenAdvance(';');
-
-            return true;
-        }
-
-        return false;
     }
 
     public bool CompileStatements()
