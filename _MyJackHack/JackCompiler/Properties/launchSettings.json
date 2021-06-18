@@ -2,7 +2,7 @@
   "profiles": {
     "JackCompiler": {
       "commandName": "Project",
-      "commandLineArgs": "C:\\Projects\\nand2Tetris\\projects\\11\\Average -o -s"
+      "commandLineArgs": "C:\\Projects\\nand2Tetris\\projects\\11\\Pong -o -s"
     }
   }
 }

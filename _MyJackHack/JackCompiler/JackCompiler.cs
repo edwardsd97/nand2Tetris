@@ -13,6 +13,8 @@ class JackCompiler
     static public bool mOSClasses = false;
     static public bool mInvertedConditions = false;
 
+    static string HACK_OS = ".HackOS.";
+
     static public Dictionary<string, Tokenizer> mTokenizerDic = new Dictionary<string, Tokenizer>();
 
     static void Main(string[] args)
@@ -67,7 +69,7 @@ class JackCompiler
         Assembly asm = Assembly.GetExecutingAssembly();
         foreach (string osName in asm.GetManifestResourceNames())
         {
-            if (!osName.Contains(".OS."))
+            if (!osName.Contains(HACK_OS))
                 continue;
             if (ClassInList(osName, paths))
                 continue;
@@ -109,7 +111,7 @@ class JackCompiler
             doneOS = true;
             foreach (string osName in asm.GetManifestResourceNames())
             {
-                if (!osName.Contains(".OS."))
+                if (!osName.Contains(HACK_OS))
                     continue;
                 if (ClassInList(osName, paths))
                     continue;

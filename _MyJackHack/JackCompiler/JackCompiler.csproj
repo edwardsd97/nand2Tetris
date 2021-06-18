@@ -6,24 +6,24 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="OS\Keyboard.jack" />
-    <None Remove="OS\Math.jack" />
-    <None Remove="OS\Memory.jack" />
-    <None Remove="OS\Output.jack" />
-    <None Remove="OS\Screen.jack" />
-    <None Remove="OS\String.jack" />
-    <None Remove="OS\Sys.jack" />
+    <None Remove="HackOS\Keyboard.jack" />
+    <None Remove="HackOS\Math.jack" />
+    <None Remove="HackOS\Memory.jack" />
+    <None Remove="HackOS\Output.jack" />
+    <None Remove="HackOS\Screen.jack" />
+    <None Remove="HackOS\String.jack" />
+    <None Remove="HackOS\Sys.jack" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="OS\Array.jack" />
-    <EmbeddedResource Include="OS\Keyboard.jack" />
-    <EmbeddedResource Include="OS\Math.jack" />
-    <EmbeddedResource Include="OS\Memory.jack" />
-    <EmbeddedResource Include="OS\Output.jack" />
-    <EmbeddedResource Include="OS\Screen.jack" />
-    <EmbeddedResource Include="OS\String.jack" />
-    <EmbeddedResource Include="OS\Sys.jack" />
+    <EmbeddedResource Include="HackOS\Array.jack" />
+    <EmbeddedResource Include="HackOS\Keyboard.jack" />
+    <EmbeddedResource Include="HackOS\Math.jack" />
+    <EmbeddedResource Include="HackOS\Memory.jack" />
+    <EmbeddedResource Include="HackOS\Output.jack" />
+    <EmbeddedResource Include="HackOS\Screen.jack" />
+    <EmbeddedResource Include="HackOS\String.jack" />
+    <EmbeddedResource Include="HackOS\Sys.jack" />
   </ItemGroup>
 
 </Project>

@@ -3,11 +3,11 @@ Jack languages extensions
 ------------------------------
 [x] remove requirement for do and let
 [x] compiler: to provide better error information and catch more errors like trying to call methods from a function
-[x] compiler: support static string allocation (uses String OS class to do so)
+[x] compiler: support static string allocation (uses String OS class extension to do so)
 [x] allow for single line if/while/else blocks without {}s
-[x] add support for for loop statements
-[ ] allow function variable declarations without "var"
-[ ] allow class variable declarations without "field"
+[x] add support for 'for' loop statements
+[x] allow function variable declarations without "var"
+[x] allow class variable declarations without "field"
 [ ] allow function variable declarations while compiling any statement (push and pop symbol table scope within each {} )
 [ ] support operator priority ( 5 + 6 * 2 ) should be 17 not 22
 [ ] add support for switch statements
