@@ -930,43 +930,45 @@ class Tokenizer : IEnumerable
 }
 
 // GRAMMAR DEFINITION
+// Key: node* : zero or more of this node
+//      nodeX | nodeY : nodeX or nodeY
+//      node? : optional node
+//      (node) : grouping
+//      'node' : literal symbol or keyword
 
 // CLASS
-// class: 'class' className '{' clasVarDec* subroutineDec* '}'
-// classVarDec: ('static'|'field) type varName (',' varName)* ';'
+// class: 'class' className '{' classVarDec* subroutineDec* '}'
+// classVarDec: ('static'|'field') type varName (',' varName)* ';'
 
 // FUNCTION
-// varDecAdd: ',' varName
 // type: 'int'|'char'|'boolean'|className
 // subroutineDec: ('constructor'|'function'|'method') ('void'|type) subroutineName '(' paramaterList ')' subroutineBody
 // parameter: type varName
 // parameterAdd: ',' type varName
 // parameterList: ( parameter (',' parameter)* )?
-// subroutineBody: '{' varDec* statements '}'
 // varDec: 'var' type varName (',' varName)* ';'
+// subroutineBody: '{' varDec* statements '}'
 
 // STATEMENTS
 // statements: statement*
 // statement: letStatement | ifStatement | whileStatement | forStatement | doStatement | returnStatement
-// arrayIndex: '[' expression ']'
-// arrayValue: varName '[' expression ']'
-// elseClause: 'else' '{' statements '}'
 // letStatement: ('let')? varName ('[' expression ']')? '=' expression ';'
 // ifStatement: 'if' '(' expression ')' ( statement | '{' statements '}' ) ('else' ( statement | '{' statements '}' ) )?
 // whileStatement: 'while' '(' expression ')' ( statement | '{' statements '}' )
-// forStatement: 'for' '(' statements ';' expression; statements ')' ( statement | '{' statements '}' )
+// forStatement: 'for' '(' statement ';' expression; statement ')' ( statement | '{' statements '}' )
 // doStatement: ('do')? subroutineCall ';'
 // returnStatement: 'return' expression? ';'
 
 // EXPRESSIONS
+// expression: term (op term)*
 // opTerm: op term
 // expressionAdd: ',' expression
-// expression: term (op term)*
 // expressionParenth: '(' expression ')
+// arrayValue: varName '[' expression ']'
 // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
 // unaryTerm: unaryOp term
 // subroutineObject: ( className | varName ) '.'
-// subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')
+// subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')'
 // expressionList: ( expression (',' expression)* )?
 // op: '+'|'-'|'*'|'/'|'&'|'|'|'<'|'>'|'='
 // unaryOp: '-'|'~'
