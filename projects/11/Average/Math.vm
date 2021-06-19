@@ -277,10 +277,10 @@ eq
 push argument 1
 push argument 0
 gt
+or
 push argument 1
 push constant 1
 lt
-or
 or
 if-goto Math_divideAbs_IF_TRUE_L15
 goto Math_divideAbs_IF_FALSE_L15

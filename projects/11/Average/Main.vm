@@ -1,4 +1,4 @@
-function Main.main 5
+function Main.main 4
 /* Static String Allocation (Inserted by the compiler at the beginning of Main.main) */
 push constant 5
 call String.staticAlloc 1
@@ -136,33 +136,31 @@ call String.appendChar 2
 push constant 4
 call String.staticSet 2
 /* Main.main statements begin ... */
-push constant 0
-pop local 2
 push constant 2
 call String.staticGet 1
 call Keyboard.readInt 1
 pop local 1
+push constant 0
+pop local 2
 push local 1
 call Array.new 1
 pop local 0
 push constant 0
 pop local 3
-push constant 0
-pop local 4
 label Main_main_FOR_EXP_L2
-push local 4
+push local 3
 push local 1
 lt
 if-goto Main_main_FOR_BODY_L2
 goto Main_main_FOR_END_L2
 label Main_main_FOR_INC_L2
-push local 4
+push local 3
 push constant 1
 add
-pop local 4
+pop local 3
 goto Main_main_FOR_EXP_L2
 label Main_main_FOR_BODY_L2
-push local 4
+push local 3
 push local 0
 add
 push constant 3
@@ -173,7 +171,7 @@ pop pointer 1
 push temp 0
 pop that 0
 push local 2
-push local 4
+push local 3
 push local 0
 add
 pop pointer 1

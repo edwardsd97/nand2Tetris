@@ -11,13 +11,10 @@ class Main
    function void main() 
    {
      Array a; 
-     int length;
+     int length = Keyboard.readInt("How many numbers? ");
      int sum = 0;
 
-     length = Keyboard.readInt("How many numbers? ");
      a = Array.new(length); // constructs the array
-
-     boolean test = false;
      
      for ( int i = 0; i < length; i = i + 1) 
      {

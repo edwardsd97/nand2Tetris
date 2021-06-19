@@ -2,7 +2,7 @@
 Jack languages extensions
 ------------------------------
 [x] remove requirement for do and let
-[x] compiler: to provide better error information and catch more errors like trying to call methods from a function
+[x] compiler: provide better error information and catch more errors like trying to call methods from a function
 [x] compiler: support static string allocation (uses String OS class extension to do so)
 [x] allow for single line if/while/else blocks without {}s
 [x] add support for 'for' loop statements
@@ -21,7 +21,7 @@ Jack languages extensions
 VM projects
 ------------------------------
 [ ] implement a class the emulates the VM machine ( without keyboard input or display )
-   (useful as a script language for any game with a sufficient game interface API)
+   (useful as a script language for any game with a sufficient game interface OS)
 
 Hardware projects
 ------------------------------

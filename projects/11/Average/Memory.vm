@@ -75,9 +75,9 @@ push local 0
 add
 pop pointer 1
 push that 0
+add
 push argument 0
 sub
-add
 pop local 1
 push constant 0
 push local 1

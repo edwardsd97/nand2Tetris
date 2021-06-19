@@ -6,12 +6,15 @@ using System.Reflection;
 
 class JackCompiler
 {
+    // Options - default false
     static public bool mComments = false;
     static public bool mVerbose = false;
     static public bool mRecursiveFolders = false;
-    static public bool mStaticStrings = false;
-    static public bool mOSClasses = false;
     static public bool mInvertedConditions = false;
+
+    // Options - default true
+    static public bool mStaticStrings = true;
+    static public bool mOSClasses = true;
 
     static string HACK_OS = ".HackOS.";
 
@@ -25,17 +28,17 @@ class JackCompiler
         {
             string lwrArg = arg.ToLower();
             if (lwrArg == "-c")
-                JackCompiler.mComments = true;
+                JackCompiler.mComments = !JackCompiler.mComments;
             else if (lwrArg == "-v")
-                JackCompiler.mVerbose = true;
+                JackCompiler.mVerbose = !JackCompiler.mVerbose;
             else if (lwrArg == "-r")
-                JackCompiler.mRecursiveFolders = true;
+                JackCompiler.mRecursiveFolders = !JackCompiler.mRecursiveFolders;
             else if (lwrArg == "-s")
-                JackCompiler.mStaticStrings = true;
+                JackCompiler.mStaticStrings = !JackCompiler.mStaticStrings;
             else if (lwrArg == "-o")
-                JackCompiler.mOSClasses = true;
+                JackCompiler.mOSClasses = !JackCompiler.mOSClasses;
             else if (lwrArg == "-f")
-                JackCompiler.mInvertedConditions = true;
+                JackCompiler.mInvertedConditions = !JackCompiler.mInvertedConditions;
             else
                 paths.Add(arg);
         }
@@ -65,7 +68,7 @@ class JackCompiler
         // Setup global scope symbol table
         SymbolTable.ScopePush( "global" );
 
-        // Pre-process in 2 phases - this allows the compiler to realize all possible class names before compiling 
+        // Pre-process in 2 phases - this allows the compiler to realize all possible class types before compiling 
         Assembly asm = Assembly.GetExecutingAssembly();
         for ( int phase = 0; phase < 2; phase++ )
         {
@@ -96,7 +99,7 @@ class JackCompiler
             }
         }
 
-        // Process the files
+        // Compile the files
         List<string> destFolders = new List<string>();
         for (int i = 0; i < paths.Count; i++)
         {
@@ -422,7 +425,7 @@ class SymbolTable
             {
                 if (symbol.mKind == kind)
                 {
-                    // in Jack all symbols are 1 word and size is measured in words
+                    // in Hack all symbols are 1 word and size is measured in words
                     result++;
                 }
             }
@@ -798,18 +801,14 @@ class Tokenizer : IEnumerable
 
     public Token GetAndAdvance()
     {
-        Token result = null;
-        if (mTokenCurrent < mTokens.Count)
-            result = mTokens[mTokenCurrent];
+        Token result = Get();
         Advance();
         return result;
     }
 
     public Token GetAndRollback( int count = 1 )
     {
-        Token result = null;
-        if (mTokenCurrent < mTokens.Count)
-            result = mTokens[mTokenCurrent];
+        Token result = Get();
         Rollback(count);
         return result;
     }
@@ -1055,13 +1054,14 @@ class Tokenizer : IEnumerable
 class Writer
 {
     protected StreamWriter mFile;
-    public int mLinesWritten = 0;
     protected bool mEnabled = true;
+    protected List<StreamWriter> mOutput = new List<StreamWriter>();
 
     public Writer(string outFile)
     {
         mFile = new StreamWriter(outFile);
         mFile.AutoFlush = true;
+        mOutput.Add( mFile );
     }
 
     public virtual void WriteLine(string line)
@@ -1070,8 +1070,7 @@ class Writer
         {
             if (JackCompiler.mVerbose)
                 Console.WriteLine(line);
-            mFile.WriteLine(line);
-            mLinesWritten++;
+            mOutput[mOutput.Count - 1].WriteLine(line);
         }
     }
 
@@ -1083,6 +1082,32 @@ class Writer
     public void Disable()
     {
         mEnabled = false;
+    }
+
+    public void OutputPush(Stream stream)
+    {
+        mOutput.Add(new StreamWriter(stream));
+        mOutput[mOutput.Count - 1].AutoFlush = true;
+    }
+    
+    public void OutputPop()
+    { 
+        if ( mOutput.Count > 1 )
+        {
+            mOutput[mOutput.Count - 1].Flush();
+            mOutput.RemoveAt(mOutput.Count - 1);
+        }
+    }
+
+    public void WriteStream(Stream stream)
+    {
+        StreamReader reader = new StreamReader(stream);
+        stream.Seek( 0, SeekOrigin.Begin );
+        while ( !reader.EndOfStream )
+        {
+            string line = reader.ReadLine();
+            mOutput[mOutput.Count - 1].WriteLine( line );
+        }
     }
 }
 
@@ -2120,7 +2145,7 @@ class CompilationEngine
         }
     }
 
-    public bool CompileExpression()
+    public bool CompileExpression( List<object> expressionTerms = null )
     {
         // Grammar:
         // ---------
@@ -2148,34 +2173,79 @@ class CompilationEngine
         //   N = CompileExpressionList()
         //   call f N
 
+        bool doResolve = false;
+        if ( expressionTerms == null )
+        {
+            doResolve = true;
+            expressionTerms = new List<object>();
+        }
+
+        // Re-direct the VM Writer to write to a memory file to hold the output for each term
+        MemoryStream memFile = new MemoryStream();
+        mVMWriter.OutputPush( memFile );
+
         bool compiledExpression = CompileTerm();
+
+        mVMWriter.OutputPop();
 
         Token token = mTokens.Get();
 
-        if ( compiledExpression && Token.IsOp(token.symbol) )
+        if (compiledExpression)
         {
-            // expression: term (op term)*
-            char op = token.symbol;
+            expressionTerms.Add(memFile);
 
-            mTokens.Advance();
-            CompileExpression();
-
-            switch (op)
+            if (Token.IsOp(token.symbol))
             {
-                // op: '+'|'-'|'*'|'/'|'&'|'|'|'<'|'>'|'='
-                case '+': mVMWriter.WriteArithmetic(VMWriter.Command.ADD); break;
-                case '-': mVMWriter.WriteArithmetic(VMWriter.Command.SUB); break;
-                case '*': mVMWriter.WriteCall("Math.multiply", 2); break;
-                case '/': mVMWriter.WriteCall("Math.divide", 2); break;
-                case '|': mVMWriter.WriteArithmetic(VMWriter.Command.OR); break;
-                case '&': mVMWriter.WriteArithmetic(VMWriter.Command.AND); break;
-                case '<': mVMWriter.WriteArithmetic(VMWriter.Command.LT); break;
-                case '>': mVMWriter.WriteArithmetic(VMWriter.Command.GT); break;
-                case '=': mVMWriter.WriteArithmetic(VMWriter.Command.EQ); break;
+                expressionTerms.Add(token.symbol);
+
+                mTokens.Advance();
+                CompileExpression(expressionTerms);
             }
         }
 
+        if ( doResolve && expressionTerms.Count > 0 )
+        {
+            ResolveExpressionTerms( expressionTerms );
+        }
+
         return compiledExpression;
+    }
+
+    protected void ResolveExpressionTerms(List<object> expressionTerms)
+    {
+        // expressionTerms is a list of term? (op term)* that needs to be resolved with operator prededence
+
+        int i = 0;
+
+        if (expressionTerms.Count > 0)
+        {
+            mVMWriter.WriteStream((Stream)expressionTerms[0]);
+            i++;
+        }
+
+        while ( i < expressionTerms.Count - 1 )
+        {
+            mVMWriter.WriteStream((Stream)expressionTerms[i+1]);
+            CompileOp((char)expressionTerms[i]);
+            i = i + 2;
+        }
+    }
+
+    public void CompileOp(char op)
+    {
+        switch ( op )
+        {
+            // op: '+'|'-'|'*'|'/'|'&'|'|'|'<'|'>'|'='
+            case '+': mVMWriter.WriteArithmetic(VMWriter.Command.ADD); break;
+            case '-': mVMWriter.WriteArithmetic(VMWriter.Command.SUB); break;
+            case '*': mVMWriter.WriteCall("Math.multiply", 2); break;
+            case '/': mVMWriter.WriteCall("Math.divide", 2); break;
+            case '|': mVMWriter.WriteArithmetic(VMWriter.Command.OR); break;
+            case '&': mVMWriter.WriteArithmetic(VMWriter.Command.AND); break;
+            case '<': mVMWriter.WriteArithmetic(VMWriter.Command.LT); break;
+            case '>': mVMWriter.WriteArithmetic(VMWriter.Command.GT); break;
+            case '=': mVMWriter.WriteArithmetic(VMWriter.Command.EQ); break;
+        }
     }
 
     public bool CompileTerm()
