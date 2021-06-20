@@ -13,6 +13,7 @@
     <None Remove="HackOS\Screen.jack" />
     <None Remove="HackOS\String.jack" />
     <None Remove="HackOS\Sys.jack" />
+    <None Remove="JackCompiler.args.json" />
   </ItemGroup>
 
   <ItemGroup>
