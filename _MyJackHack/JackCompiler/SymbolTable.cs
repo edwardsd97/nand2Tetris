@@ -162,21 +162,21 @@ class SymbolTable
         return 0;
     }
 
-    public static VMWriter.Segment SegmentOf(string varName)
+    public static IVMWriter.Segment SegmentOf(string varName)
     {
         Symbol symbol = SymbolTable.Find(varName);
         if (symbol != null)
         {
             switch (symbol.mKind)
             {
-                case Kind.ARG: return VMWriter.Segment.ARG;
-                case Kind.FIELD: return VMWriter.Segment.THIS;
-                case Kind.STATIC: return VMWriter.Segment.STATIC;
-                case Kind.VAR: return VMWriter.Segment.LOCAL;
+                case Kind.ARG: return IVMWriter.Segment.ARG;
+                case Kind.FIELD: return IVMWriter.Segment.THIS;
+                case Kind.STATIC: return IVMWriter.Segment.STATIC;
+                case Kind.VAR: return IVMWriter.Segment.LOCAL;
             }
         }
 
-        return VMWriter.Segment.INVALID;
+        return IVMWriter.Segment.INVALID;
     }
 
     public static int KindSize(Kind kind)

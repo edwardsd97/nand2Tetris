@@ -347,7 +347,13 @@ class Tokenizer : IEnumerable
         if (mLineStr.Length > 0 && mLineChar < mLineStr.Length)
             return true;
 
-        return mFile != null && !mFile.EndOfStream;
+        if (mFile != null && !mFile.EndOfStream)
+            return true;
+
+        if (mTokenCurrent < mTokens.Count - 1)
+            return true;
+
+        return false;
     }
 
     public IEnumerator GetEnumerator()

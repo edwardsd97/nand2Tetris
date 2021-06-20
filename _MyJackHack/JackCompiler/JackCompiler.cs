@@ -174,7 +174,7 @@ class JackCompiler
         Tokenizer tokenizer;
         if (mTokenizerDic.TryGetValue(srcPath, out tokenizer))
         {
-            CompilationEngine compiler = new CompilationEngine( tokenizer, destPath );
+            CompilationEngine compiler = new CompilationEngine( tokenizer, new VMWriter( destPath + ".vm" ) );
 
             // Compile the tokens into output file
             compiler.Reset();

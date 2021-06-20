@@ -54,7 +54,7 @@ class CompilationEngine
     static public Dictionary<string, int> mStrings = new Dictionary<string, int>(); // static strings
 
     Tokenizer mTokens;
-    VMWriter mVMWriter;
+    IVMWriter mVMWriter;
     string mClassName;
     string mFuncName;
     Dictionary<string, int> mFuncLabel = new Dictionary<string, int>();
@@ -71,13 +71,13 @@ class CompilationEngine
         public bool compiled;
     };
 
-    public CompilationEngine(Tokenizer tokens, string baseOutFile)
+    public CompilationEngine(Tokenizer tokens, IVMWriter writer)
     {
         mTokens = tokens;
 
         Reset();
 
-        mVMWriter = new VMWriter(baseOutFile + ".vm");
+        mVMWriter = writer;
     }
 
     public CompilationEngine(Tokenizer tokens)
@@ -146,7 +146,7 @@ class CompilationEngine
 
     public bool ValidateSymbol(string varName)
     {
-        if (SymbolTable.SegmentOf(varName) == VMWriter.Segment.INVALID)
+        if (SymbolTable.SegmentOf(varName) == IVMWriter.Segment.INVALID)
         {
             Error("Undefined symbol '" + varName + "'");
             System.Environment.Exit(-1);
@@ -371,18 +371,18 @@ class CompilationEngine
                 if (funcCallType == Token.Keyword.CONSTRUCTOR)
                 {
                     // Alloc "this" ( and it is pushed onto the stack )
-                    mVMWriter.WritePush(VMWriter.Segment.CONST, SymbolTable.KindSize(SymbolTable.Kind.FIELD));
+                    mVMWriter.WritePush(IVMWriter.Segment.CONST, SymbolTable.KindSize(SymbolTable.Kind.FIELD));
                     mVMWriter.WriteCall("Memory.alloc", 1);
                 }
 
                 if (funcCallType == Token.Keyword.METHOD)
                 {
                     // grab argument 0 (this) and push it on the stack
-                    mVMWriter.WritePush(VMWriter.Segment.ARG, 0);
+                    mVMWriter.WritePush(IVMWriter.Segment.ARG, 0);
                 }
 
                 // pop "this" off the stack
-                mVMWriter.WritePop(VMWriter.Segment.POINTER, 0);
+                mVMWriter.WritePop(IVMWriter.Segment.POINTER, 0);
             }
 
             // Before starting with Main.main, inject the allocation of all the static string constants
@@ -447,7 +447,7 @@ class CompilationEngine
             }
 
             // push pointer to object (this for object)
-            mVMWriter.WritePush(VMWriter.Segment.POINTER, 0); // this
+            mVMWriter.WritePush(IVMWriter.Segment.POINTER, 0); // this
             argCount = argCount + 1;
         }
         else if (SymbolTable.Exists(objectName) && CompilationEngine.mFunctions.ContainsKey(SymbolTable.TypeOf(objectName) + "." + subroutineName))
@@ -629,7 +629,7 @@ class CompilationEngine
         ValidateTokenAdvance(']');
         if (ValidateSymbol(varName))
             mVMWriter.WritePush(SymbolTable.SegmentOf(varName), SymbolTable.OffsetOf(varName));
-        mVMWriter.WriteArithmetic(VMWriter.Command.ADD);
+        mVMWriter.WriteArithmetic(IVMWriter.Command.ADD);
     }
 
     public void CompileArrayValue()
@@ -638,8 +638,8 @@ class CompilationEngine
         CompileArrayAddress();
 
         // set THAT and push THAT[0]
-        mVMWriter.WritePop(VMWriter.Segment.POINTER, 1);
-        mVMWriter.WritePush(VMWriter.Segment.THAT, 0);
+        mVMWriter.WritePop(IVMWriter.Segment.POINTER, 1);
+        mVMWriter.WritePush(IVMWriter.Segment.THAT, 0);
     }
 
     public void CompileStatementLet(bool eatKeyword = true, bool eatSemiColon = true)
@@ -672,10 +672,10 @@ class CompilationEngine
             // requires use of the top 2 values on the stack
             //   value
             //   address
-            mVMWriter.WritePop(VMWriter.Segment.TEMP, 0);
-            mVMWriter.WritePop(VMWriter.Segment.POINTER, 1);
-            mVMWriter.WritePush(VMWriter.Segment.TEMP, 0);
-            mVMWriter.WritePop(VMWriter.Segment.THAT, 0);
+            mVMWriter.WritePop(IVMWriter.Segment.TEMP, 0);
+            mVMWriter.WritePop(IVMWriter.Segment.POINTER, 1);
+            mVMWriter.WritePush(IVMWriter.Segment.TEMP, 0);
+            mVMWriter.WritePop(IVMWriter.Segment.THAT, 0);
         }
         else
         {
@@ -698,7 +698,7 @@ class CompilationEngine
 
         CompileSubroutineCall();
 
-        mVMWriter.WritePop(VMWriter.Segment.TEMP, 0); // ignore return value
+        mVMWriter.WritePop(IVMWriter.Segment.TEMP, 0); // ignore return value
 
         if (eatSemiColon)
             ValidateTokenAdvance(';');
@@ -714,7 +714,7 @@ class CompilationEngine
         // invert the expression to make the jumps simpler
         CompileExpression();
         if (JackCompiler.mInvertedConditions)
-            mVMWriter.WriteArithmetic(VMWriter.Command.NOT);
+            mVMWriter.WriteArithmetic(IVMWriter.Command.NOT);
 
         ValidateTokenAdvance(')');
 
@@ -802,7 +802,7 @@ class CompilationEngine
         CompileExpression();
         ValidateTokenAdvance(')');
 
-        mVMWriter.WriteArithmetic(VMWriter.Command.NOT);
+        mVMWriter.WriteArithmetic(IVMWriter.Command.NOT);
         mVMWriter.WriteIfGoto(labelEnd);
 
         bool returnCompiled;
@@ -904,7 +904,7 @@ class CompilationEngine
 
         if (token.symbol == ';')
         {
-            mVMWriter.WritePush(VMWriter.Segment.CONST, 0);
+            mVMWriter.WritePush(IVMWriter.Segment.CONST, 0);
             mTokens.Advance();
         }
         else
@@ -929,7 +929,7 @@ class CompilationEngine
 
             if (CompilationEngine.mStrings.TryGetValue(str, out strIndex))
             {
-                mVMWriter.WritePush(VMWriter.Segment.CONST, strIndex);
+                mVMWriter.WritePush(IVMWriter.Segment.CONST, strIndex);
                 mVMWriter.WriteCall("String.staticGet", 1);
             }
             else
@@ -940,11 +940,11 @@ class CompilationEngine
         else
         {
             // On the fly string creation (HUGE MEMORY LEAK)
-            mVMWriter.WritePush(VMWriter.Segment.CONST, str.Length);
+            mVMWriter.WritePush(IVMWriter.Segment.CONST, str.Length);
             mVMWriter.WriteCall("String.new", 1);
             for (int i = 0; i < str.Length; i++)
             {
-                mVMWriter.WritePush(VMWriter.Segment.CONST, str[i]);
+                mVMWriter.WritePush(IVMWriter.Segment.CONST, str[i]);
                 mVMWriter.WriteCall("String.appendChar", 2);
             }
         }
@@ -956,21 +956,21 @@ class CompilationEngine
         {
             mVMWriter.WriteLine("/* Static String Allocation (Inserted by the compiler at the beginning of Main.main) */");
 
-            mVMWriter.WritePush(VMWriter.Segment.CONST, CompilationEngine.mStrings.Keys.Count);
+            mVMWriter.WritePush(IVMWriter.Segment.CONST, CompilationEngine.mStrings.Keys.Count);
             mVMWriter.WriteCall("String.staticAlloc", 1);
 
             foreach (string staticString in CompilationEngine.mStrings.Keys)
             {
                 int strLen = staticString.Length;
                 mVMWriter.WriteLine("// \"" + staticString + "\"");
-                mVMWriter.WritePush(VMWriter.Segment.CONST, strLen);
+                mVMWriter.WritePush(IVMWriter.Segment.CONST, strLen);
                 mVMWriter.WriteCall("String.new", 1);
                 for (int i = 0; i < strLen; i++)
                 {
-                    mVMWriter.WritePush(VMWriter.Segment.CONST, staticString[i]);
+                    mVMWriter.WritePush(IVMWriter.Segment.CONST, staticString[i]);
                     mVMWriter.WriteCall("String.appendChar", 2);
                 }
-                mVMWriter.WritePush(VMWriter.Segment.CONST, CompilationEngine.mStrings[staticString]);
+                mVMWriter.WritePush(IVMWriter.Segment.CONST, CompilationEngine.mStrings[staticString]);
                 mVMWriter.WriteCall("String.staticSet", 2);
             }
 
@@ -1142,16 +1142,16 @@ class CompilationEngine
         switch (op)
         {
             // op: '~' | '*' | '/' | '%' | '+' | '-' | '<' | '>' | '=' | '&' | '|'
-            case '+': mVMWriter.WriteArithmetic(VMWriter.Command.ADD); break;
-            case '-': mVMWriter.WriteArithmetic(VMWriter.Command.SUB); break;
+            case '+': mVMWriter.WriteArithmetic(IVMWriter.Command.ADD); break;
+            case '-': mVMWriter.WriteArithmetic(IVMWriter.Command.SUB); break;
             case '*': mVMWriter.WriteCall("Math.multiply", 2); break;
             case '/': mVMWriter.WriteCall("Math.divide", 2); break;
             case '%': mVMWriter.WriteCall("Math.mod", 2); break;
-            case '|': mVMWriter.WriteArithmetic(VMWriter.Command.OR); break;
-            case '&': mVMWriter.WriteArithmetic(VMWriter.Command.AND); break;
-            case '<': mVMWriter.WriteArithmetic(VMWriter.Command.LT); break;
-            case '>': mVMWriter.WriteArithmetic(VMWriter.Command.GT); break;
-            case '=': mVMWriter.WriteArithmetic(VMWriter.Command.EQ); break;
+            case '|': mVMWriter.WriteArithmetic(IVMWriter.Command.OR); break;
+            case '&': mVMWriter.WriteArithmetic(IVMWriter.Command.AND); break;
+            case '<': mVMWriter.WriteArithmetic(IVMWriter.Command.LT); break;
+            case '>': mVMWriter.WriteArithmetic(IVMWriter.Command.GT); break;
+            case '=': mVMWriter.WriteArithmetic(IVMWriter.Command.EQ); break;
         }
     }
 
@@ -1206,11 +1206,11 @@ class CompilationEngine
             CompileExpression();
             if (symbol == '~')
             {
-                mVMWriter.WriteArithmetic(VMWriter.Command.NOT);
+                mVMWriter.WriteArithmetic(IVMWriter.Command.NOT);
             }
             else // symbol == '-' )
             {
-                mVMWriter.WriteArithmetic(VMWriter.Command.NEG);
+                mVMWriter.WriteArithmetic(IVMWriter.Command.NEG);
             }
             return true;
         }
@@ -1220,13 +1220,13 @@ class CompilationEngine
             if (token.intVal < 0)
             {
                 // negative value
-                mVMWriter.WritePush(VMWriter.Segment.CONST, -token.intVal);
-                mVMWriter.WriteArithmetic(VMWriter.Command.NEG);
+                mVMWriter.WritePush(IVMWriter.Segment.CONST, -token.intVal);
+                mVMWriter.WriteArithmetic(IVMWriter.Command.NEG);
             }
             else
             {
                 // positive value
-                mVMWriter.WritePush(VMWriter.Segment.CONST, token.intVal);
+                mVMWriter.WritePush(IVMWriter.Segment.CONST, token.intVal);
             }
             mTokens.Advance();
             return true;
@@ -1260,22 +1260,22 @@ class CompilationEngine
         else if (token.type == Token.Type.KEYWORD && token.keyword == Token.Keyword.TRUE)
         {
             // true
-            mVMWriter.WritePush(VMWriter.Segment.CONST, 0);
-            mVMWriter.WriteArithmetic(VMWriter.Command.NOT);
+            mVMWriter.WritePush(IVMWriter.Segment.CONST, 0);
+            mVMWriter.WriteArithmetic(IVMWriter.Command.NOT);
             mTokens.Advance();
             return true;
         }
         else if (token.type == Token.Type.KEYWORD && (token.keyword == Token.Keyword.FALSE || token.keyword == Token.Keyword.NULL))
         {
             // false / null
-            mVMWriter.WritePush(VMWriter.Segment.CONST, 0);
+            mVMWriter.WritePush(IVMWriter.Segment.CONST, 0);
             mTokens.Advance();
             return true;
         }
         else if (token.type == Token.Type.KEYWORD && token.keyword == Token.Keyword.THIS)
         {
             // this
-            mVMWriter.WritePush(VMWriter.Segment.POINTER, 0);
+            mVMWriter.WritePush(IVMWriter.Segment.POINTER, 0);
             mTokens.Advance();
             return true;
         }

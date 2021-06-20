@@ -2,6 +2,38 @@
 using System.IO;
 using System.Collections.Generic;
 
+// IVMWriter interface: CompilationEngine interfaces with this
+interface IVMWriter
+{
+    public enum Segment
+    {
+        INVALID, CONST, ARG, LOCAL, STATIC, THIS, THAT, POINTER, TEMP
+    }
+
+    public enum Command
+    {
+        ADD, SUB, NEG, EQ, LT, GT, AND, OR, NOT
+    }
+
+    public void WriteLine(string line); // for comments mainly
+    public void WritePush(Segment segment, int index);
+    public void WritePop(Segment segment, int index);
+    public void WriteArithmetic(Command command);
+    public void WriteLabel(string label);
+    public void WriteGoto(string label);
+    public void WriteIfGoto(string label);
+    public void WriteFunction(string function, int argCount);
+    public void WriteCall(string function, int argCount);
+    public void WriteReturn();
+    public void WriteStream(Stream stream);
+
+    public void Enable();
+    public void Disable();
+
+    public void OutputPush(Stream stream);
+    public void OutputPop();
+}
+
 class Writer
 {
     protected StreamWriter mFile;
@@ -61,3 +93,4 @@ class Writer
         }
     }
 }
+
