@@ -15,12 +15,12 @@ class SymbolTable
         public int mOffset;     // segment offset
     }
 
-    class SymbolScope
+    public class SymbolScope
     {
         public Dictionary<string, Symbol> mSymbols = new Dictionary<string, Symbol>();
         public string mName;
         public bool mMethod;
-        public SymbolScope(string name, bool isMethod = false)
+        public SymbolScope(string name = "", bool isMethod = false)
         {
             mName = name;
             mMethod = isMethod;
@@ -44,10 +44,11 @@ class SymbolTable
         return SymbolTable.mVarSize;
     }
 
-    public static void ScopePush(string name, bool isMethod = false)
+    public static SymbolScope ScopePush(string name, bool isMethod = false)
     {
         SymbolScope scope = new SymbolScope(name, isMethod);
         mScopes.Add(scope);
+        return scope;
     }
 
     public static void ScopePop()

@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -183,7 +184,7 @@ class Token
     {
         if (type == Type.KEYWORD && (keyword == Keyword.INT || keyword == Keyword.BOOL || keyword == Keyword.CHAR))
             return true;
-        if (type == Type.IDENTIFIER && CompilationEngine.mClasses.Contains(identifier))
+        if (type == Type.IDENTIFIER && CompilationEngine.mClasses.ContainsKey(identifier))
             return true;
         return false;
     }
@@ -383,9 +384,7 @@ class Tokenizer : IEnumerable
 
     public Token Get()
     {
-        if (mTokenCurrent < mTokens.Count)
-            return mTokens[mTokenCurrent];
-        return null;
+        return mTokens[Math.Min(mTokenCurrent, mTokens.Count - 1)];
     }
 
     public Token GetAndAdvance()
@@ -411,15 +410,11 @@ class Tokenizer : IEnumerable
 
     public Token Advance()
     {
-        if (mTokenCurrent < mTokens.Count - 1)
-        {
-            // Just advance to the next already parsed token
-            mTokenCurrent++;
-            return mTokens[mTokenCurrent];
-        }
-
         if (mFile == null)
         {
+            mTokenCurrent++;
+            if ( mTokens.Count > 0 )
+                return mTokens[Math.Min(mTokenCurrent, mTokens.Count - 1)];
             return null;
         }
 

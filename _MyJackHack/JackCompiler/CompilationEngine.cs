@@ -38,9 +38,11 @@ using System.Collections.Generic;
 // expressionAdd: ',' expression
 // expressionParenth: '(' expression ')
 // arrayValue: varName '[' expression ']'
-// term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
+// term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | classMember | classArrayValue | identifier )
 // unaryTerm: unaryOp term
 // subroutineObject: ( className | varName ) '.'
+// classMember: varName '.' varName
+// classArrayValue: varName '.' varName '[' expression ']'
 // subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')'
 // expressionList: ( expression (',' expression)* )?
 // op: '~' | '*' | '/' | '%' | '+' | '-' | '<' | '>' | '=' | '&' | '|'
@@ -49,7 +51,7 @@ using System.Collections.Generic;
 
 class CompilationEngine
 {
-    static public List<string> mClasses = new List<string>(); // list of known class types
+    static public Dictionary<string, ClassSpec> mClasses = new Dictionary<string, ClassSpec>(); // dictionary of known classes
     static public Dictionary<string, FuncSpec> mFunctions = new Dictionary<string, FuncSpec>(); // dictionary of function specs
     static public Dictionary<string, int> mStrings = new Dictionary<string, int>(); // static strings
 
@@ -71,6 +73,12 @@ class CompilationEngine
         public bool compiled;
     };
 
+    public class ClassSpec
+    {
+        public string name;
+        public SymbolTable.SymbolScope fields;
+    };
+
     public CompilationEngine(Tokenizer tokens, IVMWriter writer)
     {
         mTokens = tokens;
@@ -90,16 +98,30 @@ class CompilationEngine
     {
         ValidateTokenAdvance(Token.Keyword.CLASS);
         ValidateTokenAdvance(Token.Type.IDENTIFIER, out mClassName);
+        ValidateTokenAdvance('{');
 
-        if (!mClasses.Contains(mClassName))
-            mClasses.Add(mClassName);
+        if (!mClasses.ContainsKey(mClassName))
+        {
+            ClassSpec classSpec = new ClassSpec();
+            classSpec.name = mClassName;
+            mClasses.Add( mClassName, classSpec);
+        }
+
+        mClasses[mClassName].fields = SymbolTable.ScopePush("class");
+
+        while (CompileClassVarDec())
+        {
+            // continue with classVarDec
+        }
+
+        SymbolTable.ScopePop();
 
         if (phase == 0)
             return;
 
-        Token token = mTokens.Advance();
+        Token token = mTokens.Get();
 
-        while (token != null)
+        while (mTokens.HasMoreTokens())
         {
             if (token.type == Token.Type.STRING_CONST)
             {
@@ -565,7 +587,9 @@ class CompilationEngine
         returnCompiled = false;
 
         Token token = mTokens.GetAndAdvance();
-        Token tokenNext = mTokens.GetAndRollback();
+        Token tokenNext = mTokens.GetAndAdvance();
+        Token tokenNextNext = mTokens.GetAndAdvance();
+        Token tokenNextNextNext = mTokens.GetAndRollback(3);
 
         switch (token.keyword)
         {
@@ -606,6 +630,11 @@ class CompilationEngine
                     CompileStatementLet(false, eatSemiColon);
                     return true;
                 }
+                else if (token.type == Token.Type.IDENTIFIER && tokenNext.symbol == '.' && tokenNextNext.type == Token.Type.IDENTIFIER && (tokenNextNextNext.symbol == '='|| tokenNextNextNext.symbol == '['))
+                {
+                    CompileStatementLet(false, eatSemiColon);
+                    return true;
+                }
                 else if (token.type == Token.Type.IDENTIFIER && (tokenNext.symbol == '.' || tokenNext.symbol == '('))
                 {
                     CompileStatementDo(false, eatSemiColon);
@@ -616,19 +645,62 @@ class CompilationEngine
         }
     }
 
-    public void CompileArrayAddress(string varNameKnown = null)
+    public void CompileArrayAddress(string varNameKnown = null )
     {
         // Push the array indexed address onto stack
         string varName = varNameKnown;
+        string memberName = null;
+        bool array = false;
+
         if (varName == null)
         {
             ValidateTokenAdvance(Token.Type.IDENTIFIER, out varName);
         }
-        ValidateTokenAdvance('[');
-        CompileExpression();
-        ValidateTokenAdvance(']');
+
+        if (mTokens.Get().symbol == '.')
+        {
+            ValidateTokenAdvance('.');
+            ValidateTokenAdvance(Token.Type.IDENTIFIER, out memberName);
+        }
+
+        if ( mTokens.Get().symbol == '[' )
+        {
+            ValidateTokenAdvance('[');
+            CompileExpression();
+            ValidateTokenAdvance(']');
+            array = true;
+        }
+        else
+        {
+            if (memberName == null)
+                Error("Expected [ after '" + varName + "'");
+            mVMWriter.WritePush(IVMWriter.Segment.CONST, 0 );
+        }
+
         if (ValidateSymbol(varName))
             mVMWriter.WritePush(SymbolTable.SegmentOf(varName), SymbolTable.OffsetOf(varName));
+
+        if (memberName != null && mClasses.ContainsKey(SymbolTable.TypeOf(varName)))
+        {
+            ClassSpec classSpec = mClasses[SymbolTable.TypeOf(varName)];
+            if (!classSpec.fields.mSymbols.ContainsKey(memberName))
+            {
+                Error("Class identifier unknown '" + memberName + "'");
+            }
+            else
+            {
+                mVMWriter.WritePush(IVMWriter.Segment.CONST, classSpec.fields.mSymbols[memberName].mOffset);
+                mVMWriter.WriteArithmetic(IVMWriter.Command.ADD);
+
+                if (array)
+                {
+                    // member array
+                    mVMWriter.WritePop(IVMWriter.Segment.POINTER, 1);
+                    mVMWriter.WritePush(IVMWriter.Segment.THAT, 0);
+                }
+            }
+        }
+
         mVMWriter.WriteArithmetic(IVMWriter.Command.ADD);
     }
 
@@ -640,6 +712,11 @@ class CompilationEngine
         // set THAT and push THAT[0]
         mVMWriter.WritePop(IVMWriter.Segment.POINTER, 1);
         mVMWriter.WritePush(IVMWriter.Segment.THAT, 0);
+    }
+
+    public void CompileClassMember()
+    {
+        CompileArrayValue(); // handles class members as well
     }
 
     public void CompileStatementLet(bool eatKeyword = true, bool eatSemiColon = true)
@@ -655,7 +732,7 @@ class CompilationEngine
         bool isArray = false;
         ValidateTokenAdvance(Token.Type.IDENTIFIER, out varName);
 
-        if (mTokens.Get().symbol == '[')
+        if (mTokens.Get().symbol == '[' || mTokens.Get().symbol == '.')
         {
             isArray = true;
 
@@ -1157,11 +1234,12 @@ class CompilationEngine
 
     public bool CompileTerm()
     {
-        // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | identifier )
+        // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | classMember | classArrayValue | identifier )
         // expressionParenth: '(' expression ')
         // unaryTerm: ('-'|'~') term
         // keywordConstant: 'true'|'false'|'null'|'this'
-        // arrayValue: varName '[' expression ']'
+        // arrayValue: varName ('.' varName) ?  '[' expression ']'
+        // classMember: varName '.' varName
         // subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')
         // expressionList: ( expression (',' expression)* )?
 
@@ -1187,8 +1265,9 @@ class CompilationEngine
         //   call f N
 
         Token token = mTokens.GetAndAdvance();
-        Token tokenNext = mTokens.Get();
-        mTokens.Rollback(1);
+        Token tokenNext = mTokens.GetAndAdvance();
+        Token tokenNextNext = mTokens.GetAndAdvance();
+        Token tokenNextNextNext = mTokens.GetAndRollback(3);
 
         if (token.symbol == '(')
         {
@@ -1237,6 +1316,18 @@ class CompilationEngine
             CompileStringConst();
             return true;
         }
+        else if (token.type == Token.Type.IDENTIFIER && tokenNext.symbol == '.' && tokenNextNext.type == Token.Type.IDENTIFIER && tokenNextNextNext.symbol == '[')
+        {
+            // arrayValue: varName ('.' varName)? '[' expression ']'
+            CompileArrayValue();
+            return true;
+        }
+        else if (token.type == Token.Type.IDENTIFIER && tokenNext.symbol == '.' && tokenNextNext.type == Token.Type.IDENTIFIER && tokenNextNextNext.symbol != '(')
+        {
+            // classMember: varName '.' varName
+            CompileClassMember();
+            return true;
+        }
         else if (token.type == Token.Type.IDENTIFIER && (tokenNext.symbol == '.' || tokenNext.symbol == '('))
         {
             // subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')
@@ -1245,7 +1336,7 @@ class CompilationEngine
         }
         else if (token.type == Token.Type.IDENTIFIER && tokenNext.symbol == '[')
         {
-            // arrayValue: varName '[' expression ']'
+            // arrayValue: varName ('.' varName)? '[' expression ']'
             CompileArrayValue();
             return true;
         }

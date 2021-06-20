@@ -21,7 +21,6 @@ class PongGame {
 
     /** Constructs a new Pong game. */
     constructor PongGame new() {
-	    Screen.clearScreen();
         batWidth = 50;  // initial bat size
         bat = Bat.new(230, 229, batWidth, 7);
         ball = Ball.new(253, 222, 0, 511, 0, 229);
@@ -29,12 +28,10 @@ class PongGame {
         Screen.drawRectangle(0, 238, 511, 240);
 	    Output.moveCursor(22,0);
 	    Output.printString("Score: 0");
-	
 	    exit = false;
 	    score = 0;
 	    wall = 0;
 	    lastWall = 0;
-
         return this;
     }
 
