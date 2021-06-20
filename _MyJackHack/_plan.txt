@@ -11,10 +11,10 @@ Jack languages extensions
 [x] allow variable declarations to also assign them to initial values (treat as let statement) int x = 5;
 [x] allow function variable declarations while compiling any statement (push and pop symbol table scope within each {} )
 [x] support operator priority ( 5 + 6 * 2 ) should be 17 not 22
+[ ] allow class variable read/write without accessor functions > object.fieldValue = 5; x = object.fieldValue;
 [ ] add support for switch statements
 [ ] add support for float type
 [ ] allow multiple classes per file
-[ ] allow class variable read/write without accessor functions > object.fieldValue = 5; x = object.fieldValue;
 [ ] add object inheritance - requires virtual objects to have a function table pointer built in
 [ ] OS implement Memory.deFrag()
 
