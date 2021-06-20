@@ -17,10 +17,10 @@ C:\Projects\nand2Tetris\_MyJackHack\JackCompiler\bin\Debug\netcoreapp3.1\JackCom
 C:\Projects\nand2Tetris\_MyJackHack\JackCompiler\bin\Debug\netcoreapp3.1\JackCompiler.runtimeconfig.dev.json
 C:\Projects\nand2Tetris\_MyJackHack\JackCompiler\bin\Debug\netcoreapp3.1\JackCompiler.dll
 C:\Projects\nand2Tetris\_MyJackHack\JackCompiler\bin\Debug\netcoreapp3.1\JackCompiler.pdb
-C:\Projects\nand2Tetris\_MyJackHack\JackCompiler\obj\Debug\netcoreapp3.1\JackCompiler.csprojAssemblyReference.cache
 C:\Projects\nand2Tetris\_MyJackHack\JackCompiler\obj\Debug\netcoreapp3.1\JackCompiler.AssemblyInfoInputs.cache
 C:\Projects\nand2Tetris\_MyJackHack\JackCompiler\obj\Debug\netcoreapp3.1\JackCompiler.AssemblyInfo.cs
 C:\Projects\nand2Tetris\_MyJackHack\JackCompiler\obj\Debug\netcoreapp3.1\JackCompiler.csproj.CoreCompileInputs.cache
 C:\Projects\nand2Tetris\_MyJackHack\JackCompiler\obj\Debug\netcoreapp3.1\JackCompiler.dll
 C:\Projects\nand2Tetris\_MyJackHack\JackCompiler\obj\Debug\netcoreapp3.1\JackCompiler.pdb
 C:\Projects\nand2Tetris\_MyJackHack\JackCompiler\obj\Debug\netcoreapp3.1\JackCompiler.genruntimeconfig.cache
+C:\Projects\nand2Tetris\_MyJackHack\JackCompiler\obj\Debug\netcoreapp3.1\JackCompiler.csprojAssemblyReference.cache

@@ -3,6 +3,10 @@
   "Id": "b2c9d888-b676-4ba0-ba7e-4703df78e0c6",
   "Items": [
     {
+      "Id": "d6996390-9436-48e7-9a0f-1c18fe1f5757",
+      "Command": "C:\\Projects\\nand2Tetris\\projects\\11\\Expressions"
+    },
+    {
       "Id": "372a27c2-0ef6-4718-b7fb-3799241584e5",
       "Command": "C:\\Projects\\nand2Tetris\\projects\\11\\Pong\\Ball.jack"
     },

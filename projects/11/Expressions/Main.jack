@@ -1,0 +1,62 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/11/Average/Main.jack
+
+// (Same as projects/09/Average/Main.jack)
+
+// Inputs some numbers and computes their average
+class Main 
+{
+   function void main() 
+   {
+      int valueResults;
+
+      valueResults = 5 < 2 * 2 + 1;
+      Main.Compare( "5 < 2 * 2 + 1", valueResults, 0 );
+
+      valueResults = 5 < 2 * 2 + 2;
+      Main.Compare( "5 < 2 * 2 + 2", valueResults, 1 );
+
+      valueResults = 2 + 3 = 2 * 2 + 1;
+      Main.Compare( "2 + 3 = 2 * 2 + 1", valueResults, 1 );
+
+      valueResults = 1 + 2 + 3 * 4;
+      Main.Compare( "1 + 2 + 3 * 4", valueResults, 15 );
+
+      valueResults = 1 + 2 * 3 + 4;
+      Main.Compare( "1 + 2 * 3 + 4", valueResults, 11 );
+
+      valueResults = 1 * 2 + 3 + 4;
+      Main.Compare( "1 * 2 + 3 + 4", valueResults, 9 );
+
+      valueResults = 1 * 2 + 3 * 4;
+      Main.Compare( "1 * 2 + 3 * 4", valueResults , 14 );
+
+      valueResults = 2 + 2 * 2 + 2 / 2 + 2;
+      Main.Compare( "2 + 2 * 2 + 2 / 2 + 2", valueResults, 9 );
+
+      valueResults = 5 < 4 | 8 < 7 | 9 < 8;
+      Main.Compare( "5 < 4 | 8 < 7 | 9 < 8", valueResults, 0 );
+
+      valueResults = 5 < 4 | 8 < 9 | 9 < 8;
+      Main.Compare( "5 < 4 | 8 < 9 | 9 < 8", valueResults, -1 );
+   }
+
+   function void Compare( String expression, int value, int answer )
+   {
+      if ( value = answer )
+      {
+         Output.printString("(correct) ");
+      }
+      else
+      {
+         Output.printString("* WRONG * ");
+      }
+
+      Output.printString(expression);
+      Output.printString(" = ");
+      Output.printInt(value);
+      Output.println();
+   }
+}

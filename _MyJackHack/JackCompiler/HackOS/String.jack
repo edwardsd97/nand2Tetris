@@ -182,6 +182,12 @@ class String
         let wroteDigit = 0;
         let mLen = 0;
 
+        if ( i = 0 )
+        {
+            do appendChar( 48 ); // '0'
+            return;
+        }
+
         // number from 65535 to -65535
         if ( i < 0 )
         {

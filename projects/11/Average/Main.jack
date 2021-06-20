@@ -24,7 +24,5 @@ class Main
      
      Output.printString("The average is ");
      Output.printInt(sum / length);
-
-     return;
    }
 }

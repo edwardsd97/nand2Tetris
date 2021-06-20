@@ -460,7 +460,7 @@ class Token
     private static Dictionary<Keyword, string> keywordToStr;
     private static Dictionary<Type, string> typeToStr;
     private static Dictionary<char, string> symbols;
-    private static Dictionary<char, string> ops;
+    private static Dictionary<char, int> ops;
     private static Dictionary<Keyword, bool> statements;
 
     protected static void InitIfNeeded()
@@ -515,14 +515,17 @@ class Token
         symbols.Add('&', "&amp;"); symbols.Add('|', "|");
         symbols.Add('=', "="); symbols.Add('~', "~");
         symbols.Add('<', "&lt;"); symbols.Add('>', "&gt;");
+        symbols.Add('%', "%");
 
-        // op: '+' | '-' | '*' | '/' | '&' | '|' | '<' | '>' | '='
-        ops = new Dictionary<char, string>();
-        ops.Add('+', "+"); ops.Add('-', "-");
-        ops.Add('*', "*"); ops.Add('/', "/");
-        ops.Add('&', "&amp;"); ops.Add('|', "|");
-        ops.Add('=', "="); ops.Add('~', "~");
-        ops.Add('<', "&lt;"); ops.Add('>', "&gt;");
+        // op: '+' | '-' | '*' | '/' | '&' | '|' | '<' | '>' | '=' | '%'
+        // ( int values are C++ operator precedence https://en.cppreference.com/w/cpp/language/operator_precedence )
+        ops = new Dictionary<char, int>();
+        ops.Add('~', 3);
+        ops.Add('*', 5);  ops.Add('/', 5); ops.Add('%', 5);
+        ops.Add('+', 6);  ops.Add('-', 6);
+        ops.Add('<', 9); ops.Add('>', 9);
+        ops.Add('=', 10); // ==
+        ops.Add('&', 11); ops.Add('|', 13);
 
         statements = new Dictionary<Keyword, bool>();
         statements.Add(Token.Keyword.LET, true);
@@ -587,13 +590,25 @@ class Token
     public static bool IsOp(char c)
     {
         InitIfNeeded();
-        string symbolStr;
-        if (ops.TryGetValue(c, out symbolStr))
+        int precedence;
+        if (ops.TryGetValue(c, out precedence))
         {
             return true;
         }
 
         return false;
+    }
+
+    public static int OpPrecedence(char c)
+    {
+        InitIfNeeded();
+        int precedence;
+        if (ops.TryGetValue(c, out precedence))
+        {
+            return precedence;
+        }
+
+        return 0;
     }
 
     public bool IsType()
@@ -1047,7 +1062,7 @@ class Tokenizer : IEnumerable
 // subroutineObject: ( className | varName ) '.'
 // subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')'
 // expressionList: ( expression (',' expression)* )?
-// op: '+'|'-'|'*'|'/'|'&'|'|'|'<'|'>'|'='
+// op: '+'|'-'|'*'|'/'|'&'|'|'|'<'|'>'|'='|'%'
 // unaryOp: '-'|'~'
 // keywordConstant: 'true'|'false'|'null'|'this'
 
@@ -1234,14 +1249,28 @@ class CompilationEngine
 
     public class FuncSpec
     {
-        public string           filePath;
-        public string           funcName;
-        public string           className;
-        public Token.Keyword    type;
-        public List<Token>      parmTypes;
-        public Token            returnType;
-        public bool             referenced;
-        public bool             compiled;
+        public string filePath;
+        public string funcName;
+        public string className;
+        public Token.Keyword type;
+        public List<Token> parmTypes;
+        public Token returnType;
+        public bool referenced;
+        public bool compiled;
+    };
+
+    public class ExpNode
+    {
+        public object value;
+        public ExpNode parent;
+        public ExpNode left;
+        public ExpNode right;
+
+        public ExpNode(object expObj, ExpNode parentIn = null )
+        {
+            parent = parentIn;
+            value = expObj;
+        }
     };
 
     public CompilationEngine(Tokenizer tokens, string baseOutFile)
@@ -1315,6 +1344,17 @@ class CompilationEngine
         Token token = mTokens.Get();
         string line = "ERROR: Line< " + token.lineNumber + " > Char< " + token.lineCharacter + " > " + msg;
         Console.WriteLine(line);
+    }
+
+    public bool ValidateSymbol( string varName )
+    {
+        if (SymbolTable.SegmentOf(varName) == VMWriter.Segment.INVALID)
+        {
+            Error("Undefined symbol '" + varName + "'");
+            System.Environment.Exit(-1);
+        }
+
+        return true;
     }
 
     public Token ValidateTokenAdvance(object tokenCheck)
@@ -1415,7 +1455,8 @@ class CompilationEngine
 
                 CompileExpression(); // push value onto stack
 
-                mVMWriter.WritePop(SymbolTable.SegmentOf(varName), SymbolTable.OffsetOf(varName));
+                if ( ValidateSymbol( varName ) )
+                    mVMWriter.WritePop(SymbolTable.SegmentOf(varName), SymbolTable.OffsetOf(varName));
             }
 
         } while (mTokens.Get().symbol == ',');
@@ -1796,7 +1837,8 @@ class CompilationEngine
         ValidateTokenAdvance('[');
         CompileExpression();
         ValidateTokenAdvance(']');
-        mVMWriter.WritePush(SymbolTable.SegmentOf(varName), SymbolTable.OffsetOf(varName));
+        if ( ValidateSymbol( varName ) )
+            mVMWriter.WritePush(SymbolTable.SegmentOf(varName), SymbolTable.OffsetOf(varName));
         mVMWriter.WriteArithmetic(VMWriter.Command.ADD);
     }
 
@@ -1847,7 +1889,8 @@ class CompilationEngine
         }
         else
         {
-            mVMWriter.WritePop(SymbolTable.SegmentOf(varName), SymbolTable.OffsetOf(varName));
+            if ( ValidateSymbol(varName) )
+                mVMWriter.WritePop(SymbolTable.SegmentOf(varName), SymbolTable.OffsetOf(varName));
         }
 
         if ( eatSemiColon )
@@ -2150,7 +2193,7 @@ class CompilationEngine
         // Grammar:
         // ---------
         // expression: term (op term)*
-        // op: '+'|'-'|'*'|'/'|'&'|'|'|'<'|'>'|'='
+        // op: '+'|'-'|'*'|'/'|'&'|'|'|'<'|'>'|'='|'%'
 
         // Pseudo:
         // --------
@@ -2205,29 +2248,114 @@ class CompilationEngine
 
         if ( doResolve && expressionTerms.Count > 0 )
         {
-            ResolveExpressionTerms( expressionTerms );
+            ExpressionResolvePrecedence( expressionTerms );
         }
 
         return compiledExpression;
     }
 
-    protected void ResolveExpressionTerms(List<object> expressionTerms)
+    protected int ExpressionPrecCompare(object x, object y)
+    {
+        if (x == null && y != null)
+            return -1; // null < non-null
+
+        if (x != null && y == null)
+            return 1; // non-null > null
+
+        if (x == null && y == null)
+            return 0; // null == null
+
+        bool isXOp = x.GetType() == typeof(char);
+        bool isYOp = y.GetType() == typeof(char);
+
+        if (isXOp && isYOp)
+        {
+            // same operator is left-associative: + > +
+            if ((char)x == (char)y)
+                return 1;
+
+            int delta = Token.OpPrecedence((char)x) - Token.OpPrecedence((char)y);
+            return -delta;
+        }
+
+        if ( !isXOp && isYOp)
+            return 1; // term > op
+
+        if (isXOp && !isYOp)
+            return -1; // op < term
+
+        return 0;
+    }
+
+    protected object ExpressionTopOp( List<object> stack )
+    {
+        object a = null;
+        for (int sp = stack.Count - 1; sp >= 0; sp--)
+        {
+            if (stack[sp].GetType() == typeof(char))
+            {
+                a = stack[sp];
+                break;
+            }
+        }
+        return a;
+    }
+
+    protected void ExpressionResolvePrecedence(List<object> expressionTerms)
     {
         // expressionTerms is a list of term? (op term)* that needs to be resolved with operator prededence
 
-        int i = 0;
-
-        if (expressionTerms.Count > 0)
+        if (expressionTerms.Count == 1)
         {
             mVMWriter.WriteStream((Stream)expressionTerms[0]);
-            i++;
         }
-
-        while ( i < expressionTerms.Count - 1 )
+        else if( expressionTerms.Count > 0 )
         {
-            mVMWriter.WriteStream((Stream)expressionTerms[i+1]);
-            CompileOp((char)expressionTerms[i]);
-            i = i + 2;
+            // Handle operator precedence as explained here:
+            // https://en.wikipedia.org/wiki/Operator-precedence_grammar
+
+            int ip = 0;
+            List<object> stack = new List<object>();
+            object a, b, terminalPopped = null;
+
+            while ( ip < expressionTerms.Count || stack.Count > 0 )
+            {
+                // Let a be the top terminal on the stack, and b the symbol pointed to by ip
+                b = ip < expressionTerms.Count ? expressionTerms[ip] : null;
+                a = ExpressionTopOp(stack);
+
+                if (a == null && b == null)
+                    return;
+
+                // if a < b or a == b then
+                if ( ExpressionPrecCompare( a, b ) <= 0 )
+                {
+                    // push b onto the stack
+                    stack.Add(b);
+                    // advance ip to the next input symbol
+                    ip++;
+                }
+                else // a > b
+                {
+                    // repeat
+                    //   pop the stack
+                    // until the top stack terminal is related by < to the terminal most recently popped
+                    do
+                    {
+                        if (stack[stack.Count - 3].GetType().IsSubclassOf( typeof( Stream ) ) ) 
+                            mVMWriter.WriteStream((Stream)stack[stack.Count - 3]);
+                        if (stack[stack.Count - 1].GetType().IsSubclassOf(typeof(Stream)))
+                            mVMWriter.WriteStream((Stream)stack[stack.Count - 1]);
+                        CompileOp((char)stack[stack.Count - 2]);
+                        terminalPopped = stack[stack.Count - 2];
+                        stack.RemoveAt(stack.Count - 1);
+                        stack.RemoveAt(stack.Count - 1);
+                        stack.RemoveAt(stack.Count - 1);
+                        stack.Add("stackValue"); // placeholder to write nothing when it is encountered
+
+                    } while (stack.Count >= 3 && ExpressionPrecCompare(ExpressionTopOp(stack), terminalPopped) < 0);
+                }
+            }
         }
     }
 
@@ -2235,11 +2363,12 @@ class CompilationEngine
     {
         switch ( op )
         {
-            // op: '+'|'-'|'*'|'/'|'&'|'|'|'<'|'>'|'='
+            // op: '+'|'-'|'*'|'/'|'&'|'|'|'<'|'>'|'='|'%'
             case '+': mVMWriter.WriteArithmetic(VMWriter.Command.ADD); break;
             case '-': mVMWriter.WriteArithmetic(VMWriter.Command.SUB); break;
             case '*': mVMWriter.WriteCall("Math.multiply", 2); break;
             case '/': mVMWriter.WriteCall("Math.divide", 2); break;
+            case '%': mVMWriter.WriteCall("Math.mod", 2); break;
             case '|': mVMWriter.WriteArithmetic(VMWriter.Command.OR); break;
             case '&': mVMWriter.WriteArithmetic(VMWriter.Command.AND); break;
             case '<': mVMWriter.WriteArithmetic(VMWriter.Command.LT); break;
