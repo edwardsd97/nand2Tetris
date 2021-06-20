@@ -3,6 +3,10 @@
   "Id": "b2c9d888-b676-4ba0-ba7e-4703df78e0c6",
   "Items": [
     {
+      "Id": "0e812e2b-e1f3-42ae-8827-f32e18b03c51",
+      "Command": "C:\\Projects\\nand2Tetris\\projects\\09\\Driver\\source"
+    },
+    {
       "Id": "d6996390-9436-48e7-9a0f-1c18fe1f5757",
       "Command": "C:\\Projects\\nand2Tetris\\projects\\11\\Expressions"
     },

@@ -521,11 +521,12 @@ class Token
         // ( int values are C++ operator precedence https://en.cppreference.com/w/cpp/language/operator_precedence )
         ops = new Dictionary<char, int>();
         ops.Add('~', 3);
-        ops.Add('*', 5);  ops.Add('/', 5); ops.Add('%', 5);
-        ops.Add('+', 6);  ops.Add('-', 6);
+        ops.Add('*', 5); ops.Add('/', 5); ops.Add('%', 5);
+        ops.Add('+', 6); ops.Add('-', 6);
         ops.Add('<', 9); ops.Add('>', 9);
         ops.Add('=', 10); // ==
-        ops.Add('&', 11); ops.Add('|', 13);
+        ops.Add('&', 11); 
+        ops.Add('|', 13);
 
         statements = new Dictionary<Keyword, bool>();
         statements.Add(Token.Keyword.LET, true);
