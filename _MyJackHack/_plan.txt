@@ -12,6 +12,7 @@ Jack languages extensions
 [x] allow function variable declarations while compiling any statement (push and pop symbol table scope within each {} )
 [x] support operator priority ( 5 + 6 * 2 ) should be 17 not 22
 [x] allow class variable read/write without accessor functions: object.fieldValue = 5; x = object.fieldValue;
+[ ] allow class static variable read/write without: ClassName.staticField = 5; x = ClassName.staticField;
 [ ] add support for switch statements
 [ ] add support for float type
 [ ] allow multiple classes per file
