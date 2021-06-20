@@ -16,42 +16,42 @@ pop temp 0
 push constant 0
 return
 function Sys.halt 0
-label Sys_halt_WHILE_EXP_L1
+label Sys_halt_WHILE_EXP_L2
 push constant 0
 not
 not
-if-goto Sys_halt_WHILE_END_L1
-goto Sys_halt_WHILE_EXP_L1
-label Sys_halt_WHILE_END_L1
+if-goto Sys_halt_WHILE_END_L2
+goto Sys_halt_WHILE_EXP_L2
+label Sys_halt_WHILE_END_L2
 push constant 0
 return
 function Sys.wait 1
-label Sys_wait_WHILE_EXP_L1
+label Sys_wait_WHILE_EXP_L5
 push argument 0
 push constant 0
 gt
 not
-if-goto Sys_wait_WHILE_END_L1
+if-goto Sys_wait_WHILE_END_L5
 push constant 100
 pop local 0
-label Sys_wait_WHILE_EXP_L2
+label Sys_wait_WHILE_EXP_L6
 push local 0
 push constant 0
 gt
 not
-if-goto Sys_wait_WHILE_END_L2
+if-goto Sys_wait_WHILE_END_L6
 push local 0
 push constant 1
 sub
 pop local 0
-goto Sys_wait_WHILE_EXP_L2
-label Sys_wait_WHILE_END_L2
+goto Sys_wait_WHILE_EXP_L6
+label Sys_wait_WHILE_END_L6
 push argument 0
 push constant 1
 sub
 pop argument 0
-goto Sys_wait_WHILE_EXP_L1
-label Sys_wait_WHILE_END_L1
+goto Sys_wait_WHILE_EXP_L5
+label Sys_wait_WHILE_END_L5
 push constant 0
 return
 function Sys.error 2

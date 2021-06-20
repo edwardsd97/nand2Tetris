@@ -517,7 +517,7 @@ class Token
         symbols.Add('<', "&lt;"); symbols.Add('>', "&gt;");
         symbols.Add('%', "%");
 
-        // op: '+' | '-' | '*' | '/' | '&' | '|' | '<' | '>' | '=' | '%'
+        // op: '~' | '*' | '/' | '%' | '+' | '-' | '<' | '>' | '=' | '&' | '|'
         // ( int values are C++ operator precedence https://en.cppreference.com/w/cpp/language/operator_precedence )
         ops = new Dictionary<char, int>();
         ops.Add('~', 3);
@@ -1063,8 +1063,8 @@ class Tokenizer : IEnumerable
 // subroutineObject: ( className | varName ) '.'
 // subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')'
 // expressionList: ( expression (',' expression)* )?
-// op: '+'|'-'|'*'|'/'|'&'|'|'|'<'|'>'|'='|'%'
-// unaryOp: '-'|'~'
+// op: '~' | '*' | '/' | '%' | '+' | '-' | '<' | '>' | '=' | '&' | '|'
+// unaryOp: '-' | '~'
 // keywordConstant: 'true'|'false'|'null'|'this'
 
 class Writer
@@ -2194,28 +2194,7 @@ class CompilationEngine
         // Grammar:
         // ---------
         // expression: term (op term)*
-        // op: '+'|'-'|'*'|'/'|'&'|'|'|'<'|'>'|'='|'%'
-
-        // Pseudo:
-        // --------
-        // if exp is a number n:
-        //   push constant n
-
-        // if exp is a variable var:
-        //   push segment i
-
-        // if exp is "exp1 op exp2":
-        //   CompileExpression( exp1 );
-        //   CompileExpression( exp2 );
-        //   op command (add, sub, ... )
-
-        // if exp is "op exp"
-        //   CompileExpression( exp )
-        //   op command (add, sub, ... )
-
-        // if exp is "f(exp1, exp2, ..., expN )"
-        //   N = CompileExpressionList()
-        //   call f N
+        // op: '~' | '*' | '/' | '%' | '+' | '-' | '<' | '>' | '=' | '&' | '|'
 
         bool doResolve = false;
         if ( expressionTerms == null )
@@ -2306,18 +2285,27 @@ class CompilationEngine
     {
         // expressionTerms is a list of term? (op term)* that needs to be resolved with operator prededence
 
+        // This will always be either empty or an odd number of entries always following term op term op term ...
+        // Each term is a pre-compiled set of VM commands before arriving here
+        // 0: (do nothing)
+        // 1: x
+        // 3: x + y
+        // 5: x + y * 5
+        // 7: x + y * 5 - 6 = 9
+        // etc...
+
         if (expressionTerms.Count == 1)
         {
             mVMWriter.WriteStream((Stream)expressionTerms[0]);
         }
         else if( expressionTerms.Count > 0 )
         {
-            // Handle operator precedence as explained here:
+            // Handle operator precedence as a form of what is explained here:
             // https://en.wikipedia.org/wiki/Operator-precedence_grammar
 
             int ip = 0;
             List<object> stack = new List<object>();
-            object a, b, terminalPopped = null;
+            object a, b, opPopped = null;
 
             while ( ip < expressionTerms.Count || stack.Count > 0 )
             {
@@ -2348,13 +2336,13 @@ class CompilationEngine
                         if (stack[stack.Count - 1].GetType().IsSubclassOf(typeof(Stream)))
                             mVMWriter.WriteStream((Stream)stack[stack.Count - 1]);
                         CompileOp((char)stack[stack.Count - 2]);
-                        terminalPopped = stack[stack.Count - 2];
+                        opPopped = stack[stack.Count - 2];
                         stack.RemoveAt(stack.Count - 1);
                         stack.RemoveAt(stack.Count - 1);
                         stack.RemoveAt(stack.Count - 1);
                         stack.Add("stackValue"); // placeholder to write nothing when it is encountered
 
-                    } while (stack.Count >= 3 && ExpressionPrecCompare(ExpressionTopOp(stack), terminalPopped) < 0);
+                    } while (stack.Count >= 3 && ExpressionPrecCompare(ExpressionTopOp(stack), opPopped) < 0);
                 }
             }
         }
@@ -2364,7 +2352,7 @@ class CompilationEngine
     {
         switch ( op )
         {
-            // op: '+'|'-'|'*'|'/'|'&'|'|'|'<'|'>'|'='|'%'
+            // op: '~' | '*' | '/' | '%' | '+' | '-' | '<' | '>' | '=' | '&' | '|'
             case '+': mVMWriter.WriteArithmetic(VMWriter.Command.ADD); break;
             case '-': mVMWriter.WriteArithmetic(VMWriter.Command.SUB); break;
             case '*': mVMWriter.WriteCall("Math.multiply", 2); break;
@@ -2387,6 +2375,27 @@ class CompilationEngine
         // arrayValue: varName '[' expression ']'
         // subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')
         // expressionList: ( expression (',' expression)* )?
+
+        // Pseudo:
+        // --------
+        // if exp is a number n:
+        //   push constant n
+
+        // if exp is a variable var:
+        //   push segment i
+
+        // if exp is "exp1 op exp2":
+        //   CompileExpression( exp1 );
+        //   CompileExpression( exp2 );
+        //   op command (add, sub, ... )
+
+        // if exp is "op exp"
+        //   CompileExpression( exp )
+        //   op command (add, sub, ... )
+
+        // if exp is "f(exp1, exp2, ..., expN )"
+        //   N = CompileExpressionList()
+        //   call f N
 
         Token token = mTokens.GetAndAdvance();
         Token tokenNext = mTokens.Get();
@@ -2454,7 +2463,8 @@ class CompilationEngine
         else if (token.type == Token.Type.IDENTIFIER && SymbolTable.Exists(token.identifier))
         {
             // varName
-            mVMWriter.WritePush(SymbolTable.SegmentOf(token.identifier), SymbolTable.OffsetOf(token.identifier));
+            if ( ValidateSymbol(token.identifier) )
+                mVMWriter.WritePush(SymbolTable.SegmentOf(token.identifier), SymbolTable.OffsetOf(token.identifier));
             mTokens.Advance();
             return true;
         }

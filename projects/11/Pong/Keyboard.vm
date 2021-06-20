@@ -9,34 +9,34 @@ function Keyboard.readChar 1
 push constant 0
 call Output.printChar 1
 pop temp 0
-label Keyboard_readChar_WHILE_EXP_L1
+label Keyboard_readChar_WHILE_EXP_L4
 call Keyboard.keyPressed 0
 push constant 0
 eq
 not
 not
-if-goto Keyboard_readChar_WHILE_END_L1
-goto Keyboard_readChar_WHILE_EXP_L1
-label Keyboard_readChar_WHILE_END_L1
-label Keyboard_readChar_WHILE_EXP_L2
+if-goto Keyboard_readChar_WHILE_END_L4
+goto Keyboard_readChar_WHILE_EXP_L4
+label Keyboard_readChar_WHILE_END_L4
+label Keyboard_readChar_WHILE_EXP_L5
 call Keyboard.keyPressed 0
 push constant 0
 eq
 not
-if-goto Keyboard_readChar_WHILE_END_L2
-goto Keyboard_readChar_WHILE_EXP_L2
-label Keyboard_readChar_WHILE_END_L2
+if-goto Keyboard_readChar_WHILE_END_L5
+goto Keyboard_readChar_WHILE_EXP_L5
+label Keyboard_readChar_WHILE_END_L5
 call Keyboard.keyPressed 0
 pop local 0
-label Keyboard_readChar_WHILE_EXP_L3
+label Keyboard_readChar_WHILE_EXP_L6
 call Keyboard.keyPressed 0
 push constant 0
 eq
 not
 not
-if-goto Keyboard_readChar_WHILE_END_L3
-goto Keyboard_readChar_WHILE_EXP_L3
-label Keyboard_readChar_WHILE_END_L3
+if-goto Keyboard_readChar_WHILE_END_L6
+goto Keyboard_readChar_WHILE_EXP_L6
+label Keyboard_readChar_WHILE_END_L6
 push constant 129
 call Output.printChar 1
 pop temp 0
@@ -52,40 +52,40 @@ pop temp 0
 push constant 256
 call String.new 1
 pop local 0
-label Keyboard_readLine_WHILE_EXP_L1
+label Keyboard_readLine_WHILE_EXP_L8
 push local 1
 push constant 128
 eq
 not
 not
-if-goto Keyboard_readLine_WHILE_END_L1
+if-goto Keyboard_readLine_WHILE_END_L8
 call Keyboard.readChar 0
 pop local 1
 push local 1
 push constant 129
 eq
-if-goto Keyboard_readLine_IF_TRUE_L1
-goto Keyboard_readLine_IF_FALSE_L1
-label Keyboard_readLine_IF_TRUE_L1
+if-goto Keyboard_readLine_IF_TRUE_L3
+goto Keyboard_readLine_IF_FALSE_L3
+label Keyboard_readLine_IF_TRUE_L3
 call Output.backSpace 0
 pop temp 0
 push local 0
 call String.eraseLastChar 1
 pop temp 0
-label Keyboard_readLine_IF_FALSE_L1
+label Keyboard_readLine_IF_FALSE_L3
 push local 1
 push constant 128
 lt
-if-goto Keyboard_readLine_IF_TRUE_L2
-goto Keyboard_readLine_IF_FALSE_L2
-label Keyboard_readLine_IF_TRUE_L2
+if-goto Keyboard_readLine_IF_TRUE_L4
+goto Keyboard_readLine_IF_FALSE_L4
+label Keyboard_readLine_IF_TRUE_L4
 push local 0
 push local 1
 call String.appendChar 2
 pop temp 0
-label Keyboard_readLine_IF_FALSE_L2
-goto Keyboard_readLine_WHILE_EXP_L1
-label Keyboard_readLine_WHILE_END_L1
+label Keyboard_readLine_IF_FALSE_L4
+goto Keyboard_readLine_WHILE_EXP_L8
+label Keyboard_readLine_WHILE_END_L8
 push local 0
 return
 function Keyboard.readInt 2

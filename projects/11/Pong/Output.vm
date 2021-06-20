@@ -1467,12 +1467,12 @@ push argument 0
 push constant 126
 gt
 or
-if-goto Output_getMap_IF_TRUE_L1
-goto Output_getMap_IF_FALSE_L1
-label Output_getMap_IF_TRUE_L1
+if-goto Output_getMap_IF_TRUE_L2
+goto Output_getMap_IF_FALSE_L2
+label Output_getMap_IF_TRUE_L2
 push constant 0
 pop argument 0
-label Output_getMap_IF_FALSE_L1
+label Output_getMap_IF_FALSE_L2
 push argument 0
 push static 0
 add
@@ -1487,39 +1487,39 @@ pop static 1
 push static 1
 push constant 63
 gt
-if-goto Output_moveCursor_IF_TRUE_L1
-goto Output_moveCursor_IF_FALSE_L1
-label Output_moveCursor_IF_TRUE_L1
+if-goto Output_moveCursor_IF_TRUE_L7
+goto Output_moveCursor_IF_FALSE_L7
+label Output_moveCursor_IF_TRUE_L7
 push constant 63
 pop static 1
-label Output_moveCursor_IF_FALSE_L1
+label Output_moveCursor_IF_FALSE_L7
 push static 2
 push constant 22
 gt
-if-goto Output_moveCursor_IF_TRUE_L2
-goto Output_moveCursor_IF_FALSE_L2
-label Output_moveCursor_IF_TRUE_L2
+if-goto Output_moveCursor_IF_TRUE_L8
+goto Output_moveCursor_IF_FALSE_L8
+label Output_moveCursor_IF_TRUE_L8
 push constant 22
 pop static 2
-label Output_moveCursor_IF_FALSE_L2
+label Output_moveCursor_IF_FALSE_L8
 push static 1
 push constant 0
 lt
-if-goto Output_moveCursor_IF_TRUE_L3
-goto Output_moveCursor_IF_FALSE_L3
-label Output_moveCursor_IF_TRUE_L3
+if-goto Output_moveCursor_IF_TRUE_L9
+goto Output_moveCursor_IF_FALSE_L9
+label Output_moveCursor_IF_TRUE_L9
 push constant 0
 pop static 1
-label Output_moveCursor_IF_FALSE_L3
+label Output_moveCursor_IF_FALSE_L9
 push static 2
 push constant 0
 lt
-if-goto Output_moveCursor_IF_TRUE_L4
-goto Output_moveCursor_IF_FALSE_L4
-label Output_moveCursor_IF_TRUE_L4
+if-goto Output_moveCursor_IF_TRUE_L10
+goto Output_moveCursor_IF_FALSE_L10
+label Output_moveCursor_IF_TRUE_L10
 push constant 0
 pop static 2
-label Output_moveCursor_IF_FALSE_L4
+label Output_moveCursor_IF_FALSE_L10
 push constant 32
 call Output.printChar 1
 pop temp 0
@@ -1532,9 +1532,9 @@ function Output.printChar 6
 push argument 0
 push constant 128
 eq
-if-goto Output_printChar_IF_TRUE_L1
-goto Output_printChar_IF_FALSE_L1
-label Output_printChar_IF_TRUE_L1
+if-goto Output_printChar_IF_TRUE_L19
+goto Output_printChar_IF_FALSE_L19
+label Output_printChar_IF_TRUE_L19
 push constant 0
 pop static 1
 push static 2
@@ -1544,21 +1544,21 @@ pop static 2
 push static 2
 push constant 22
 gt
-if-goto Output_printChar_IF_TRUE_L2
-goto Output_printChar_IF_FALSE_L2
-label Output_printChar_IF_TRUE_L2
+if-goto Output_printChar_IF_TRUE_L20
+goto Output_printChar_IF_FALSE_L20
+label Output_printChar_IF_TRUE_L20
 push constant 0
 pop static 2
-label Output_printChar_IF_FALSE_L2
+label Output_printChar_IF_FALSE_L20
 push constant 0
 return
-label Output_printChar_IF_FALSE_L1
+label Output_printChar_IF_FALSE_L19
 push argument 0
 push constant 129
 eq
-if-goto Output_printChar_IF_TRUE_L3
-goto Output_printChar_IF_FALSE_L3
-label Output_printChar_IF_TRUE_L3
+if-goto Output_printChar_IF_TRUE_L21
+goto Output_printChar_IF_FALSE_L21
+label Output_printChar_IF_TRUE_L21
 push static 1
 push constant 1
 sub
@@ -1566,9 +1566,9 @@ pop static 1
 push static 1
 push constant 0
 lt
-if-goto Output_printChar_IF_TRUE_L4
-goto Output_printChar_IF_FALSE_L4
-label Output_printChar_IF_TRUE_L4
+if-goto Output_printChar_IF_TRUE_L22
+goto Output_printChar_IF_FALSE_L22
+label Output_printChar_IF_TRUE_L22
 push constant 63
 pop static 1
 push static 2
@@ -1578,16 +1578,16 @@ pop static 2
 push static 2
 push constant 0
 lt
-if-goto Output_printChar_IF_TRUE_L5
-goto Output_printChar_IF_FALSE_L5
-label Output_printChar_IF_TRUE_L5
+if-goto Output_printChar_IF_TRUE_L23
+goto Output_printChar_IF_FALSE_L23
+label Output_printChar_IF_TRUE_L23
 push constant 22
 pop static 2
-label Output_printChar_IF_FALSE_L5
-label Output_printChar_IF_FALSE_L4
+label Output_printChar_IF_FALSE_L23
+label Output_printChar_IF_FALSE_L22
 push constant 0
 return
-label Output_printChar_IF_FALSE_L3
+label Output_printChar_IF_FALSE_L21
 push argument 0
 push constant 127
 lt
@@ -1596,9 +1596,9 @@ push constant 1
 neg
 gt
 and
-if-goto Output_printChar_IF_TRUE_L6
-goto Output_printChar_IF_FALSE_L6
-label Output_printChar_IF_TRUE_L6
+if-goto Output_printChar_IF_TRUE_L24
+goto Output_printChar_IF_FALSE_L24
+label Output_printChar_IF_TRUE_L24
 push static 1
 push constant 8
 call Math.multiply 2
@@ -1765,9 +1765,9 @@ pop static 1
 push static 1
 push constant 63
 gt
-if-goto Output_printChar_IF_TRUE_L7
-goto Output_printChar_IF_FALSE_L7
-label Output_printChar_IF_TRUE_L7
+if-goto Output_printChar_IF_TRUE_L25
+goto Output_printChar_IF_FALSE_L25
+label Output_printChar_IF_TRUE_L25
 push constant 0
 pop static 1
 push static 2
@@ -1777,14 +1777,14 @@ pop static 2
 push static 2
 push constant 22
 gt
-if-goto Output_printChar_IF_TRUE_L8
-goto Output_printChar_IF_FALSE_L8
-label Output_printChar_IF_TRUE_L8
+if-goto Output_printChar_IF_TRUE_L26
+goto Output_printChar_IF_FALSE_L26
+label Output_printChar_IF_TRUE_L26
 push constant 0
 pop static 2
-label Output_printChar_IF_FALSE_L8
-label Output_printChar_IF_FALSE_L7
-label Output_printChar_IF_FALSE_L6
+label Output_printChar_IF_FALSE_L26
+label Output_printChar_IF_FALSE_L25
+label Output_printChar_IF_FALSE_L24
 push constant 0
 return
 function Output.printCharScanLine 2
@@ -1795,16 +1795,16 @@ push argument 0
 call Memory.peek 1
 pop local 0
 push argument 2
-if-goto Output_printCharScanLine_IF_TRUE_L1
-goto Output_printCharScanLine_IF_FALSE_L1
-label Output_printCharScanLine_IF_TRUE_L1
+if-goto Output_printCharScanLine_IF_TRUE_L28
+goto Output_printCharScanLine_IF_FALSE_L28
+label Output_printCharScanLine_IF_TRUE_L28
 push argument 1
 push constant 256
 call Math.multiply 2
 pop argument 1
 push constant 255
 pop local 1
-label Output_printCharScanLine_IF_FALSE_L1
+label Output_printCharScanLine_IF_FALSE_L28
 push local 0
 push local 1
 and
@@ -1823,12 +1823,12 @@ call String.length 1
 pop local 0
 push constant 0
 pop local 1
-label Output_printString_WHILE_EXP_L1
+label Output_printString_WHILE_EXP_L2
 push local 1
 push local 0
 lt
 not
-if-goto Output_printString_WHILE_END_L1
+if-goto Output_printString_WHILE_END_L2
 push argument 0
 push local 1
 call String.charAt 2
@@ -1838,8 +1838,8 @@ push local 1
 push constant 1
 add
 pop local 1
-goto Output_printString_WHILE_EXP_L1
-label Output_printString_WHILE_END_L1
+goto Output_printString_WHILE_EXP_L2
+label Output_printString_WHILE_END_L2
 push constant 0
 return
 function Output.printInt 1

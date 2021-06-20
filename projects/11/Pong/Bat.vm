@@ -96,9 +96,9 @@ pop pointer 0
 push this 4
 push constant 1
 eq
-if-goto Bat_move_IF_TRUE_L1
-goto Bat_move_IF_FALSE_L1
-label Bat_move_IF_TRUE_L1
+if-goto Bat_move_IF_TRUE_L4
+goto Bat_move_IF_FALSE_L4
+label Bat_move_IF_TRUE_L4
 push this 0
 push constant 4
 sub
@@ -106,12 +106,12 @@ pop this 0
 push this 0
 push constant 0
 lt
-if-goto Bat_move_IF_TRUE_L2
-goto Bat_move_IF_FALSE_L2
-label Bat_move_IF_TRUE_L2
+if-goto Bat_move_IF_TRUE_L5
+goto Bat_move_IF_FALSE_L5
+label Bat_move_IF_TRUE_L5
 push constant 0
 pop this 0
-label Bat_move_IF_FALSE_L2
+label Bat_move_IF_FALSE_L5
 push constant 0
 call Screen.setColor 1
 pop temp 0
@@ -145,8 +145,8 @@ push this 3
 add
 call Screen.drawRectangle 4
 pop temp 0
-goto Bat_move_IF_END_L1
-label Bat_move_IF_FALSE_L1
+goto Bat_move_IF_END_L2
+label Bat_move_IF_FALSE_L4
 push this 0
 push constant 4
 add
@@ -156,14 +156,14 @@ push this 2
 add
 push constant 511
 gt
-if-goto Bat_move_IF_TRUE_L3
-goto Bat_move_IF_FALSE_L3
-label Bat_move_IF_TRUE_L3
+if-goto Bat_move_IF_TRUE_L6
+goto Bat_move_IF_FALSE_L6
+label Bat_move_IF_TRUE_L6
 push constant 511
 push this 2
 sub
 pop this 0
-label Bat_move_IF_FALSE_L3
+label Bat_move_IF_FALSE_L6
 push constant 0
 call Screen.setColor 1
 pop temp 0
@@ -197,5 +197,5 @@ push this 3
 add
 call Screen.drawRectangle 4
 pop temp 0
-label Bat_move_IF_END_L1
+label Bat_move_IF_END_L2
 return
