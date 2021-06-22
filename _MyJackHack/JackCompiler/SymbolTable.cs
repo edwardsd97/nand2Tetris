@@ -20,6 +20,9 @@ class SymbolTable
         public Dictionary<string, Symbol> mSymbols = new Dictionary<string, Symbol>();
         public string mName;
         public bool mMethod;
+        public string mLabelContinue;
+        public string mLabelBreak;
+
         public SymbolScope(string name = "", bool isMethod = false)
         {
             mName = name;
@@ -84,6 +87,43 @@ class SymbolTable
         mScopes[mScopes.Count - 1].mSymbols.Add(varName, newVar);
 
         mVarSize = Math.Max(mVarSize, SymbolTable.KindSize(SymbolTable.Kind.VAR));
+    }
+
+    public static void DefineContinueBreak( string labelContinue, string labelBreak )
+    {
+        if (mScopes.Count == 0)
+            return;
+
+        mScopes[mScopes.Count - 1].mLabelContinue = labelContinue;
+        mScopes[mScopes.Count - 1].mLabelBreak = labelBreak;
+    }
+
+    public static string GetLabelContinue()
+    {
+        int iScope = mScopes.Count - 1;
+
+        while (iScope >= 0)
+        {
+            if ( mScopes[iScope].mLabelContinue != null )
+                return mScopes[iScope].mLabelContinue;
+            iScope--;
+        }
+
+        return null;
+    }
+
+    public static string GetLabelBreak()
+    {
+        int iScope = mScopes.Count - 1;
+
+        while (iScope >= 0)
+        {
+            if (mScopes[iScope].mLabelBreak != null)
+                return mScopes[iScope].mLabelBreak;
+            iScope--;
+        }
+
+        return null;
     }
 
     public static bool Exists(string varName)

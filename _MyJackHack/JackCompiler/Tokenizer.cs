@@ -17,7 +17,7 @@ class Token
         CLASS, METHOD, FUNCTION, CONSTRUCTOR,
         INT, BOOL, CHAR, VOID,
         VAR, STATIC, FIELD, LET,
-        DO, IF, ELSE, WHILE, FOR,
+        DO, IF, ELSE, WHILE, FOR, CONTINUE, BREAK,
         RETURN, TRUE, FALSE, NULL,
         THIS
     };
@@ -29,7 +29,6 @@ class Token
     private static Dictionary<Type, string> typeToStr;
     private static Dictionary<char, string> symbols;
     private static Dictionary<char, int> ops;
-    private static Dictionary<Keyword, bool> statements;
 
     protected static void InitIfNeeded()
     {
@@ -61,6 +60,8 @@ class Token
         strToKeyword.Add("else", Token.Keyword.ELSE);
         strToKeyword.Add("while", Token.Keyword.WHILE);
         strToKeyword.Add("for", Token.Keyword.FOR);
+        strToKeyword.Add("continue", Token.Keyword.CONTINUE);
+        strToKeyword.Add("break", Token.Keyword.BREAK);
         strToKeyword.Add("return", Token.Keyword.RETURN);
         strToKeyword.Add("true", Token.Keyword.TRUE);
         strToKeyword.Add("false", Token.Keyword.FALSE);
@@ -95,15 +96,6 @@ class Token
         ops.Add('=', 10); // ==
         ops.Add('&', 11);
         ops.Add('|', 13);
-
-        statements = new Dictionary<Keyword, bool>();
-        statements.Add(Token.Keyword.LET, true);
-        statements.Add(Token.Keyword.DO, true);
-        statements.Add(Token.Keyword.IF, true);
-        statements.Add(Token.Keyword.ELSE, true);
-        statements.Add(Token.Keyword.WHILE, true);
-        statements.Add(Token.Keyword.FOR, true);
-        statements.Add(Token.Keyword.RETURN, true);
 
         Token.mInitialized = true;
     }
@@ -192,13 +184,6 @@ class Token
     public static bool IsUnaryOp(char c)
     {
         return c == '~' || c == '-';
-    }
-
-    public static bool IsStatement(Keyword keyword)
-    {
-        bool result = false;
-        statements.TryGetValue(keyword, out result);
-        return result;
     }
 
     public static string SymbolString(char c)

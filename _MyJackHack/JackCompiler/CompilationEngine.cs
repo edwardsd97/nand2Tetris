@@ -24,7 +24,7 @@ using System.Collections.Generic;
 
 // STATEMENTS
 // statements: statement*
-// statement: letStatement | ifStatement | whileStatement | forStatement | doStatement | returnStatement | varDec
+// statement: letStatement | ifStatement | whileStatement | forStatement | doStatement | returnStatement | 'continue' | 'break' | varDec
 // letStatement: ('let')? varName ('[' expression ']')? '=' expression ';'
 // ifStatement: 'if' '(' expression ')' ( statement | '{' statements '}' ) ('else' ( statement | '{' statements '}' ) )?
 // whileStatement: 'while' '(' expression ')' ( statement | '{' statements '}' )
@@ -104,7 +104,7 @@ class CompilationEngine
         {
             ClassSpec classSpec = new ClassSpec();
             classSpec.name = mClassName;
-            mClasses.Add( mClassName, classSpec);
+            mClasses.Add(mClassName, classSpec);
         }
 
         mClasses[mClassName].fields = SymbolTable.ScopePush("class");
@@ -162,7 +162,7 @@ class CompilationEngine
     public void Error(string msg = "")
     {
         Token token = mTokens.Get();
-        string line = "ERROR: Line< " + token.lineNumber + " > Char< " + token.lineCharacter + " > " + msg;
+        string line = "ERROR: < " + token.lineNumber + ", " + token.lineCharacter + " > " + msg;
         Console.WriteLine(line);
     }
 
@@ -195,15 +195,15 @@ class CompilationEngine
 
         if (type == typeof(Token.Type) && token.type != (Token.Type)tokenCheck)
         {
-            error = "Expected " + tokenCheck.ToString();
+            error = "Expected " + tokenCheck.ToString() + " at " + tokenString;
         }
         else if (type == typeof(Token.Keyword) && token.keyword != (Token.Keyword)tokenCheck)
         {
-            error = "Expected " + tokenCheck.ToString();
+            error = "Expected " + tokenCheck.ToString() + " at " + tokenString;
         }
         else if (type == typeof(char) && token.symbol != (char)tokenCheck)
         {
-            error = "Expected " + tokenCheck.ToString();
+            error = "Expected " + tokenCheck.ToString() + " at " + tokenString;
         }
 
         if (error != null)
@@ -582,7 +582,7 @@ class CompilationEngine
     {
         // compiles a series of statements without handling the enclosing {}s
 
-        // statement: letStatement | ifStatement | whileStatement | forStatement | doStatement | returnStatement | varDec
+        // statement: letStatement | ifStatement | whileStatement | forStatement | doStatement | returnStatement | 'continue' | 'break' | varDec
 
         returnCompiled = false;
 
@@ -618,6 +618,14 @@ class CompilationEngine
                 CompileStatementLet(true, eatSemiColon);
                 return true;
 
+            case Token.Keyword.CONTINUE:
+                CompileStatementContinue();
+                return true;
+
+            case Token.Keyword.BREAK:
+                CompileStatementBreak();
+                return true;
+
             default:
                 // Check for non-keyword do/let/varDec
                 if (token.keyword == Token.Keyword.VAR || (token.IsType() && tokenNext.type == Token.Type.IDENTIFIER))
@@ -630,7 +638,7 @@ class CompilationEngine
                     CompileStatementLet(false, eatSemiColon);
                     return true;
                 }
-                else if (token.type == Token.Type.IDENTIFIER && tokenNext.symbol == '.' && tokenNextNext.type == Token.Type.IDENTIFIER && (tokenNextNextNext.symbol == '='|| tokenNextNextNext.symbol == '['))
+                else if (token.type == Token.Type.IDENTIFIER && tokenNext.symbol == '.' && tokenNextNext.type == Token.Type.IDENTIFIER && (tokenNextNextNext.symbol == '=' || tokenNextNextNext.symbol == '['))
                 {
                     CompileStatementLet(false, eatSemiColon);
                     return true;
@@ -645,7 +653,7 @@ class CompilationEngine
         }
     }
 
-    public void CompileArrayAddress(string varNameKnown = null )
+    public void CompileArrayAddress(string varNameKnown = null)
     {
         // Push the array indexed address onto stack
         string varName = varNameKnown;
@@ -663,7 +671,7 @@ class CompilationEngine
             ValidateTokenAdvance(Token.Type.IDENTIFIER, out memberName);
         }
 
-        if ( mTokens.Get().symbol == '[' )
+        if (mTokens.Get().symbol == '[')
         {
             ValidateTokenAdvance('[');
             CompileExpression();
@@ -674,7 +682,7 @@ class CompilationEngine
         {
             if (memberName == null)
                 Error("Expected [ after '" + varName + "'");
-            mVMWriter.WritePush(IVMWriter.Segment.CONST, 0 );
+            mVMWriter.WritePush(IVMWriter.Segment.CONST, 0);
         }
 
         if (ValidateSymbol(varName))
@@ -863,6 +871,44 @@ class CompilationEngine
         }
     }
 
+    public void CompileStatementContinue()
+    {
+        // 'continue'
+
+        ValidateTokenAdvance(Token.Keyword.CONTINUE);
+
+        string label = SymbolTable.GetLabelContinue();
+        if (label != null)
+        {
+            mVMWriter.WriteGoto(label);
+        }
+        else
+        {
+            Error( "continue not supported at current scope" );
+        }
+
+        ValidateTokenAdvance(';');
+    }
+
+    public void CompileStatementBreak()
+    {
+        // 'break'
+
+        ValidateTokenAdvance(Token.Keyword.BREAK);
+
+        string label = SymbolTable.GetLabelBreak();
+        if (label != null)
+        {
+            mVMWriter.WriteGoto(label);
+        }
+        else
+        {
+            Error("break not supported at current scope");
+        }
+
+        ValidateTokenAdvance(';');
+    }
+
     public void CompileStatementWhile()
     {
         // whileStatement: 'while' '(' expression ')' ( statement | '{' statements '}' )
@@ -871,6 +917,10 @@ class CompilationEngine
 
         string labelExp = NewFuncFlowLabel("WHILE_EXP");
         string labelEnd = NewFuncFlowLabel("WHILE_END");
+
+        SymbolTable.ScopePush("whileStatement", false);
+
+        SymbolTable.DefineContinueBreak(labelExp, labelEnd);
 
         mVMWriter.WriteLabel(labelExp);
 
@@ -905,6 +955,8 @@ class CompilationEngine
 
         mVMWriter.WriteLabel(labelEnd);
 
+        SymbolTable.ScopePop(); // "whileStatement"
+
     }
 
     public void CompileStatementFor()
@@ -922,6 +974,8 @@ class CompilationEngine
         string labelBody = NewFuncFlowLabel("FOR_BODY");
 
         SymbolTable.ScopePush("forStatement", false);
+
+        SymbolTable.DefineContinueBreak( labelInc, labelEnd );
 
         CompileStatementSingle(out returnCompiled, false);
 
@@ -969,6 +1023,16 @@ class CompilationEngine
         mVMWriter.WriteLabel(labelEnd);
 
         SymbolTable.ScopePop(); // "forStatement"
+    }
+
+    public void CompileStatementSwitch()
+    {
+        // There are several ways to handle a switch statement
+        // Modern compilers often reduce it to a simple if/else if/... sequence as that can be more efficient than allocating a static jump table when the number of cases is small
+        // If the case values are non-sequential it often requires breaking it up into multiple sets and implementations or a binary search
+        // http://lazarenko.me/switch
+
+        // For the purposes of this compiler we will treat all switch statements as an if/else if/... sequence.
     }
 
     public void CompileStatementReturn()
