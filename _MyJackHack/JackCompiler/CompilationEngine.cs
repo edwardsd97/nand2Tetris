@@ -26,13 +26,15 @@ using System.Collections.Generic;
 // statements: statement*
 // statement: letStatement | ifStatement | whileStatement | forStatement | doStatement | returnStatement | 'continue' | 'break' | varDec
 // letStatement: ('let')? varName ('[' expression ']')? '=' expression ';'
+// doStatement: ('do')? subroutineCall ';'
 // ifStatement: 'if' '(' expression ')' ( statement | '{' statements '}' ) ('else' ( statement | '{' statements '}' ) )?
 // whileStatement: 'while' '(' expression ')' ( statement | '{' statements '}' )
 // forStatement: 'for' '(' statement ';' expression; statement ')' ( statement | '{' statements '}' )
-// doStatement: ('do')? subroutineCall ';'
+// switchStatement: 'switch' '(' expression ')' '{' ( ( 'case' expressionConst | 'default' ) ':' ( statement | '{' statements '}' ) )* '}'
 // returnStatement: 'return' expression? ';'
 
 // EXPRESSIONS
+// expressionConst: expression (limited to constant values)
 // expression: term (op term)*
 // opTerm: op term
 // expressionAdd: ',' expression
@@ -177,6 +179,15 @@ class CompilationEngine
         return true;
     }
 
+    public bool ValidateConstTerm( string termType, bool constOnly )
+    {
+        if ( !constOnly )
+            return true;
+
+        Error ("case value cannot use " + termType );
+        return false;
+    }
+
     public Token ValidateTokenAdvance(object tokenCheck)
     {
         string dontCare = "";
@@ -257,7 +268,7 @@ class CompilationEngine
         SymbolTable.ScopePop();
     }
 
-    public void CompileVarDecSet(Token varType, SymbolTable.Kind varKind, bool defineVars = true)
+    public void CompileVarDecSet(Token varType, SymbolTable.Kind varKind)
     {
         do
         {
@@ -266,8 +277,7 @@ class CompilationEngine
             string varName;
             ValidateTokenAdvance(Token.Type.IDENTIFIER, out varName);
 
-            if (defineVars)
-                SymbolTable.Define(varName, varType, varKind);
+            SymbolTable.Define(varName, varType, varKind);
 
             if (mTokens.Get().symbol == '=')
             {
@@ -312,7 +322,7 @@ class CompilationEngine
         return false;
     }
 
-    public bool CompileVarDec(bool eatSemiColon = true, bool defineVars = true)
+    public bool CompileVarDec(bool eatSemiColon = true )
     {
         // handles local variables in a subroutine
         // varDec: 'var'? type varName (',' varName)* ';'
@@ -330,7 +340,7 @@ class CompilationEngine
         {
             Token varType = mTokens.Get();
 
-            CompileVarDecSet(varType, SymbolTable.Kind.VAR, defineVars);
+            CompileVarDecSet(varType, SymbolTable.Kind.VAR);
 
             if (eatSemiColon)
                 ValidateTokenAdvance(';');
@@ -361,30 +371,31 @@ class CompilationEngine
 
             ValidateTokenAdvance(Token.Type.IDENTIFIER, out mFuncName);
 
-            SymbolTable.ScopePush("function", funcCallType == Token.Keyword.METHOD);
-
             ValidateTokenAdvance('(');
-
-            List<Token> parameterTypes = CompileParameterList();
-
-            ValidateTokenAdvance(')');
-
-            ValidateTokenAdvance('{');
 
             //////////////////////////////////////////////////////////////////////////
             // pre-compile statements to find peak local var space needed
+            SymbolTable.ScopePush("function", funcCallType == Token.Keyword.METHOD);
             Tokenizer.State tokenStart = null;
             int localVarSize = 0;
             tokenStart = mTokens.StateGet();
+            List<Token> parameterTypes = CompileParameterList();
+            ValidateTokenAdvance(')');
+            ValidateTokenAdvance('{');
             mVMWriter.Disable();
             SymbolTable.VarSizeBegin();
-            CompileStatements(true);
+            CompileStatements();
             localVarSize = SymbolTable.VarSizeEnd();
+            SymbolTable.ScopePop(); // "function"
 
             //////////////////////////////////////////////////////////////////////////
             // Rewind tokenizer and compile the function ignoring root level var declarations
+            SymbolTable.ScopePush("function", funcCallType == Token.Keyword.METHOD);
             mTokens.StateSet(tokenStart);
             mVMWriter.Enable();
+            parameterTypes = CompileParameterList();
+            ValidateTokenAdvance(')');
+            ValidateTokenAdvance('{');
 
             // Compile function beginning
             mVMWriter.WriteFunction(mClassName + "." + mFuncName, localVarSize);
@@ -413,7 +424,7 @@ class CompilationEngine
                 CompileStaticStrings();
             }
 
-            bool compiledReturn = CompileStatements(false);
+            bool compiledReturn = CompileStatements();
 
             FuncSpec funcSpec;
             if (CompilationEngine.mFunctions.TryGetValue(mClassName + "." + mFuncName, out funcSpec))
@@ -560,7 +571,7 @@ class CompilationEngine
         return result;
     }
 
-    public bool CompileStatements(bool defineVars = true)
+    public bool CompileStatements()
     {
         // compiles a series of statements without handling the enclosing {}s
 
@@ -569,7 +580,7 @@ class CompilationEngine
         bool resultReturnCompiled = false;
         bool returnCompiled = false;
 
-        while (CompileStatementSingle(out returnCompiled, true, defineVars))
+        while (CompileStatementSingle(out returnCompiled, true))
         {
             // keep compiling more statements
             resultReturnCompiled = resultReturnCompiled || returnCompiled;
@@ -578,7 +589,7 @@ class CompilationEngine
         return resultReturnCompiled;
     }
 
-    public bool CompileStatementSingle(out bool returnCompiled, bool eatSemiColon = true, bool defineVars = true)
+    public bool CompileStatementSingle(out bool returnCompiled, bool eatSemiColon = true)
     {
         // compiles a series of statements without handling the enclosing {}s
 
@@ -603,6 +614,10 @@ class CompilationEngine
 
             case Token.Keyword.FOR:
                 CompileStatementFor();
+                return true;
+
+            case Token.Keyword.SWITCH:
+                CompileStatementSwitch();
                 return true;
 
             case Token.Keyword.RETURN:
@@ -630,7 +645,7 @@ class CompilationEngine
                 // Check for non-keyword do/let/varDec
                 if (token.keyword == Token.Keyword.VAR || (token.IsType() && tokenNext.type == Token.Type.IDENTIFIER))
                 {
-                    CompileVarDec(eatSemiColon, defineVars);
+                    CompileVarDec(eatSemiColon);
                     return true;
                 }
                 else if (token.type == Token.Type.IDENTIFIER && (tokenNext.symbol == '=' || tokenNext.symbol == '['))
@@ -1027,12 +1042,142 @@ class CompilationEngine
 
     public void CompileStatementSwitch()
     {
+        // switchStatement: 'switch' '(' expression ')' '{' ( ( 'case' expressionConst | 'default' ) ':' ( statement | '{' statements '}' ) )* '}'
+
         // There are several ways to handle a switch statement
         // Modern compilers often reduce it to a simple if/else if/... sequence as that can be more efficient than allocating a static jump table when the number of cases is small
         // If the case values are non-sequential it often requires breaking it up into multiple sets and implementations or a binary search
         // http://lazarenko.me/switch
 
-        // For the purposes of this compiler we will treat all switch statements as an if/else if/... sequence.
+        // ** For the purposes of this compiler we will treat all switch statements as an if/else if/.... **
+
+        ValidateTokenAdvance(Token.Keyword.SWITCH);
+
+        string labelEnd = NewFuncFlowLabel("SWITCH_END");
+        List<string> caseLabels = new List<string>();
+        List<Stream> caseExpressions = new List<Stream>();
+        List<Stream> caseStatements = new List<Stream>();
+        int caseLabelIndex = -1;
+        int defaultLabelIndex = -1;
+
+        SymbolTable.ScopePush("switchStatement", false);
+
+        SymbolTable.DefineContinueBreak( null, labelEnd );
+
+        ValidateTokenAdvance('(');
+        CompileExpression();
+        ValidateTokenAdvance(')');
+
+        ValidateTokenAdvance('{');
+
+        // Hold the switch input index in a temp register
+        mVMWriter.WritePop( IVMWriter.Segment.TEMP, 0 );
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // pre-compile to find out all the cases needed and generate code for each expression and statements body
+        while (mTokens.Get().keyword == Token.Keyword.CASE || mTokens.Get().keyword == Token.Keyword.DEFAULT)
+        {
+            bool wrapped = false;
+            bool isDefault = mTokens.Get().keyword == Token.Keyword.DEFAULT;
+
+            mTokens.Advance();
+
+            caseLabelIndex = caseLabelIndex + 1;
+
+            // Generate a new case label
+            caseLabels.Add(NewFuncFlowLabel("SWITCH_CASE"));
+
+            // Compile case expression to a memory file
+            // FIXME: this should be evaluating the expression in the compiler and only using constant values
+            MemoryStream memFile = new MemoryStream();
+            mVMWriter.OutputPush(memFile);
+
+            if (!isDefault)
+            {
+                // compile expression made up of only constants
+                CompileExpression(null, true);
+            }
+            else if (isDefault && defaultLabelIndex >= 0)
+            {
+                Error("Only one default case allowed");
+            }
+            else if (isDefault)
+            {
+                defaultLabelIndex = caseLabelIndex;
+            }
+
+            mVMWriter.OutputPop();
+
+            caseExpressions.Add( memFile );
+
+            ValidateTokenAdvance(':');
+
+            // Compile case statements to a memory file
+            memFile = new MemoryStream();
+            mVMWriter.OutputPush(memFile);
+
+            if (mTokens.Get().symbol == '{')
+            {
+                ValidateTokenAdvance('{');
+                SymbolTable.ScopePush("case", false);
+                wrapped = true;
+            }
+
+            CompileStatements();
+
+            if (wrapped)
+            {
+                ValidateTokenAdvance('}');
+                SymbolTable.ScopePop(); // "case"
+            }
+
+            mVMWriter.OutputPop();
+
+            caseStatements.Add( memFile);
+        }
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // compile out the expressions and statement bodies appropriately
+        for ( caseLabelIndex = 0;  caseLabelIndex < caseLabels.Count; caseLabelIndex++ )
+        {
+            if( caseLabelIndex != defaultLabelIndex )
+            {
+                // switch( expression )
+                mVMWriter.WritePush(IVMWriter.Segment.TEMP, 0);
+
+                // case expression:
+                mVMWriter.WriteStream(caseExpressions[caseLabelIndex]);
+
+                // is equal?
+                mVMWriter.WriteArithmetic(IVMWriter.Command.EQ);
+
+                // then goto that case label
+                mVMWriter.WriteIfGoto(caseLabels[caseLabelIndex]);
+            }
+        }
+
+        if (defaultLabelIndex >= 0)
+        {
+            // default: 
+            mVMWriter.WriteGoto(caseLabels[defaultLabelIndex]);
+        }
+        else
+        {
+            mVMWriter.WriteGoto(labelEnd);
+        }
+
+        // Then write out the statement code with labels
+        for (caseLabelIndex = 0; caseLabelIndex < caseLabels.Count; caseLabelIndex++)
+        {
+            mVMWriter.WriteLabel(caseLabels[caseLabelIndex]);
+            mVMWriter.WriteStream(caseStatements[caseLabelIndex]);
+        }
+
+        ValidateTokenAdvance('}');
+
+        mVMWriter.WriteLabel( labelEnd );
+
+        SymbolTable.ScopePop(); // "switchStatement"
     }
 
     public void CompileStatementReturn()
@@ -1119,7 +1264,7 @@ class CompilationEngine
         }
     }
 
-    public bool CompileExpression(List<object> expressionTerms = null)
+    public bool CompileExpression(List<object> expressionTerms = null, bool constOnly = false )
     {
         // Grammar:
         // ---------
@@ -1137,7 +1282,7 @@ class CompilationEngine
         MemoryStream memFile = new MemoryStream();
         mVMWriter.OutputPush(memFile);
 
-        bool compiledExpression = CompileTerm();
+        bool compiledExpression = CompileTerm( constOnly );
 
         mVMWriter.OutputPop();
 
@@ -1152,7 +1297,7 @@ class CompilationEngine
                 expressionTerms.Add(token.symbol);
 
                 mTokens.Advance();
-                CompileExpression(expressionTerms);
+                CompileExpression(expressionTerms, constOnly);
             }
         }
 
@@ -1296,7 +1441,7 @@ class CompilationEngine
         }
     }
 
-    public bool CompileTerm()
+    public bool CompileTerm( bool constOnly = false )
     {
         // term: ( expressionParenth | unaryTerm | string_const | int_const | keywordConstant | subroutineCall | arrayValue | classMember | classArrayValue | identifier )
         // expressionParenth: '(' expression ')
@@ -1377,36 +1522,42 @@ class CompilationEngine
         else if (token.type == Token.Type.STRING_CONST)
         {
             // string constant: e.g. "string constant"
+            ValidateConstTerm( "string constant", constOnly );
             CompileStringConst();
             return true;
         }
         else if (token.type == Token.Type.IDENTIFIER && tokenNext.symbol == '.' && tokenNextNext.type == Token.Type.IDENTIFIER && tokenNextNextNext.symbol == '[')
         {
             // arrayValue: varName ('.' varName)? '[' expression ']'
+            ValidateConstTerm("array value", constOnly);
             CompileArrayValue();
             return true;
         }
         else if (token.type == Token.Type.IDENTIFIER && tokenNext.symbol == '.' && tokenNextNext.type == Token.Type.IDENTIFIER && tokenNextNextNext.symbol != '(')
         {
             // classMember: varName '.' varName
+            ValidateConstTerm("class field", constOnly);
             CompileClassMember();
             return true;
         }
         else if (token.type == Token.Type.IDENTIFIER && (tokenNext.symbol == '.' || tokenNext.symbol == '('))
         {
             // subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')
+            ValidateConstTerm("function call", constOnly);
             CompileSubroutineCall();
             return true;
         }
         else if (token.type == Token.Type.IDENTIFIER && tokenNext.symbol == '[')
         {
             // arrayValue: varName ('.' varName)? '[' expression ']'
+            ValidateConstTerm("array value", constOnly);
             CompileArrayValue();
             return true;
         }
         else if (token.type == Token.Type.IDENTIFIER && SymbolTable.Exists(token.identifier))
         {
             // varName
+            ValidateConstTerm("variable", constOnly);
             if (ValidateSymbol(token.identifier))
                 mVMWriter.WritePush(SymbolTable.SegmentOf(token.identifier), SymbolTable.OffsetOf(token.identifier));
             mTokens.Advance();
@@ -1430,6 +1581,7 @@ class CompilationEngine
         else if (token.type == Token.Type.KEYWORD && token.keyword == Token.Keyword.THIS)
         {
             // this
+            ValidateConstTerm("this", constOnly);
             mVMWriter.WritePush(IVMWriter.Segment.POINTER, 0);
             mTokens.Advance();
             return true;

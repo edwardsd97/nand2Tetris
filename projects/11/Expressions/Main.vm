@@ -1,28 +1,64 @@
-function Main.main 2
-/* Static String Allocation (Inserted by the compiler at the beginning of Main.main) */
-push constant 21
-call String.staticAlloc 1
-// "ERR<"
-push constant 4
-call String.new 1
-push constant 69
-call String.appendChar 2
-push constant 82
-call String.appendChar 2
-push constant 82
-call String.appendChar 2
-push constant 60
-call String.appendChar 2
+function Main.main 1
 push constant 0
-call String.staticSet 2
-// ">"
+pop local 0
+label Main_main_FOR_EXP_L2
+push local 0
+push constant 4
+lt
+if-goto Main_main_FOR_BODY_L2
+goto Main_main_FOR_END_L2
+label Main_main_FOR_INC_L2
+push local 0
+push constant 1
+add
+pop local 0
+goto Main_main_FOR_EXP_L2
+label Main_main_FOR_BODY_L2
+push local 0
+pop temp 0
+push temp 0
+push constant 0
+eq
+if-goto Main_main_SWITCH_CASE_L4
+push temp 0
+push constant 1
+eq
+if-goto Main_main_SWITCH_CASE_L5
+goto Main_main_SWITCH_CASE_L6
+label Main_main_SWITCH_CASE_L4
 push constant 1
 call String.new 1
-push constant 62
+push constant 48
 call String.appendChar 2
+call Output.printString 1
+pop temp 0
+label Main_main_SWITCH_CASE_L5
 push constant 1
-call String.staticSet 2
-// "5 + 6 * 2"
+call String.new 1
+push constant 49
+call String.appendChar 2
+call Output.printString 1
+pop temp 0
+goto Main_main_SWITCH_END_L2
+label Main_main_SWITCH_CASE_L6
+push constant 1
+call String.new 1
+push constant 100
+call String.appendChar 2
+call Output.printString 1
+pop temp 0
+goto Main_main_SWITCH_END_L2
+label Main_main_SWITCH_END_L2
+call Output.println 0
+pop temp 0
+goto Main_main_FOR_INC_L2
+label Main_main_FOR_END_L2
+push constant 6
+push constant 2
+call Math.multiply 2
+push constant 5
+add
+pop local 0
 push constant 9
 call String.new 1
 push constant 53
@@ -43,9 +79,18 @@ push constant 32
 call String.appendChar 2
 push constant 50
 call String.appendChar 2
+push local 0
+push constant 17
+call Main.Compare 3
+pop temp 0
 push constant 2
-call String.staticSet 2
-// "5 < 2 * 2 + 1"
+push constant 2
+call Math.multiply 2
+push constant 5
+lt
+push constant 1
+add
+pop local 0
 push constant 13
 call String.new 1
 push constant 53
@@ -74,9 +119,18 @@ push constant 32
 call String.appendChar 2
 push constant 49
 call String.appendChar 2
-push constant 3
-call String.staticSet 2
-// "5 < 2 * 2 + 2"
+push local 0
+push constant 0
+call Main.Compare 3
+pop temp 0
+push constant 2
+push constant 2
+call Math.multiply 2
+push constant 5
+lt
+push constant 2
+add
+pop local 0
 push constant 13
 call String.new 1
 push constant 53
@@ -105,9 +159,20 @@ push constant 32
 call String.appendChar 2
 push constant 50
 call String.appendChar 2
-push constant 4
-call String.staticSet 2
-// "2 + 3 = 2 * 2 + 1"
+push local 0
+push constant 1
+call Main.Compare 3
+pop temp 0
+push constant 2
+push constant 3
+add
+push constant 2
+push constant 2
+call Math.multiply 2
+eq
+push constant 1
+add
+pop local 0
 push constant 17
 call String.new 1
 push constant 50
@@ -144,9 +209,18 @@ push constant 32
 call String.appendChar 2
 push constant 49
 call String.appendChar 2
-push constant 5
-call String.staticSet 2
-// "1 + 2 + 3 * 4"
+push local 0
+push constant 1
+call Main.Compare 3
+pop temp 0
+push constant 1
+push constant 2
+add
+push constant 3
+push constant 4
+call Math.multiply 2
+add
+pop local 0
 push constant 13
 call String.new 1
 push constant 49
@@ -175,9 +249,18 @@ push constant 32
 call String.appendChar 2
 push constant 52
 call String.appendChar 2
-push constant 6
-call String.staticSet 2
-// "1 + 2 * 3 + 4"
+push local 0
+push constant 15
+call Main.Compare 3
+pop temp 0
+push constant 2
+push constant 3
+call Math.multiply 2
+push constant 1
+add
+push constant 4
+add
+pop local 0
 push constant 13
 call String.new 1
 push constant 49
@@ -206,9 +289,18 @@ push constant 32
 call String.appendChar 2
 push constant 52
 call String.appendChar 2
-push constant 7
-call String.staticSet 2
-// "1 * 2 + 3 + 4"
+push local 0
+push constant 11
+call Main.Compare 3
+pop temp 0
+push constant 1
+push constant 2
+call Math.multiply 2
+push constant 3
+add
+push constant 4
+add
+pop local 0
 push constant 13
 call String.new 1
 push constant 49
@@ -237,40 +329,62 @@ push constant 32
 call String.appendChar 2
 push constant 52
 call String.appendChar 2
-push constant 8
-call String.staticSet 2
-// "1 * 2 + 3 * 4"
-push constant 13
-call String.new 1
-push constant 49
-call String.appendChar 2
-push constant 32
-call String.appendChar 2
-push constant 42
-call String.appendChar 2
-push constant 32
-call String.appendChar 2
-push constant 50
-call String.appendChar 2
-push constant 32
-call String.appendChar 2
-push constant 43
-call String.appendChar 2
-push constant 32
-call String.appendChar 2
-push constant 51
-call String.appendChar 2
-push constant 32
-call String.appendChar 2
-push constant 42
-call String.appendChar 2
-push constant 32
-call String.appendChar 2
-push constant 52
-call String.appendChar 2
+push local 0
 push constant 9
-call String.staticSet 2
-// "2 + 2 * 2 + 2 / 2 + 2"
+call Main.Compare 3
+pop temp 0
+push constant 1
+push constant 2
+call Math.multiply 2
+push constant 3
+push constant 4
+call Math.multiply 2
+add
+pop local 0
+push constant 13
+call String.new 1
+push constant 49
+call String.appendChar 2
+push constant 32
+call String.appendChar 2
+push constant 42
+call String.appendChar 2
+push constant 32
+call String.appendChar 2
+push constant 50
+call String.appendChar 2
+push constant 32
+call String.appendChar 2
+push constant 43
+call String.appendChar 2
+push constant 32
+call String.appendChar 2
+push constant 51
+call String.appendChar 2
+push constant 32
+call String.appendChar 2
+push constant 42
+call String.appendChar 2
+push constant 32
+call String.appendChar 2
+push constant 52
+call String.appendChar 2
+push local 0
+push constant 14
+call Main.Compare 3
+pop temp 0
+push constant 2
+push constant 2
+call Math.multiply 2
+push constant 2
+add
+push constant 2
+push constant 2
+call Math.divide 2
+add
+push constant 2
+add
+pop local 0
 push constant 21
 call String.new 1
 push constant 50
@@ -315,9 +429,22 @@ push constant 32
 call String.appendChar 2
 push constant 50
 call String.appendChar 2
-push constant 10
-call String.staticSet 2
-// "5 < 4 | 8 < 7 | 9 < 8"
+push local 0
+push constant 9
+call Main.Compare 3
+pop temp 0
+push constant 5
+push constant 4
+lt
+push constant 8
+push constant 7
+lt
+or
+push constant 9
+push constant 8
+lt
+or
+pop local 0
 push constant 21
 call String.new 1
 push constant 53
@@ -362,9 +489,22 @@ push constant 32
 call String.appendChar 2
 push constant 56
 call String.appendChar 2
-push constant 11
-call String.staticSet 2
-// "5 < 4 | 8 < 9 | 9 < 8"
+push local 0
+push constant 0
+call Main.Compare 3
+pop temp 0
+push constant 5
+push constant 4
+lt
+push constant 8
+push constant 9
+lt
+or
+push constant 9
+push constant 8
+lt
+or
+pop local 0
 push constant 21
 call String.new 1
 push constant 53
@@ -409,9 +549,19 @@ push constant 32
 call String.appendChar 2
 push constant 56
 call String.appendChar 2
-push constant 12
-call String.staticSet 2
-// "6 / 2 = 1 + 2"
+push local 0
+push constant 1
+neg
+call Main.Compare 3
+pop temp 0
+push constant 6
+push constant 2
+call Math.divide 2
+push constant 1
+push constant 2
+add
+eq
+pop local 0
 push constant 13
 call String.new 1
 push constant 54
@@ -440,9 +590,19 @@ push constant 32
 call String.appendChar 2
 push constant 50
 call String.appendChar 2
-push constant 13
-call String.staticSet 2
-// "5 > 4 & 4 < 5"
+push local 0
+push constant 1
+neg
+call Main.Compare 3
+pop temp 0
+push constant 5
+push constant 4
+gt
+push constant 4
+push constant 5
+lt
+and
+pop local 0
 push constant 13
 call String.new 1
 push constant 53
@@ -471,9 +631,27 @@ push constant 32
 call String.appendChar 2
 push constant 53
 call String.appendChar 2
-push constant 14
-call String.staticSet 2
-// "3 + 3 > 2 * 2 & 2 * 2 + 1 < 6"
+push local 0
+push constant 1
+neg
+call Main.Compare 3
+pop temp 0
+push constant 3
+push constant 3
+add
+push constant 2
+push constant 2
+call Math.multiply 2
+gt
+push constant 2
+push constant 2
+call Math.multiply 2
+and
+push constant 1
+add
+push constant 6
+lt
+pop local 0
 push constant 29
 call String.new 1
 push constant 51
@@ -534,9 +712,19 @@ push constant 32
 call String.appendChar 2
 push constant 54
 call String.appendChar 2
-push constant 15
-call String.staticSet 2
-// "(correct) "
+push local 0
+push constant 1
+neg
+call Main.Compare 3
+pop temp 0
+return
+function Main.Compare 0
+push argument 1
+push argument 2
+eq
+if-goto Main_Compare_IF_TRUE_L3
+goto Main_Compare_IF_FALSE_L3
+label Main_Compare_IF_TRUE_L3
 push constant 10
 call String.new 1
 push constant 40
@@ -559,9 +747,10 @@ push constant 41
 call String.appendChar 2
 push constant 32
 call String.appendChar 2
-push constant 16
-call String.staticSet 2
-// "* WRONG * "
+call Output.printString 1
+pop temp 0
+goto Main_Compare_IF_END_L2
+label Main_Compare_IF_FALSE_L3
 push constant 10
 call String.new 1
 push constant 42
@@ -584,9 +773,12 @@ push constant 42
 call String.appendChar 2
 push constant 32
 call String.appendChar 2
-push constant 17
-call String.staticSet 2
-// " = "
+call Output.printString 1
+pop temp 0
+label Main_Compare_IF_END_L2
+push argument 0
+call Output.printString 1
+pop temp 0
 push constant 3
 call String.new 1
 push constant 32
@@ -595,9 +787,18 @@ push constant 61
 call String.appendChar 2
 push constant 32
 call String.appendChar 2
-push constant 18
-call String.staticSet 2
-// " (expected "
+call Output.printString 1
+pop temp 0
+push argument 1
+call Output.printInt 1
+pop temp 0
+push argument 1
+push argument 2
+eq
+not
+if-goto Main_Compare_IF_TRUE_L4
+goto Main_Compare_IF_FALSE_L4
+label Main_Compare_IF_TRUE_L4
 push constant 11
 call String.new 1
 push constant 32
@@ -622,361 +823,18 @@ push constant 100
 call String.appendChar 2
 push constant 32
 call String.appendChar 2
-push constant 19
-call String.staticSet 2
-// ")"
+call Output.printString 1
+pop temp 0
+push argument 2
+call Output.printInt 1
+pop temp 0
 push constant 1
 call String.new 1
 push constant 41
 call String.appendChar 2
-push constant 20
-call String.staticSet 2
-/* Main.main statements begin ... */
-push constant 0
-pop local 1
-label Main_main_FOR_EXP_L2
-push local 1
-push constant 6
-lt
-if-goto Main_main_FOR_BODY_L2
-goto Main_main_FOR_END_L2
-label Main_main_FOR_INC_L2
-push local 1
-push constant 1
-add
-pop local 1
-goto Main_main_FOR_EXP_L2
-label Main_main_FOR_BODY_L2
-push local 1
-push constant 3
-eq
-if-goto Main_main_IF_TRUE_L5
-goto Main_main_IF_FALSE_L5
-label Main_main_IF_TRUE_L5
-goto Main_main_FOR_INC_L2
-label Main_main_IF_FALSE_L5
-push local 1
-push constant 5
-eq
-if-goto Main_main_IF_TRUE_L6
-goto Main_main_IF_FALSE_L6
-label Main_main_IF_TRUE_L6
-goto Main_main_FOR_END_L2
-label Main_main_IF_FALSE_L6
-push local 1
-call Output.printInt 1
-pop temp 0
-goto Main_main_FOR_INC_L2
-label Main_main_FOR_END_L2
-call Output.println 0
-pop temp 0
-push constant 0
-pop local 0
-label Main_main_WHILE_EXP_L2
-push local 0
-push constant 6
-lt
-not
-if-goto Main_main_WHILE_END_L2
-push local 0
-push constant 3
-eq
-if-goto Main_main_IF_TRUE_L7
-goto Main_main_IF_FALSE_L7
-label Main_main_IF_TRUE_L7
-push local 0
-push constant 1
-add
-pop local 0
-goto Main_main_WHILE_EXP_L2
-label Main_main_IF_FALSE_L7
-push local 0
-push constant 5
-eq
-if-goto Main_main_IF_TRUE_L8
-goto Main_main_IF_FALSE_L8
-label Main_main_IF_TRUE_L8
-goto Main_main_WHILE_END_L2
-label Main_main_IF_FALSE_L8
-push local 0
-call Output.printInt 1
-pop temp 0
-push local 0
-push constant 1
-add
-pop local 0
-goto Main_main_WHILE_EXP_L2
-label Main_main_WHILE_END_L2
-call Output.println 0
-pop temp 0
-push constant 6
-push constant 2
-call Math.multiply 2
-push constant 5
-add
-pop local 0
-push constant 2
-call String.staticGet 1
-push local 0
-push constant 17
-call Main.Compare 3
-pop temp 0
-push constant 2
-push constant 2
-call Math.multiply 2
-push constant 5
-lt
-push constant 1
-add
-pop local 0
-push constant 3
-call String.staticGet 1
-push local 0
-push constant 0
-call Main.Compare 3
-pop temp 0
-push constant 2
-push constant 2
-call Math.multiply 2
-push constant 5
-lt
-push constant 2
-add
-pop local 0
-push constant 4
-call String.staticGet 1
-push local 0
-push constant 1
-call Main.Compare 3
-pop temp 0
-push constant 2
-push constant 3
-add
-push constant 2
-push constant 2
-call Math.multiply 2
-eq
-push constant 1
-add
-pop local 0
-push constant 5
-call String.staticGet 1
-push local 0
-push constant 1
-call Main.Compare 3
-pop temp 0
-push constant 1
-push constant 2
-add
-push constant 3
-push constant 4
-call Math.multiply 2
-add
-pop local 0
-push constant 6
-call String.staticGet 1
-push local 0
-push constant 15
-call Main.Compare 3
-pop temp 0
-push constant 2
-push constant 3
-call Math.multiply 2
-push constant 1
-add
-push constant 4
-add
-pop local 0
-push constant 7
-call String.staticGet 1
-push local 0
-push constant 11
-call Main.Compare 3
-pop temp 0
-push constant 1
-push constant 2
-call Math.multiply 2
-push constant 3
-add
-push constant 4
-add
-pop local 0
-push constant 8
-call String.staticGet 1
-push local 0
-push constant 9
-call Main.Compare 3
-pop temp 0
-push constant 1
-push constant 2
-call Math.multiply 2
-push constant 3
-push constant 4
-call Math.multiply 2
-add
-pop local 0
-push constant 9
-call String.staticGet 1
-push local 0
-push constant 14
-call Main.Compare 3
-pop temp 0
-push constant 2
-push constant 2
-call Math.multiply 2
-push constant 2
-add
-push constant 2
-push constant 2
-call Math.divide 2
-add
-push constant 2
-add
-pop local 0
-push constant 10
-call String.staticGet 1
-push local 0
-push constant 9
-call Main.Compare 3
-pop temp 0
-push constant 5
-push constant 4
-lt
-push constant 8
-push constant 7
-lt
-or
-push constant 9
-push constant 8
-lt
-or
-pop local 0
-push constant 11
-call String.staticGet 1
-push local 0
-push constant 0
-call Main.Compare 3
-pop temp 0
-push constant 5
-push constant 4
-lt
-push constant 8
-push constant 9
-lt
-or
-push constant 9
-push constant 8
-lt
-or
-pop local 0
-push constant 12
-call String.staticGet 1
-push local 0
-push constant 1
-neg
-call Main.Compare 3
-pop temp 0
-push constant 6
-push constant 2
-call Math.divide 2
-push constant 1
-push constant 2
-add
-eq
-pop local 0
-push constant 13
-call String.staticGet 1
-push local 0
-push constant 1
-neg
-call Main.Compare 3
-pop temp 0
-push constant 5
-push constant 4
-gt
-push constant 4
-push constant 5
-lt
-and
-pop local 0
-push constant 14
-call String.staticGet 1
-push local 0
-push constant 1
-neg
-call Main.Compare 3
-pop temp 0
-push constant 3
-push constant 3
-add
-push constant 2
-push constant 2
-call Math.multiply 2
-gt
-push constant 2
-push constant 2
-call Math.multiply 2
-and
-push constant 1
-add
-push constant 6
-lt
-pop local 0
-push constant 15
-call String.staticGet 1
-push local 0
-push constant 1
-neg
-call Main.Compare 3
-pop temp 0
-return
-function Main.Compare 0
-push argument 1
-push argument 2
-eq
-if-goto Main_Compare_IF_TRUE_L11
-goto Main_Compare_IF_FALSE_L11
-label Main_Compare_IF_TRUE_L11
-push constant 16
-call String.staticGet 1
 call Output.printString 1
 pop temp 0
-goto Main_Compare_IF_END_L2
-label Main_Compare_IF_FALSE_L11
-push constant 17
-call String.staticGet 1
-call Output.printString 1
-pop temp 0
-label Main_Compare_IF_END_L2
-push argument 0
-call Output.printString 1
-pop temp 0
-push constant 18
-call String.staticGet 1
-call Output.printString 1
-pop temp 0
-push argument 1
-call Output.printInt 1
-pop temp 0
-push argument 1
-push argument 2
-eq
-not
-if-goto Main_Compare_IF_TRUE_L12
-goto Main_Compare_IF_FALSE_L12
-label Main_Compare_IF_TRUE_L12
-push constant 19
-call String.staticGet 1
-call Output.printString 1
-pop temp 0
-push argument 2
-call Output.printInt 1
-pop temp 0
-push constant 20
-call String.staticGet 1
-call Output.printString 1
-pop temp 0
-label Main_Compare_IF_FALSE_L12
+label Main_Compare_IF_FALSE_L4
 call Output.println 0
 pop temp 0
 return

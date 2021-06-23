@@ -18,6 +18,7 @@ class Token
         INT, BOOL, CHAR, VOID,
         VAR, STATIC, FIELD, LET,
         DO, IF, ELSE, WHILE, FOR, CONTINUE, BREAK,
+        SWITCH, CASE, DEFAULT,
         RETURN, TRUE, FALSE, NULL,
         THIS
     };
@@ -62,6 +63,9 @@ class Token
         strToKeyword.Add("for", Token.Keyword.FOR);
         strToKeyword.Add("continue", Token.Keyword.CONTINUE);
         strToKeyword.Add("break", Token.Keyword.BREAK);
+        strToKeyword.Add("switch", Token.Keyword.SWITCH);
+        strToKeyword.Add("case", Token.Keyword.CASE);
+        strToKeyword.Add("default", Token.Keyword.DEFAULT);
         strToKeyword.Add("return", Token.Keyword.RETURN);
         strToKeyword.Add("true", Token.Keyword.TRUE);
         strToKeyword.Add("false", Token.Keyword.FALSE);
@@ -78,7 +82,7 @@ class Token
         symbols.Add('{', "{"); symbols.Add('}', "}");
         symbols.Add('[', "["); symbols.Add(']', "]");
         symbols.Add('(', "("); symbols.Add(')', ")");
-        symbols.Add('.', "."); symbols.Add(',', ","); symbols.Add(';', ";");
+        symbols.Add('.', "."); symbols.Add(',', ","); symbols.Add(';', ";"); symbols.Add(':', ":");
         symbols.Add('+', "+"); symbols.Add('-', "-");
         symbols.Add('*', "*"); symbols.Add('/', "/");
         symbols.Add('&', "&amp;"); symbols.Add('|', "|");
