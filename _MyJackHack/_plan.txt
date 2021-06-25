@@ -10,13 +10,12 @@ Jack language extensions
 [x] allow class variable declarations without "field"
 [x] allow variable declarations to also assign them to initial values (treat as let statement) int x = 5;
 [x] allow function variable declarations while compiling any statement (push and pop symbol table scope within each {} )
-[x] support operator priority ( 5 + 6 * 2 ) should be 17 not 22
+[x] support operator precedence ( 5 + 6 * 2 ) should be 17 not 22
 [x] allow class field read/write without accessor functions: object.fieldValue = 5; x = object.fieldArray[3];
 [x] add support for 'continue' and 'break' commands inside a for/while
-[x] add support for switch statements (non-optimized)
-[ ] allow multiple classes per file
+[x] add support for switch (case/default/break) statements (non-optimized)
 [ ] add object inheritance - requires virtual objects to have a function table pointer built in
-[ ] OS implement Memory.deFrag()
+[ ] OS implement Memory.deFrag() (low priority)
 [ ] optimize switch statements with a jump table when appropriate (low priority)
 
 VM projects
@@ -25,6 +24,7 @@ VM projects
    (useful as a script language for any game with a sufficient game interface OS)
 [ ] allow class static variable read/write without accessor functions: ClassName.staticField = 5; x = ClassName.staticArray[1];
     (oddly this requires a fresh VM machine as the default one requires that each class have its own isolated statics)
+[ ] allow multiple classes per file
 [ ] make int type 32 bit
 [ ] add support for 32 bit float type
 

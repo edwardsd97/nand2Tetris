@@ -1,0 +1,238 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/String.jack
+
+/**
+ * Represents character strings. In addition for constructing and disposing
+ * strings, the class features methods for getting and setting individual
+ * characters of the string, for erasing the string's last character,
+ * for appending a character to the string's end, and more typical
+ * string-oriented operations.
+ */
+class String 
+{
+    static Array mStaticStrings;
+
+    field Array mStr;
+    field int mLen;
+    field int mLenMax;
+
+    /** constructs a new empty string with a maximum length of maxLength
+     *  and initial length of 0. */
+    constructor String new(int maxLength) 
+    {
+        let mLenMax = maxLength;
+        let mLen = 0;
+        let mStr = 0;
+
+        if ( mLenMax > 0 )
+        {
+            let mStr = Array.new( mLenMax );
+        }
+
+        return this;
+    }
+
+    /** Allocates the set of static strings to be set later */
+    function void staticAlloc(int staticStrCount) 
+    {
+        let mStaticStrings = Array.new( staticStrCount );
+        return;
+    }
+
+    /** Sets a static string by index */
+    function void staticSet(String value, int staticIndex ) 
+    {
+        let mStaticStrings[staticIndex] = value;
+        return;
+    }
+
+    /** Gets a static string by index */
+    function int staticGet(int staticIndex ) 
+    {
+        return mStaticStrings[staticIndex];
+    }
+
+    /** Disposes this string. */
+    method void dispose() 
+    {
+        if ( ~(mStr = null) )
+        {
+            do Memory.deAlloc( mStr );
+            let mStr = null;
+        }
+        return;
+    }
+
+    /** Returns the current length of this string. */
+    method int length() 
+    {
+        return mLen;
+    }
+
+    /** Returns the character at the j-th location of this string. */
+    method char charAt(int j) 
+    {
+        if ( ( j > -1 ) & ( j < mLen ) )
+        {
+            return mStr[j];
+        }
+
+        return 0;
+    }
+
+    /** Sets the character at the j-th location of this string to c. */
+    method void setCharAt(int j, char c) 
+    {
+        if ( ( j > -1 ) & ( j < mLen ) )
+        {
+            let mStr[j] = c;
+        }
+        return;
+    }
+
+    /** Appends c to this string's end and returns this string. */
+    method String appendChar(char c) 
+    {
+        if ( mLen < mLenMax )
+        {
+            let mStr[mLen] = c;
+            let mLen = mLen + 1;
+        }
+
+        return this;
+    }
+
+    /** Appends string to this string's end and returns this string. */
+    method String append(String s) 
+    {
+        var int i;
+        var int sLen;
+
+        let i = 0;
+        let sLen = s.length();
+
+        while ( ( mLen < mLenMax ) & ( i < sLen ) )
+        {
+            let mStr[mLen] = s.charAt( i );
+            let mLen = mLen + 1;
+            let i = i + 1;
+        }
+
+        return this;
+    }
+
+    /** Erases the last character from this string. */
+    method void eraseLastChar() 
+    {
+        if ( mLen > 0 )
+        {
+            let mLen = mLen - 1;
+        }
+        return;
+    }
+
+    /** Returns the integer value of this string, 
+     *  until a non-digit character is detected. */
+    method int intValue() 
+    {
+        var int c;
+        var int result;
+        var int mult;
+        var int sc;
+
+        let c = mLen - 1;
+        let result = 0;
+        let mult = 1;
+
+        while ( c > -1 )
+        {
+            let sc = mStr[c];
+
+            if ( sc = 45 ) // '-'
+            {
+                let result = -result;
+                return result;
+            }
+
+            // 0: 48 .... 9: 57
+            if ( ( sc < 48 ) | ( sc > 57 ) )
+            {
+                // non number character
+                return result;
+            }
+
+            let result = result + ( mult * ( sc - 48 ) );
+
+            let c = c - 1;
+            let mult = mult * 10;
+        }
+
+        return result;
+    }
+
+    /** Sets this string to hold a representation of the given value. */
+    method void setInt(int i) 
+    {
+        var int digit;
+        var int divisor;
+        var boolean wroteDigit;
+
+        let wroteDigit = 0;
+        let mLen = 0;
+
+        if ( i = 0 )
+        {
+            do appendChar( 48 ); // '0'
+            return;
+        }
+
+        // number from 65535 to -65535
+        if ( i < 0 )
+        {
+            let i = -i;
+            do appendChar( 45 ); // '-'
+        }
+
+        let divisor = 10000;
+
+        while ( divisor > 0  )
+        {
+            let digit = i / divisor;
+            if ( ( digit > 0 ) | wroteDigit )
+            {
+                let wroteDigit = true;
+                do appendChar( 48 + digit );
+                let i = i - ( digit * divisor );
+            }
+            if ( divisor = 1 )
+            {
+                let divisor = 0;
+            }
+            else
+            {
+                let divisor = divisor / 10;
+            }
+        }
+        return;
+    }
+
+    /** Returns the new line character. */
+    function char newLine() 
+    {
+        return 128; // newline
+    }
+
+    /** Returns the backspace character. */
+    function char backSpace() 
+    {
+        return 129; // backspace
+    }
+
+    /** Returns the double quote (") character. */
+    function char doubleQuote() 
+    {
+        return 34; // '"'
+    }
+}

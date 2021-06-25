@@ -43,9 +43,9 @@ push this 6
 push constant 1
 neg
 gt
-if-goto IF_TRUE0
-goto IF_FALSE0
-label IF_TRUE0
+if-goto Sprite_clampX_IF_TRUE_L4
+goto Sprite_clampX_IF_FALSE_L4
+label Sprite_clampX_IF_TRUE_L4
 push constant 256
 push this 6
 sub
@@ -56,25 +56,25 @@ add
 push constant 16
 sub
 pop local 1
-label IF_FALSE0
+label Sprite_clampX_IF_FALSE_L4
 push this 0
 push local 0
 lt
-if-goto IF_TRUE1
-goto IF_FALSE1
-label IF_TRUE1
+if-goto Sprite_clampX_IF_TRUE_L5
+goto Sprite_clampX_IF_FALSE_L5
+label Sprite_clampX_IF_TRUE_L5
 push local 0
 pop this 0
-label IF_FALSE1
+label Sprite_clampX_IF_FALSE_L5
 push this 0
 push local 1
 gt
-if-goto IF_TRUE2
-goto IF_FALSE2
-label IF_TRUE2
+if-goto Sprite_clampX_IF_TRUE_L6
+goto Sprite_clampX_IF_FALSE_L6
+label Sprite_clampX_IF_TRUE_L6
 push local 1
 pop this 0
-label IF_FALSE2
+label Sprite_clampX_IF_FALSE_L6
 push constant 0
 return
 function Sprite.clampY 2
@@ -90,9 +90,9 @@ push this 7
 push constant 1
 neg
 gt
-if-goto IF_TRUE0
-goto IF_FALSE0
-label IF_TRUE0
+if-goto Sprite_clampY_IF_TRUE_L10
+goto Sprite_clampY_IF_FALSE_L10
+label Sprite_clampY_IF_TRUE_L10
 push constant 128
 push this 7
 sub
@@ -103,25 +103,25 @@ add
 push constant 16
 sub
 pop local 1
-label IF_FALSE0
+label Sprite_clampY_IF_FALSE_L10
 push this 1
 push local 0
 lt
-if-goto IF_TRUE1
-goto IF_FALSE1
-label IF_TRUE1
+if-goto Sprite_clampY_IF_TRUE_L11
+goto Sprite_clampY_IF_FALSE_L11
+label Sprite_clampY_IF_TRUE_L11
 push local 0
 pop this 1
-label IF_FALSE1
+label Sprite_clampY_IF_FALSE_L11
 push this 1
 push local 1
 gt
-if-goto IF_TRUE2
-goto IF_FALSE2
-label IF_TRUE2
+if-goto Sprite_clampY_IF_TRUE_L12
+goto Sprite_clampY_IF_FALSE_L12
+label Sprite_clampY_IF_TRUE_L12
 push local 1
 pop this 1
-label IF_FALSE2
+label Sprite_clampY_IF_FALSE_L12
 push constant 0
 return
 function Sprite.setType 0
@@ -226,13 +226,13 @@ pop pointer 0
 push argument 1
 pop this 5
 push this 5
-if-goto IF_TRUE0
-goto IF_FALSE0
-label IF_TRUE0
+if-goto Sprite_setVisible_IF_TRUE_L14
+goto Sprite_setVisible_IF_FALSE_L14
+label Sprite_setVisible_IF_TRUE_L14
 push constant 1
 neg
 pop this 5
-label IF_FALSE0
+label Sprite_setVisible_IF_FALSE_L14
 push constant 0
 return
 function Sprite.getVisible 0
@@ -248,23 +248,23 @@ call Sprite.getVisible 1
 pop local 2
 push local 2
 not
-if-goto IF_TRUE0
-goto IF_FALSE0
-label IF_TRUE0
+if-goto Sprite_touching_IF_TRUE_L21
+goto Sprite_touching_IF_FALSE_L21
+label Sprite_touching_IF_TRUE_L21
 push constant 0
 return
-label IF_FALSE0
+label Sprite_touching_IF_FALSE_L21
 push argument 1
 call Sprite.getVisible 1
 pop local 2
 push local 2
 not
-if-goto IF_TRUE1
-goto IF_FALSE1
-label IF_TRUE1
+if-goto Sprite_touching_IF_TRUE_L22
+goto Sprite_touching_IF_FALSE_L22
+label Sprite_touching_IF_TRUE_L22
 push constant 0
 return
-label IF_FALSE1
+label Sprite_touching_IF_FALSE_L22
 push this 0
 push argument 1
 call Sprite.getX 1
@@ -273,24 +273,24 @@ pop local 0
 push local 0
 push constant 0
 lt
-if-goto IF_TRUE2
-goto IF_FALSE2
-label IF_TRUE2
+if-goto Sprite_touching_IF_TRUE_L23
+goto Sprite_touching_IF_FALSE_L23
+label Sprite_touching_IF_TRUE_L23
 push local 0
 push constant 1
 neg
 call Math.multiply 2
 pop local 0
-label IF_FALSE2
+label Sprite_touching_IF_FALSE_L23
 push local 0
 push constant 14
 gt
-if-goto IF_TRUE3
-goto IF_FALSE3
-label IF_TRUE3
+if-goto Sprite_touching_IF_TRUE_L24
+goto Sprite_touching_IF_FALSE_L24
+label Sprite_touching_IF_TRUE_L24
 push constant 0
 return
-label IF_FALSE3
+label Sprite_touching_IF_FALSE_L24
 push this 1
 push argument 1
 call Sprite.getY 1
@@ -299,24 +299,24 @@ pop local 1
 push local 1
 push constant 0
 lt
-if-goto IF_TRUE4
-goto IF_FALSE4
-label IF_TRUE4
+if-goto Sprite_touching_IF_TRUE_L25
+goto Sprite_touching_IF_FALSE_L25
+label Sprite_touching_IF_TRUE_L25
 push local 1
 push constant 1
 neg
 call Math.multiply 2
 pop local 1
-label IF_FALSE4
+label Sprite_touching_IF_FALSE_L25
 push local 1
 push constant 14
 gt
-if-goto IF_TRUE5
-goto IF_FALSE5
-label IF_TRUE5
+if-goto Sprite_touching_IF_TRUE_L26
+goto Sprite_touching_IF_FALSE_L26
+label Sprite_touching_IF_TRUE_L26
 push constant 0
 return
-label IF_FALSE5
+label Sprite_touching_IF_FALSE_L26
 push constant 1
 neg
 return
@@ -351,26 +351,26 @@ push this 3
 push constant 0
 eq
 not
-if-goto IF_TRUE0
-goto IF_FALSE0
-label IF_TRUE0
+if-goto Sprite_update_IF_TRUE_L29
+goto Sprite_update_IF_FALSE_L29
+label Sprite_update_IF_TRUE_L29
 push pointer 0
 push this 3
 call Sprite.moveX 2
 pop temp 0
-label IF_FALSE0
+label Sprite_update_IF_FALSE_L29
 push this 4
 push constant 0
 eq
 not
-if-goto IF_TRUE1
-goto IF_FALSE1
-label IF_TRUE1
+if-goto Sprite_update_IF_TRUE_L30
+goto Sprite_update_IF_FALSE_L30
+label Sprite_update_IF_TRUE_L30
 push pointer 0
 push this 4
 call Sprite.moveY 2
 pop temp 0
-label IF_FALSE1
+label Sprite_update_IF_FALSE_L30
 push constant 0
 return
 function Sprite.draw 0
@@ -378,45 +378,45 @@ push argument 0
 pop pointer 0
 push this 5
 not
-if-goto IF_TRUE0
-goto IF_FALSE0
-label IF_TRUE0
+if-goto Sprite_draw_IF_TRUE_L35
+goto Sprite_draw_IF_FALSE_L35
+label Sprite_draw_IF_TRUE_L35
 push constant 0
 return
-label IF_FALSE0
+label Sprite_draw_IF_FALSE_L35
 push this 2
 push constant 0
 eq
-if-goto IF_TRUE1
-goto IF_FALSE1
-label IF_TRUE1
+if-goto Sprite_draw_IF_TRUE_L36
+goto Sprite_draw_IF_FALSE_L36
+label Sprite_draw_IF_TRUE_L36
 push this 0
 push this 1
 call SpriteLib.drawCar 2
 pop temp 0
-label IF_FALSE1
+label Sprite_draw_IF_FALSE_L36
 push this 2
 push constant 1
 eq
-if-goto IF_TRUE2
-goto IF_FALSE2
-label IF_TRUE2
+if-goto Sprite_draw_IF_TRUE_L37
+goto Sprite_draw_IF_FALSE_L37
+label Sprite_draw_IF_TRUE_L37
 push this 0
 push this 1
 call SpriteLib.drawLine 2
 pop temp 0
-label IF_FALSE2
+label Sprite_draw_IF_FALSE_L37
 push this 2
 push constant 2
 eq
-if-goto IF_TRUE3
-goto IF_FALSE3
-label IF_TRUE3
+if-goto Sprite_draw_IF_TRUE_L38
+goto Sprite_draw_IF_FALSE_L38
+label Sprite_draw_IF_TRUE_L38
 push this 0
 push this 1
 call SpriteLib.drawOilSlick 2
 pop temp 0
-label IF_FALSE3
+label Sprite_draw_IF_FALSE_L38
 push constant 0
 return
 function Sprite.clear 0
@@ -424,12 +424,12 @@ push argument 0
 pop pointer 0
 push this 5
 not
-if-goto IF_TRUE0
-goto IF_FALSE0
-label IF_TRUE0
+if-goto Sprite_clear_IF_TRUE_L40
+goto Sprite_clear_IF_FALSE_L40
+label Sprite_clear_IF_TRUE_L40
 push constant 0
 return
-label IF_FALSE0
+label Sprite_clear_IF_FALSE_L40
 push this 0
 push this 1
 call SpriteLib.clear 2

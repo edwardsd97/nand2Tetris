@@ -1,0 +1,10 @@
+C:\Projects\nand2Tetris\_MyJackHack\VMEmulator\bin\Debug\VMEmulator.exe.config
+C:\Projects\nand2Tetris\_MyJackHack\VMEmulator\bin\Debug\VMEmulator.exe
+C:\Projects\nand2Tetris\_MyJackHack\VMEmulator\bin\Debug\VMEmulator.pdb
+C:\Projects\nand2Tetris\_MyJackHack\VMEmulator\obj\Debug\VMEmulator.csprojAssemblyReference.cache
+C:\Projects\nand2Tetris\_MyJackHack\VMEmulator\obj\Debug\VMEmulator.Form1.resources
+C:\Projects\nand2Tetris\_MyJackHack\VMEmulator\obj\Debug\VMEmulator.Properties.Resources.resources
+C:\Projects\nand2Tetris\_MyJackHack\VMEmulator\obj\Debug\VMEmulator.csproj.GenerateResource.cache
+C:\Projects\nand2Tetris\_MyJackHack\VMEmulator\obj\Debug\VMEmulator.csproj.CoreCompileInputs.cache
+C:\Projects\nand2Tetris\_MyJackHack\VMEmulator\obj\Debug\VMEmulator.exe
+C:\Projects\nand2Tetris\_MyJackHack\VMEmulator\obj\Debug\VMEmulator.pdb

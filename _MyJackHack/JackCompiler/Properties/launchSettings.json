@@ -2,7 +2,7 @@
   "profiles": {
     "JackCompiler": {
       "commandName": "Project",
-      "commandLineArgs": "C:\\Projects\\nand2Tetris\\projects\\11\\Expressions -s"
+      "commandLineArgs": "C:\\Projects\\nand2Tetris\\projects\\09\\Driver\\source"
     }
   }
 }
