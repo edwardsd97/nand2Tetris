@@ -52,11 +52,7 @@ namespace VMEmulator
             tokenizer.ReadAll();
 
             Compiler compiler = new Compiler(tokenizer);
-            compiler.CompilePrePass("", 0);
-            compiler.Reset();
-            compiler.CompilePrePass("", 1);
             compiler.SetWriter(writer);
-            compiler.Reset();
             compiler.Compile();
 
             string errors = "";

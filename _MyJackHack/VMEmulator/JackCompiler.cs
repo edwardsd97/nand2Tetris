@@ -166,7 +166,7 @@ class JackCompiler
         }
 
         Compiler compiler = new Compiler(tokenizer);
-        compiler.CompilePrePass( filePath, phase );
+        compiler.CompilePrePass();
     }
 
     static void CompileFile( string srcPath, string destPath )

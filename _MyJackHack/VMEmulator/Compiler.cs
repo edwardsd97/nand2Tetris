@@ -61,6 +61,7 @@ class Compiler
     IVMWriter mVMWriter;
     string mClassName;
     string mFuncName;
+    string mSourcePath;
     bool mIgnoreErrors;
     Dictionary<string, int> mFuncLabel = new Dictionary<string, int>();
 
@@ -84,16 +85,18 @@ class Compiler
         public SymbolTable.SymbolScope fields;
     };
 
-    public Compiler(Tokenizer tokens, IVMWriter writer)
+    public Compiler(Tokenizer tokens, IVMWriter writer, string sourcePath = "")
     {
         mTokens = tokens;
-        Reset();
         mVMWriter = writer;
+        mSourcePath = sourcePath;
+        Reset();
     }
 
-    public Compiler(Tokenizer tokens)
+    public Compiler(Tokenizer tokens, string sourcePath = "" )
     {
         mTokens = tokens;
+        mSourcePath = sourcePath;
         Reset();
     }
 
@@ -111,37 +114,47 @@ class Compiler
         mVMWriter = writer;
     }
 
-    public void CompilePrePass(string filePath, int phase)
+    public void CompilePrePass()
     {
+        mTokens.Reset();
+
         mIgnoreErrors = true;
 
-        ValidateTokenAdvance(Token.Keyword.CLASS);
-        ValidateTokenAdvance(Token.Type.IDENTIFIER, out mClassName);
-        ValidateTokenAdvance('{');
-
-        if (!mClasses.ContainsKey(mClassName))
-        {
-            ClassSpec classSpec = new ClassSpec();
-            classSpec.name = mClassName;
-            mClasses.Add(mClassName, classSpec);
-        }
-
-        mClasses[mClassName].fields = SymbolTable.ScopePush("class");
-
-        while (CompileClassVarDec())
-        {
-            // continue with classVarDec
-        }
-
-        SymbolTable.ScopePop();
-
-        if (phase == 0)
-        {
-            mIgnoreErrors = false;
-            return;
-        }
-
         Token token = mTokens.Get();
+
+        // Find and register all classes and their member variables so that we know what types are valid
+        while (mTokens.HasMoreTokens())
+        {
+            if (token.keyword == Token.Keyword.CLASS)
+            {
+                ValidateTokenAdvance(Token.Keyword.CLASS);
+                ValidateTokenAdvance(Token.Type.IDENTIFIER, out mClassName);
+                ValidateTokenAdvance('{');
+
+                if (!mClasses.ContainsKey(mClassName))
+                {
+                    ClassSpec classSpec = new ClassSpec();
+                    classSpec.name = mClassName;
+                    mClasses.Add(mClassName, classSpec);
+                }
+
+                mClasses[mClassName].fields = SymbolTable.ScopePush("class");
+
+                while (CompileClassVarDec())
+                {
+                    // continue with classVarDec
+                }
+
+                SymbolTable.ScopePop();
+            }
+
+            token = mTokens.Advance();
+        }
+    
+        mIgnoreErrors = false;
+
+        mTokens.Reset();
+        token = mTokens.Get();
 
         while (mTokens.HasMoreTokens())
         {
@@ -156,7 +169,7 @@ class Compiler
                 FuncSpec spec = new FuncSpec();
                 spec.className = mClassName;
                 spec.type = token.keyword;
-                spec.filePath = filePath;
+                spec.filePath = mSourcePath;
 
                 mTokens.Advance();
                 spec.returnType = mTokens.Get();
@@ -273,7 +286,9 @@ class Compiler
 
     public void Compile()
     {
-        mTokens.Reset();
+        CompilePrePass();
+
+        Reset();
 
         Token token = null;
 
@@ -515,6 +530,9 @@ class Compiler
 
                 if (funcSpec.returnType.keyword != Token.Keyword.VOID && compiledReturn < 2)
                     Error("Subroutine " + FunctionName(mClassName, mFuncName) + " missing return value");
+
+                if (funcSpec.returnType.keyword == Token.Keyword.VOID && compiledReturn == 2)
+                    Error("void Subroutine " + FunctionName(mClassName, mFuncName) + " returning value");
 
                 if ( compiledReturn == 0 )
                 {
