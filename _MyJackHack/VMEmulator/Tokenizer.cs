@@ -87,14 +87,14 @@ class Token
         symbols.Add('+', "+"); symbols.Add('-', "-");
         symbols.Add('*', "*"); symbols.Add('/', "/");
         symbols.Add('&', "&amp;"); symbols.Add('|', "|");
-        symbols.Add('=', "="); symbols.Add('~', "~");
+        symbols.Add('=', "="); symbols.Add('~', "~"); symbols.Add('!', "!");
         symbols.Add('<', "&lt;"); symbols.Add('>', "&gt;");
         symbols.Add('%', "%");
 
         // op: '~' | '*' | '/' | '%' | '+' | '-' | '<' | '>' | '=' | '&' | '|'
         // ( int values are C++ operator precedence https://en.cppreference.com/w/cpp/language/operator_precedence )
         ops = new Dictionary<char, int>();
-        ops.Add('~', 3);
+        ops.Add('~', 3); ops.Add('!', 3);
         ops.Add('*', 5); ops.Add('/', 5); ops.Add('%', 5);
         ops.Add('+', 6); ops.Add('-', 6);
         ops.Add('<', 9); ops.Add('>', 9);

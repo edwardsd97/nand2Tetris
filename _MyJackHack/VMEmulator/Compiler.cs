@@ -916,7 +916,7 @@ class Compiler
         // invert the expression to make the jumps simpler
         CompileExpression();
         if (JackCompiler.mInvertedConditions)
-            mVMWriter.WriteArithmetic(VM.Command.NOT);
+            mVMWriter.WriteArithmetic(VM.Command.LNOT);
 
         ValidateTokenAdvance(')');
 
@@ -1046,7 +1046,7 @@ class Compiler
         CompileExpression();
         ValidateTokenAdvance(')');
 
-        mVMWriter.WriteArithmetic(VM.Command.NOT);
+        mVMWriter.WriteArithmetic(VM.Command.LNOT);
         mVMWriter.WriteIfGoto(labelEnd);
 
         int returnCompiled = 0;
@@ -1546,9 +1546,10 @@ class Compiler
             // op: '~' | '*' | '/' | '%' | '+' | '-' | '<' | '>' | '=' | '&' | '|'
             case '+': mVMWriter.WriteArithmetic(VM.Command.ADD); break;
             case '-': mVMWriter.WriteArithmetic(VM.Command.SUB); break;
-            case '*': mVMWriter.WriteCall("Math.multiply", 2); break;
-            case '/': mVMWriter.WriteCall("Math.divide", 2); break;
-            case '%': mVMWriter.WriteCall("Math.mod", 2); break;
+            case '*': mVMWriter.WriteArithmetic(VM.Command.MUL); break;
+            case '/': mVMWriter.WriteArithmetic(VM.Command.DIV); break;
+            case '^': mVMWriter.WriteArithmetic(VM.Command.XOR); break;
+            case '%': mVMWriter.WriteArithmetic(VM.Command.MOD); break;
             case '|': mVMWriter.WriteArithmetic(VM.Command.OR); break;
             case '&': mVMWriter.WriteArithmetic(VM.Command.AND); break;
             case '<': mVMWriter.WriteArithmetic(VM.Command.LT); break;
@@ -1603,7 +1604,7 @@ class Compiler
             ValidateTokenAdvance(')');
             return true;
         }
-        else if (token.symbol == '~' || token.symbol == '-')
+        else if (token.symbol == '~' || token.symbol == '-' || token.symbol == '!' )
         {
             // unaryTerm: ('-'|'~') term
             char symbol = token.symbol;
@@ -1612,6 +1613,10 @@ class Compiler
             if (symbol == '~')
             {
                 mVMWriter.WriteArithmetic(VM.Command.NOT);
+            }
+            else if (symbol == '!')
+            {
+                mVMWriter.WriteArithmetic(VM.Command.LNOT);
             }
             else // symbol == '-' )
             {
@@ -1683,8 +1688,8 @@ class Compiler
         else if (token.type == Token.Type.KEYWORD && token.keyword == Token.Keyword.TRUE)
         {
             // true
-            mVMWriter.WritePush(VM.Segment.CONST, 0);
-            mVMWriter.WriteArithmetic(VM.Command.NOT);
+            mVMWriter.WritePush(VM.Segment.CONST, 1);
+            mVMWriter.WriteArithmetic(VM.Command.NEG);
             mTokens.Advance();
             return true;
         }

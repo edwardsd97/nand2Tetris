@@ -8,6 +8,7 @@ namespace VMEmulator
     public partial class Form1 : Form
     {
         VM mVM = new VM();
+        MemoryStream byteCode = new MemoryStream();
 
         public Form1()
         {
@@ -25,6 +26,14 @@ namespace VMEmulator
         {
             mVM.ExecuteStep();
             UpdateMemory();
+            UpdateByteCode();
+        }
+
+        private void buttonReset_Click(object sender, EventArgs e)
+        {
+            mVM.Reset();
+            UpdateMemory();
+            UpdateByteCode();
         }
 
         public void Compile()
@@ -42,27 +51,13 @@ namespace VMEmulator
             }
             textVM.Text = vmStr;
 
-            string byteStr = "";
             VMByteConvert convert = new VMByteConvert();
-            MemoryStream byteCode = new MemoryStream();
             convert.ConvertVMToByteCode(vmcommands, byteCode);
-            byteCode.Seek(0, SeekOrigin.Begin);
-            while (byteCode.Position < byteCode.Length)
-            {
-                int command = 0;
-                StreamExtensions.Read(byteCode, out command);
-                string hexStr = Convert.ToString(command, 16);
-                while (hexStr.Length < 8)
-                    hexStr = "0" + hexStr;
-                byteStr = byteStr + "0x" + hexStr.ToUpper() + "\r\n";
-            }
-            textByteCode.Text = byteStr;
-
-            byteCode.Seek(0, SeekOrigin.Begin);
 
             mVM.Reset();
             mVM.Load(byteCode);
             UpdateMemory();
+            UpdateByteCode();
         }
 
         public void UpdateMemory()
@@ -90,6 +85,29 @@ namespace VMEmulator
             }
 
             textMemory.Text = memStr;
+        }
+
+        public void UpdateByteCode()
+        {
+            string byteStr = "";
+            byteCode.Seek(0, SeekOrigin.Begin);
+            int i = 0;
+            while (byteCode.Position < byteCode.Length)
+            {
+                int command = 0;
+                StreamExtensions.Read(byteCode, out command);
+                string hexStr = Convert.ToString(command, 16);
+                while (hexStr.Length < 8)
+                    hexStr = "0" + hexStr;
+                byteStr = byteStr + "0x" + hexStr.ToUpper();
+                if (i == mVM.mCodeFrame)
+                    byteStr = byteStr + " <";
+                byteStr = byteStr + "\r\n";
+                i = i + 1;
+            }
+            textByteCode.Text = byteStr;
+
+            byteCode.Seek(0, SeekOrigin.Begin);
         }
 
         public void Compile( IVMWriter writer )

@@ -148,9 +148,15 @@ class VMByteConvert
         mStringToCommand.Add("return", VM.Command.RETURN);
         mStringToCommand.Add("add", VM.Command.ADD);
         mStringToCommand.Add("sub", VM.Command.SUB);
+        mStringToCommand.Add("mul", VM.Command.MUL);
+        mStringToCommand.Add("div", VM.Command.DIV);
+        mStringToCommand.Add("mod", VM.Command.MOD);
+        mStringToCommand.Add("xor", VM.Command.XOR);
         mStringToCommand.Add("neg", VM.Command.NEG);
         mStringToCommand.Add("not", VM.Command.NOT);
         mStringToCommand.Add("and", VM.Command.AND);
+        mStringToCommand.Add("lnot", VM.Command.LNOT);
+        mStringToCommand.Add("land", VM.Command.LAND);
         mStringToCommand.Add("or", VM.Command.OR);
         mStringToCommand.Add("eq", VM.Command.EQ);
         mStringToCommand.Add("gt", VM.Command.GT);

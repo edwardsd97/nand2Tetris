@@ -31,12 +31,18 @@ class VMWriter : Writer, IVMWriter
         {
             case VM.Command.ADD: return "add";
             case VM.Command.SUB: return "sub";
+            case VM.Command.MUL: return "mul";
+            case VM.Command.DIV: return "div";
+            case VM.Command.MOD: return "mod";
+            case VM.Command.XOR: return "xor";
             case VM.Command.NEG: return "neg";
             case VM.Command.EQ: return "eq";
             case VM.Command.LT: return "lt";
             case VM.Command.GT: return "gt";
             case VM.Command.AND: return "and";
             case VM.Command.OR: return "or";
+            case VM.Command.LNOT: return "lnot";
+            case VM.Command.LAND: return "land";
             default: return "not";
         }
     }

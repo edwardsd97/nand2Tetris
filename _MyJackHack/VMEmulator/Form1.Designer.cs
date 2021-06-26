@@ -35,6 +35,7 @@ namespace VMEmulator
             this.textByteCode = new System.Windows.Forms.TextBox();
             this.textMemory = new System.Windows.Forms.TextBox();
             this.buttonStep = new System.Windows.Forms.Button();
+            this.buttonReset = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // textCode
@@ -49,8 +50,8 @@ namespace VMEmulator
             this.textCode.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
             this.textCode.Size = new System.Drawing.Size(441, 492);
             this.textCode.TabIndex = 0;
-            this.textCode.Text = "class Main\r\n{\r\n   function void main()\r\n   {\r\n      int x = 5;\r\n      x = x + 2;\r" +
-    "\n   }\r\n}";
+            this.textCode.Text = "int y = 1;\r\ny = y + main();\r\n\r\n// halt\r\nwhile( 1 ) { }\r\n\r\n   function int main()\r" +
+    "\n   {\r\n      int x = 5;\r\n      x = x + 2;\r\n      return x;\r\n   }\r\n";
             this.textCode.TextChanged += new System.EventHandler(this.textCode_TextChanged);
             // 
             // textCompile
@@ -116,11 +117,22 @@ namespace VMEmulator
             this.buttonStep.UseVisualStyleBackColor = true;
             this.buttonStep.Click += new System.EventHandler(this.buttonStep_Click);
             // 
+            // buttonReset
+            // 
+            this.buttonReset.Location = new System.Drawing.Point(1063, 540);
+            this.buttonReset.Name = "buttonReset";
+            this.buttonReset.Size = new System.Drawing.Size(75, 23);
+            this.buttonReset.TabIndex = 6;
+            this.buttonReset.Text = "Reset";
+            this.buttonReset.UseVisualStyleBackColor = true;
+            this.buttonReset.Click += new System.EventHandler(this.buttonReset_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1383, 596);
+            this.Controls.Add(this.buttonReset);
             this.Controls.Add(this.buttonStep);
             this.Controls.Add(this.textMemory);
             this.Controls.Add(this.textByteCode);
@@ -142,6 +154,7 @@ namespace VMEmulator
         private System.Windows.Forms.TextBox textByteCode;
         private System.Windows.Forms.TextBox textMemory;
         private System.Windows.Forms.Button buttonStep;
+        private System.Windows.Forms.Button buttonReset;
     }
 }
 

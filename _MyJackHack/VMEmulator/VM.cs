@@ -45,7 +45,15 @@ public class VM
             mSegment = segment;
             mIndex = index;
         }
-    }   
+    }
+
+    public static int Align(int value, int alignment)
+    {
+        int mod = value % alignment;
+        if (mod == 0)
+            return value;        
+        return value + alignment - mod;
+    }
 
     public VM( int stackSizeBytes = 8192, int heapSizeBytes = 14336, int globalSizeBytes = 1024 )
     {
@@ -60,9 +68,9 @@ public class VM
     public void Reset(int stackSizeBytes, int heapSizeBytes, int globalSizeBytes)
     {
         // Round up the byte sizes to be 4 byte aligned
-        heapSizeBytes = heapSizeBytes + (heapSizeBytes % 4);
-        stackSizeBytes = stackSizeBytes + (stackSizeBytes % 4);
-        globalSizeBytes = globalSizeBytes + (globalSizeBytes % 4);
+        heapSizeBytes = Align(heapSizeBytes, 4);
+        stackSizeBytes = Align(stackSizeBytes, 4);
+        globalSizeBytes = Align(globalSizeBytes, 4);
 
         mStackDwords = stackSizeBytes / 4;
         mHeapDwords = heapSizeBytes / 4;

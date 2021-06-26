@@ -9,11 +9,11 @@ class JackCompiler
     static public bool mComments = false;
     static public bool mVerbose = false;
     static public bool mRecursiveFolders = false;
-    static public bool mInvertedConditions = false;
 
     // Options - default true
     static public bool mStaticStrings = true;
     static public bool mOSClasses = true;
+    static public bool mInvertedConditions = true;
 
     static string HACK_OS = ".HackOS.";
 
