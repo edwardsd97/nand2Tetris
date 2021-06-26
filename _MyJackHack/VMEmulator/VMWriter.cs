@@ -10,51 +10,50 @@ class VMWriter : Writer, IVMWriter
     {
     }
 
-    public string SegmentString(IVMWriter.Segment segment)
+    public string SegmentString(VM.Segment segment)
     {
         switch (segment)
         {
-            case IVMWriter.Segment.ARG: return "argument";
-            case IVMWriter.Segment.LOCAL: return "local";
-            case IVMWriter.Segment.GLOBAL: return "global";
-            case IVMWriter.Segment.STATIC: return "static";
-            case IVMWriter.Segment.THIS: return "this";
-            case IVMWriter.Segment.THAT: return "that";
-            case IVMWriter.Segment.POINTER: return "pointer";
-            case IVMWriter.Segment.TEMP: return "temp";
+            case VM.Segment.ARG: return "argument";
+            case VM.Segment.LOCAL: return "local";
+            case VM.Segment.GLOBAL: return "global";
+            case VM.Segment.THIS: return "this";
+            case VM.Segment.THAT: return "that";
+            case VM.Segment.POINTER: return "pointer";
+            case VM.Segment.TEMP: return "temp";
             default: return "constant";
         }
     }
 
-    public string CommandString(IVMWriter.Command command)
+    public string CommandString(VM.Command command)
     {
         switch (command)
         {
-            case IVMWriter.Command.ADD: return "add";
-            case IVMWriter.Command.SUB: return "sub";
-            case IVMWriter.Command.NEG: return "neg";
-            case IVMWriter.Command.EQ: return "eq";
-            case IVMWriter.Command.LT: return "lt";
-            case IVMWriter.Command.GT: return "gt";
-            case IVMWriter.Command.AND: return "and";
-            case IVMWriter.Command.OR: return "or";
+            case VM.Command.ADD: return "add";
+            case VM.Command.SUB: return "sub";
+            case VM.Command.NEG: return "neg";
+            case VM.Command.EQ: return "eq";
+            case VM.Command.LT: return "lt";
+            case VM.Command.GT: return "gt";
+            case VM.Command.AND: return "and";
+            case VM.Command.OR: return "or";
             default: return "not";
         }
     }
 
-    public void WritePush(IVMWriter.Segment segment, int index)
+    public void WritePush(VM.Segment segment, int index)
     {
         // push segment int
         WriteLine("push " + SegmentString(segment) + " " + index);
     }
 
-    public void WritePop(IVMWriter.Segment segment, int index)
+    public void WritePop(VM.Segment segment, int index)
     {
         // push segment int
         WriteLine("pop " + SegmentString(segment) + " " + index);
     }
 
-    public void WriteArithmetic(IVMWriter.Command command)
+    public void WriteArithmetic(VM.Command command)
     {
         // command
         WriteLine(CommandString(command));

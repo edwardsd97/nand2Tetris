@@ -5,20 +5,10 @@ using System.Collections.Generic;
 // IVMWriter interface: Compiler interfaces with this
 public interface IVMWriter
 {
-    public enum Segment
-    {
-        INVALID, GLOBAL, CONST, ARG, LOCAL, STATIC, THIS, THAT, POINTER, TEMP
-    }
-
-    public enum Command
-    {
-        ADD, SUB, NEG, EQ, LT, GT, AND, OR, NOT
-    }
-
     public void WriteLine(string line); // for comments mainly
-    public void WritePush(Segment segment, int index);
-    public void WritePop(Segment segment, int index);
-    public void WriteArithmetic(Command command);
+    public void WritePush(VM.Segment segment, int index);
+    public void WritePop(VM.Segment segment, int index);
+    public void WriteArithmetic(VM.Command command);
     public void WriteLabel(string label);
     public void WriteGoto(string label);
     public void WriteIfGoto(string label);
@@ -39,6 +29,9 @@ class Writer
     protected StreamWriter mFile;
     protected bool mEnabled = true;
     protected List<StreamWriter> mOutput = new List<StreamWriter>();
+
+    public int mCommandsWritten = 0;
+    public int mCommandStart = 0;
 
     public Writer(string outFile)
     {
@@ -61,6 +54,16 @@ class Writer
             if (JackCompiler.mVerbose)
                 Console.WriteLine(line);
             mOutput[mOutput.Count - 1].WriteLine(line);
+            mCommandsWritten++;
+        }
+    }
+
+    public virtual void Write(int value)
+    {
+        if (mEnabled)
+        {
+            mOutput[mOutput.Count - 1].Write(value);
+            mCommandsWritten++;
         }
     }
 
@@ -89,7 +92,7 @@ class Writer
         }
     }
 
-    public void WriteStream(Stream stream)
+    public virtual void WriteStream(Stream stream)
     {
         StreamReader reader = new StreamReader(stream);
         stream.Seek(0, SeekOrigin.Begin);
@@ -97,6 +100,7 @@ class Writer
         {
             string line = reader.ReadLine();
             mOutput[mOutput.Count - 1].WriteLine(line);
+            mCommandsWritten++;
         }
     }
 }

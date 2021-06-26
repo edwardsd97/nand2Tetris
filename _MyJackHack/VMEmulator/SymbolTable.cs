@@ -4,6 +4,7 @@ using System.Collections.Generic;
 class SymbolTable
 {
     static List<SymbolScope> mScopes = new List<SymbolScope>();
+    static Dictionary<string, int> mLabels = new Dictionary<string, int>();
     static SymbolTable mTheTable = new SymbolTable();
     static int mVarSize;
 
@@ -40,7 +41,7 @@ class SymbolTable
 
     public enum Kind
     {
-        NONE, GLOBAL, STATIC, FIELD, ARG, VAR
+        NONE, GLOBAL, FIELD, ARG, VAR
     }
 
     public static void Reset()
@@ -244,22 +245,21 @@ class SymbolTable
         return 0;
     }
 
-    public static IVMWriter.Segment SegmentOf(string varName)
+    public static VM.Segment SegmentOf(string varName)
     {
         Symbol symbol = SymbolTable.Find(varName);
         if (symbol != null)
         {
             switch (symbol.mKind)
             {
-                case Kind.ARG: return IVMWriter.Segment.ARG;
-                case Kind.FIELD: return IVMWriter.Segment.THIS;
-                case Kind.STATIC: return IVMWriter.Segment.STATIC;
-                case Kind.VAR: return IVMWriter.Segment.LOCAL;
-                case Kind.GLOBAL: return IVMWriter.Segment.GLOBAL;
+                case Kind.ARG: return VM.Segment.ARG;
+                case Kind.FIELD: return VM.Segment.THIS;
+                case Kind.VAR: return VM.Segment.LOCAL;
+                case Kind.GLOBAL: return VM.Segment.GLOBAL;
             }
         }
 
-        return IVMWriter.Segment.INVALID;
+        return VM.Segment.INVALID;
     }
 
     public static int KindSize(Kind kind)

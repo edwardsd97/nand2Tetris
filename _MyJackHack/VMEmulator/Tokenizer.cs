@@ -313,6 +313,21 @@ class Tokenizer : IEnumerable
         mTokenCurrent = -1;
     }
 
+    public static int IntParse(string str)
+    {
+        int result = 0;
+        try
+        {
+            result = int.Parse(str);
+        }
+        catch
+        {
+            result = 0;
+        }
+
+        return result;
+    }
+
     public void ReadAll()
     {
         while (HasMoreTokens())
@@ -533,7 +548,7 @@ class Tokenizer : IEnumerable
                             token.type = Token.Type.INT_CONST;
                             try
                             {
-                                token.intVal = int.Parse(mTokenStr);
+                                token.intVal = IntParse(mTokenStr);
                             }
                             catch
                             {
