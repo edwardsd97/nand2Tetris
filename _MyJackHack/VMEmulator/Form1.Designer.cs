@@ -29,6 +29,7 @@ namespace VMEmulator
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.textCode = new System.Windows.Forms.TextBox();
             this.textCompile = new System.Windows.Forms.TextBox();
             this.textVM = new System.Windows.Forms.TextBox();
@@ -50,8 +51,7 @@ namespace VMEmulator
             this.textCode.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
             this.textCode.Size = new System.Drawing.Size(441, 492);
             this.textCode.TabIndex = 0;
-            this.textCode.Text = "int y = 1;\r\ny = y + main();\r\n\r\n// halt\r\nwhile( 1 ) { }\r\n\r\n   function int main()\r" +
-    "\n   {\r\n      int x = 5;\r\n      x = x + 2;\r\n      return x;\r\n   }\r\n";
+            this.textCode.Text = resources.GetString("textCode.Text");
             this.textCode.TextChanged += new System.EventHandler(this.textCode_TextChanged);
             // 
             // textCompile

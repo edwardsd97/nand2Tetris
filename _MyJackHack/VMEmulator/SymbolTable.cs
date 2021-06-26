@@ -230,7 +230,7 @@ class SymbolTable
         Symbol symbol = SymbolTable.Find(varName);
         if (symbol != null)
             return symbol.mType.GetTokenString();
-        return null;
+        return "";
     }
 
     public static int OffsetOf(string varName)

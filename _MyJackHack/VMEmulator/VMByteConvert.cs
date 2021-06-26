@@ -15,7 +15,15 @@ class VMByteConvert
     static Dictionary<string, VM.Segment> mStringToSegment;
 
     Dictionary<string, int> mLabels = new Dictionary<string, int>();
+    VMBuiltIn mLabelsBuiltIn = null;
     Stream mWriter = null;
+
+    public VMByteConvert(VMBuiltIn builtIns = null)
+    {
+        if (builtIns == null)
+            builtIns = VM.DefaultBuiltIns();
+        mLabelsBuiltIn = builtIns;
+    }
 
     public static int IntParse(string str)
     {
@@ -51,44 +59,57 @@ class VMByteConvert
         {
             string commandStr = reader.ReadLine();
             string[] commandElems = CommandElements(commandStr);
-            VM.Command command = mStringToCommand[commandElems[0]];
-            switch (command)
+            if ( mStringToCommand.ContainsKey(commandElems[0]) )
             {
-                case VM.Command.LABEL:
-                    // Do nothing - labels are not a command
-                    break;
+                VM.Command command = mStringToCommand[commandElems[0]];
+                switch (command)
+                {
+                    case VM.Command.LABEL:
+                        // Do nothing - labels are not a command
+                        break;
 
-                case VM.Command.PUSH:
-                case VM.Command.POP:
-                    if (mStringToSegment.ContainsKey(commandElems[1]))
-                    {
-                        WriteSegmentCommand(command, mStringToSegment[commandElems[1]], IntParse(commandElems[2]));
+                    case VM.Command.PUSH:
+                    case VM.Command.POP:
+                        if (mStringToSegment.ContainsKey(commandElems[1]))
+                        {
+                            WriteSegmentCommand(command, mStringToSegment[commandElems[1]], IntParse(commandElems[2]));
+                            written++;
+                        }
+                        break;
+
+                    case VM.Command.GOTO:
+                    case VM.Command.IF_GOTO:
+                        if (mLabels.ContainsKey(commandElems[1]))
+                        {
+                            WriteJumpCommand(command, mLabels[commandElems[1]]);
+                            written++;
+                        }
+                        else if (mLabelsBuiltIn.Find(commandElems[1]) != null)
+                        {
+                            WriteJumpCommand(command, mLabelsBuiltIn.FindLabel(commandElems[1]));
+                            written++;
+                        }
+                        break;
+
+                    case VM.Command.FUNCTION:
+                    case VM.Command.CALL:
+                        if (mLabels.ContainsKey(commandElems[1]))
+                        {
+                            WriteFunctionOrCall(command, mLabels[commandElems[1]], IntParse(commandElems[2]));
+                            written++;
+                        }
+                        else if (mLabelsBuiltIn.Find(commandElems[1]) != null)
+                        {
+                            WriteFunctionOrCall(command, mLabelsBuiltIn.FindLabel(commandElems[1]), IntParse(commandElems[2]));
+                            written++;
+                        }
+                        break;
+
+                    default:
+                        WriteCommand(command);
                         written++;
-                    }
-                    break;
-
-                case VM.Command.GOTO:
-                case VM.Command.IF_GOTO:
-                    if (mLabels.ContainsKey(commandElems[1]))
-                    {
-                        WriteJumpCommand(command, mLabels[commandElems[1]]);
-                        written++;
-                    }
-                    break;
-
-                case VM.Command.FUNCTION:
-                case VM.Command.CALL:
-                    if (mLabels.ContainsKey(commandElems[1]))
-                    {
-                        WriteFunctionOrCall(command, mLabels[commandElems[1]], IntParse(commandElems[2]));
-                        written++;
-                    }
-                    break;
-
-                default:
-                    WriteCommand(command);
-                    written++;
-                    break;
+                        break;
+                }
             }
         }
 
@@ -106,19 +127,21 @@ class VMByteConvert
         {
             string commandStr = reader.ReadLine();
             string[] commandElems = CommandElements( commandStr );
-            VM.Command command = mStringToCommand[commandElems[0]];
-            if (command == VM.Command.LABEL)
+            if (mStringToCommand.ContainsKey(commandElems[0]))
             {
-                // Labels are not actually a command but a reference to the command that follows
-                if (!mLabels.ContainsKey(commandElems[1]))
-                    mLabels.Add(commandElems[1], commandIndex);
-                continue;
-            }
-            else if (command == VM.Command.FUNCTION)
-            {
-                // FIXME: tie in API functions here with a different indexing - say negative indexes refer to built in functions
-                if ( !mLabels.ContainsKey(commandElems[1]) )
-                    mLabels.Add(commandElems[1], commandIndex);
+                VM.Command command = mStringToCommand[commandElems[0]];
+                if (command == VM.Command.LABEL)
+                {
+                    // Labels are not actually a command but a reference to the command that follows
+                    if (!mLabels.ContainsKey(commandElems[1]))
+                        mLabels.Add(commandElems[1], commandIndex);
+                    continue;
+                }
+                else if (command == VM.Command.FUNCTION)
+                {
+                    if (!mLabels.ContainsKey(commandElems[1]))
+                        mLabels.Add(commandElems[1], commandIndex);
+                }
             }
 
             commandIndex++;
@@ -127,7 +150,7 @@ class VMByteConvert
         return mLabels.Count;
     }
 
-    protected static string[] CommandElements( string commandStr )
+    public static string[] CommandElements( string commandStr )
     {
         return commandStr.Split(new char[3] { ' ', '\t', ',' });
     }
@@ -174,17 +197,17 @@ class VMByteConvert
     }
     public int SegmentMask(VM.Segment segment)
     {
-        return ( (int) segment ) << BITS_INDEX;
+        return (( (int) segment ) << BITS_INDEX) & (int) MASK_SEGMENT;
     }
 
     public int CommandMask(VM.Command command)
     {
-        return ((int)command) << (BITS_INDEX + BITS_SEGMENT);
+        return (((int)command) << (BITS_INDEX + BITS_SEGMENT)) & unchecked( (int) MASK_COMMAND );
     }
 
     public int IndexMask(int index)
     {
-        return index;
+        return index & (int) MASK_INDEX;
     }
 
     public virtual void Write(int value)
@@ -221,6 +244,12 @@ class VMByteConvert
         command = ( (uint) commandInt & MASK_COMMAND ) >> ( BITS_SEGMENT + BITS_INDEX );
         segment = ( (uint) commandInt & MASK_SEGMENT ) >> BITS_INDEX;
         index =   ( (uint) commandInt & MASK_INDEX );
+
+        if ( ( index & ( 1 << BITS_INDEX - 1) ) != 0 ) 
+        {
+            // Index is negative, fill in the rest of the left bits
+            index = index | MASK_SEGMENT | MASK_COMMAND;
+        }
 
         return new VM.VMCommand((VM.Command)command, (VM.Segment) segment, (int) index );
     }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Reflection;
 
 // GRAMMAR DEFINITION
 // Key: node* : zero or more of this node
@@ -116,6 +117,14 @@ class Compiler
 
     public void CompilePrePass()
     {
+        CompilePrePass(mTokens);
+    }
+    
+    public void CompilePrePass( Tokenizer tokenizer )
+    {
+        Tokenizer tokensPrev = mTokens;
+        mTokens = tokenizer;
+
         mTokens.Reset();
 
         mIgnoreErrors = true;
@@ -189,6 +198,8 @@ class Compiler
         }
 
         mTokens.Reset();
+
+        mTokens = tokensPrev;
 
         mIgnoreErrors = false;
     }
@@ -289,7 +300,25 @@ class Compiler
 
     public void Compile()
     {
-        CompilePrePass();
+        // Pre-process the operating system classes that are part of the compiler itself
+        Assembly asm = Assembly.GetExecutingAssembly();
+        foreach (string osName in asm.GetManifestResourceNames() )
+        {
+            if (!osName.Contains(".OSVM."))
+                continue;
+
+            Stream resourceStream = asm.GetManifestResourceStream(osName);
+            if (resourceStream != null)
+            {
+                StreamReader sRdr = new StreamReader(resourceStream);
+                Tokenizer tokens = new Tokenizer(sRdr);
+                tokens.ReadAll();
+                CompilePrePass(tokens);
+            }
+        }
+
+        // Pre process the source code
+        CompilePrePass( mTokens );
 
         Reset();
 
@@ -480,11 +509,19 @@ class Compiler
             tokenStart = mTokens.StateGet();
             List<Token> parameterTypes = CompileParameterList();
             ValidateTokenAdvance(')');
-            ValidateTokenAdvance('{');
-            mVMWriter.Disable();
-            SymbolTable.VarSizeBegin();
-            CompileStatements();
-            localVarSize = SymbolTable.VarSizeEnd();
+            if (mTokens.Get().symbol == ';')
+            {
+                // Function declaration only
+                ValidateTokenAdvance(';');
+            }
+            else
+            {
+                ValidateTokenAdvance('{');
+                mVMWriter.Disable();
+                SymbolTable.VarSizeBegin();
+                CompileStatements();
+                localVarSize = SymbolTable.VarSizeEnd();
+            }
             SymbolTable.ScopePop(); // "function"
             mIgnoreErrors = false;
 
@@ -495,56 +532,65 @@ class Compiler
             mVMWriter.Enable();
             parameterTypes = CompileParameterList();
             ValidateTokenAdvance(')');
-            ValidateTokenAdvance('{');
-
-            // Compile function beginning
-            mVMWriter.WriteFunction( FunctionName( mClassName, mFuncName ), localVarSize);
-            if (funcCallType == Token.Keyword.CONSTRUCTOR || funcCallType == Token.Keyword.METHOD)
+            if (mTokens.Get().symbol == ';')
             {
-                if (funcCallType == Token.Keyword.CONSTRUCTOR)
+                // Function declaration only
+                ValidateTokenAdvance(';');
+            }
+            else
+            {
+                // function implementation
+                ValidateTokenAdvance('{');
+
+                // Compile function beginning
+                mVMWriter.WriteFunction(FunctionName(mClassName, mFuncName), localVarSize);
+                if (funcCallType == Token.Keyword.CONSTRUCTOR || funcCallType == Token.Keyword.METHOD)
                 {
-                    // Alloc "this" ( and it is pushed onto the stack )
-                    mVMWriter.WritePush(VM.Segment.CONST, SymbolTable.KindSize(SymbolTable.Kind.FIELD));
-                    mVMWriter.WriteCall("Memory.alloc", 1);
+                    if (funcCallType == Token.Keyword.CONSTRUCTOR)
+                    {
+                        // Alloc "this" ( and it is pushed onto the stack )
+                        mVMWriter.WritePush(VM.Segment.CONST, SymbolTable.KindSize(SymbolTable.Kind.FIELD));
+                        mVMWriter.WriteCall("Memory.alloc", 1);
+                    }
+
+                    if (funcCallType == Token.Keyword.METHOD)
+                    {
+                        // grab argument 0 (this) and push it on the stack
+                        mVMWriter.WritePush(VM.Segment.ARG, 0);
+                    }
+
+                    // pop "this" off the stack
+                    mVMWriter.WritePop(VM.Segment.POINTER, 0);
                 }
 
-                if (funcCallType == Token.Keyword.METHOD)
+                // Before starting with Main.main, inject the allocation of all the static string constants
+                if (mClassName == "Main" && mFuncName == "main")
                 {
-                    // grab argument 0 (this) and push it on the stack
-                    mVMWriter.WritePush(VM.Segment.ARG, 0);
+                    CompileStaticStrings();
                 }
 
-                // pop "this" off the stack
-                mVMWriter.WritePop(VM.Segment.POINTER, 0);
-            }
+                int compiledReturn = CompileStatements();
 
-            // Before starting with Main.main, inject the allocation of all the static string constants
-            if (mClassName == "Main" && mFuncName == "main")
-            {
-                CompileStaticStrings();
-            }
-
-            int compiledReturn = CompileStatements();
-
-            FuncSpec funcSpec;
-            if (Compiler.mFunctions.TryGetValue(FunctionName(mClassName, mFuncName), out funcSpec))
-            {
-                funcSpec.compiled = true;
-
-                if (funcSpec.returnType.keyword != Token.Keyword.VOID && compiledReturn < 2)
-                    Error("Subroutine " + FunctionName(mClassName, mFuncName) + " missing return value");
-
-                if (funcSpec.returnType.keyword == Token.Keyword.VOID && compiledReturn == 2)
-                    Error("void Subroutine " + FunctionName(mClassName, mFuncName) + " returning value");
-
-                if ( compiledReturn == 0 )
+                FuncSpec funcSpec;
+                if (Compiler.mFunctions.TryGetValue(FunctionName(mClassName, mFuncName), out funcSpec))
                 {
-                    mVMWriter.WritePush( VM.Segment.CONST, 0 );
-                    mVMWriter.WriteReturn();
-                }
-            }
+                    funcSpec.compiled = true;
 
-            ValidateTokenAdvance('}');
+                    if (funcSpec.returnType.keyword != Token.Keyword.VOID && compiledReturn < 2)
+                        Error("Subroutine " + FunctionName(mClassName, mFuncName) + " missing return value");
+
+                    if (funcSpec.returnType.keyword == Token.Keyword.VOID && compiledReturn == 2)
+                        Error("void Subroutine " + FunctionName(mClassName, mFuncName) + " returning value");
+
+                    if (compiledReturn == 0)
+                    {
+                        mVMWriter.WritePush(VM.Segment.CONST, 0);
+                        mVMWriter.WriteReturn();
+                    }
+                }
+
+                ValidateTokenAdvance('}');
+            }
 
             SymbolTable.ScopePop(); // "function"
 

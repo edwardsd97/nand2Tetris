@@ -8,7 +8,9 @@ namespace VMEmulator
     public partial class Form1 : Form
     {
         VM mVM = new VM();
+
         MemoryStream byteCode = new MemoryStream();
+        MemoryStream vmcommands = new MemoryStream();
 
         public Form1()
         {
@@ -25,37 +27,33 @@ namespace VMEmulator
         private void buttonStep_Click(object sender, EventArgs e)
         {
             mVM.ExecuteStep();
-            UpdateMemory();
-            UpdateByteCode();
+            UpdateForm();
         }
 
         private void buttonReset_Click(object sender, EventArgs e)
         {
             mVM.Reset();
-            UpdateMemory();
-            UpdateByteCode();
+            UpdateForm();
         }
 
         public void Compile()
         {
-            MemoryStream vmcommands = new MemoryStream();
+            vmcommands.Seek(0, SeekOrigin.Begin);
+
             VMWriter writer = new VMWriter(vmcommands);
             Compile(writer);
-
-            string vmStr = "";
-            vmcommands.Seek(0, SeekOrigin.Begin);
-            StreamReader vmreader = new StreamReader(vmcommands);
-            while (!vmreader.EndOfStream)
-            {
-                vmStr = vmStr + vmreader.ReadLine() + "\r\n";
-            }
-            textVM.Text = vmStr;
 
             VMByteConvert convert = new VMByteConvert();
             convert.ConvertVMToByteCode(vmcommands, byteCode);
 
             mVM.Reset();
             mVM.Load(byteCode);
+            UpdateForm();
+        }
+
+        public void UpdateForm()
+        {
+            UpdateVMCommands();
             UpdateMemory();
             UpdateByteCode();
         }
@@ -69,8 +67,22 @@ namespace VMEmulator
                 while (hexStr.Length < 8)
                     hexStr = "0" + hexStr;
                 memStr = memStr + "0x" + hexStr.ToUpper();
-                if (i == mVM.mMemory[0])
+                if (i == mVM.mMemory[(int)VM.SegPointer.SP])
                     memStr = memStr + " < SP";
+                else if (i == (int)VM.SegPointer.SP)
+                    memStr = memStr + " [SP]";
+                else if (i == (int)VM.SegPointer.ARG)
+                    memStr = memStr + " [ARG]";
+                else if (i == (int)VM.SegPointer.GLOBAL)
+                    memStr = memStr + " [GLOBAL]";
+                else if (i == (int)VM.SegPointer.LOCAL)
+                    memStr = memStr + " [LOCAL]";
+                else if (i == (int)VM.SegPointer.THIS)
+                    memStr = memStr + " [THIS]";
+                else if (i == (int)VM.SegPointer.THAT)
+                    memStr = memStr + " [THAT]";
+                else if (i == (int)VM.SegPointer.TEMP)
+                    memStr = memStr + " [TEMP]";
                 memStr = memStr + "\r\n";
             }
 
@@ -87,6 +99,30 @@ namespace VMEmulator
             textMemory.Text = memStr;
         }
 
+        public void UpdateVMCommands()
+        {
+            string vmStr = "";
+            int codeFrame = 0;
+            vmcommands.Seek(0, SeekOrigin.Begin);
+            StreamReader vmreader = new StreamReader(vmcommands);
+            while (!vmreader.EndOfStream)
+            {
+                string lineStr = vmreader.ReadLine();
+                string[] elements = VMByteConvert.CommandElements(lineStr);
+
+                if (elements[0] != "label" && codeFrame == mVM.mCodeFrame)
+                    lineStr = lineStr + " <-";
+
+                if (elements[0] != "label")
+                    codeFrame++;
+
+                lineStr = lineStr + "\r\n";
+
+                vmStr = vmStr + lineStr;
+            }
+            textVM.Text = vmStr;
+        }
+
         public void UpdateByteCode()
         {
             string byteStr = "";
@@ -101,7 +137,7 @@ namespace VMEmulator
                     hexStr = "0" + hexStr;
                 byteStr = byteStr + "0x" + hexStr.ToUpper();
                 if (i == mVM.mCodeFrame)
-                    byteStr = byteStr + " <";
+                    byteStr = byteStr + " <-";
                 byteStr = byteStr + "\r\n";
                 i = i + 1;
             }

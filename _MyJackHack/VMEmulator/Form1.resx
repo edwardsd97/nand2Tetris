@@ -117,4 +117,37 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="textCode.Text" xml:space="preserve">
+    <value>int y = 1;
+Main q = Main.new();
+y = y + q.addTwo( y );
+q.dispose();
+q = null;
+
+// halt
+while( 1 ) { }
+
+class Main
+{
+   int mMember;
+
+   constructor Main new()
+   {
+      mMember = 8;
+      return this;
+   }
+
+   method int addTwo( int y )
+   {
+      int x = y;
+      x = x + 2;
+      return x;
+   }
+
+   method void dispose()
+   {
+      Memory.deAlloc( this );
+   }
+}</value>
+  </data>
 </root>

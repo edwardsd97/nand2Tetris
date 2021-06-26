@@ -2,22 +2,30 @@
 using System.IO;
 using System.Collections.Generic;
 
+using VMBuiltInFunc = System.Action<VM>;
+
 public class VM
 {
     public List<VMCommand> mCode;
     public int mCodeFrame;
 
     public int[] mMemory;
-    public int mMemoryDwords;
+    public int mMemoryDwords = 0;
     public int mStackDwords;
     public int mGlobalDwords;
     public int mHeapDwords;
-    public int mHeap;
+
+    public VMHeap mHeap;
+
+    public VMBuiltIn mBuiltIns;
+
+    public int mStackPushedCount;
+    public int mStackPoppedCount;
 
     public enum SegPointer : byte
     {
-        SP, ARG, LOCAL, GLOBAL, THIS, THAT, POINTER, TEMP,
-        COUNT
+        SP, ARG, LOCAL, GLOBAL, THIS, THAT, TEMP,
+        COUNT, POINTER,
     }
 
     public enum Command : byte
@@ -55,9 +63,18 @@ public class VM
         return value + alignment - mod;
     }
 
-    public VM( int stackSizeBytes = 8192, int heapSizeBytes = 14336, int globalSizeBytes = 1024 )
+    public VM( int stackSizeBytes = 8192, int heapSizeBytes = 14336, int globalSizeBytes = 1024, VMBuiltIn builtIns = null )
     {
+        if (builtIns == null)
+            builtIns = VM.DefaultBuiltIns();
+        mBuiltIns = builtIns;
+
         Reset(stackSizeBytes, heapSizeBytes, globalSizeBytes);
+    }
+
+    public static VMBuiltIn DefaultBuiltIns()
+    {
+        return VMOS.DefaultBuiltIns();
     }
 
     public void Reset()
@@ -76,12 +93,24 @@ public class VM
         mHeapDwords = heapSizeBytes / 4;
         mGlobalDwords = globalSizeBytes / 4;
 
+        int prevMemDwords = mMemoryDwords;
         mMemoryDwords = mStackDwords + mHeapDwords + mGlobalDwords + (int)SegPointer.COUNT;
 
-        mMemory = new int[mMemoryDwords];
+        if (prevMemDwords != mMemoryDwords)
+        {
+            // Allocate new memory
+            mMemory = new int[mMemoryDwords];
+        }
+
+        // Zero out the memory
+        for (int i = 0; i < mMemory.Length; i++)
+            mMemory[i] = 0;
+
+        // Set stack pointer and global pointer
         mMemory[(int)SegPointer.SP] = (int)SegPointer.COUNT;
-        mMemory[(int)SegPointer.GLOBAL] = mMemory[(int)SegPointer.SP] + mStackDwords;
-        mHeap = mMemory[(int)SegPointer.GLOBAL] + mGlobalDwords;
+        mMemory[(int)SegPointer.GLOBAL] = (int)SegPointer.COUNT + mStackDwords;
+
+        mHeap = new VMHeap(mMemory, mMemoryDwords - mHeapDwords, mHeapDwords);
 
         mCodeFrame = 0;
     }
@@ -153,19 +182,21 @@ public class VM
         }
     }
 
-    protected int StackPop()
+    public int StackPop()
     {
         if (mMemory[(int)SegPointer.SP] == (int)SegPointer.COUNT)
             Error("Stack cannot be popped when empty");
 
+        mStackPoppedCount++;
         mMemory[(int)SegPointer.SP]--;
         return mMemory[mMemory[(int)SegPointer.SP]];
     }
 
-    protected void StackPush( int value )
+    public void StackPush( int value )
     {
         mMemory[mMemory[(int)SegPointer.SP]] = value;
         mMemory[(int)SegPointer.SP]++;
+        mStackPushedCount++;
 
         if (mMemory[(int)SegPointer.SP] - (int)SegPointer.COUNT > mStackDwords )
             Error("Stack overflow");
@@ -244,6 +275,32 @@ public class VM
     protected void DoCall(Segment segment, int index)
     {
         int args = (int)segment;
+
+        if (index < 0)
+        {
+            mStackPushedCount = 0;
+            mStackPoppedCount = 0;
+
+            // A built in function - call it directly and resume on the next instruction
+            VMBuiltInFunc func = mBuiltIns.Find(index);
+            if (func != null)
+            {
+                func(this);
+            }
+            else
+            {
+                Error("Built in function not found");
+            }
+
+            // Make sure we keep the stack correct even if function did not 
+            for (int i = 0; i < args - mStackPoppedCount; i++)
+                StackPop();
+            if (mStackPushedCount == 0)
+                StackPush(0);
+
+            mCodeFrame++;
+            return;
+        }
 
         // push returnAddress
         StackPush(mCodeFrame + 1);
@@ -360,3 +417,175 @@ public class VM
     }
 }
 
+/////////////////////////////////////////////////////////////////////////////////
+// VMHeap - manages heap section of an already allocated int array of memory
+public class VMHeap
+{
+    int[] mMemory;
+
+    int mHeapBase;
+    int mHeapFree;
+    int mHeapCount;
+
+    public VMHeap( int[] memory, int start, int count )
+    {
+        mMemory = memory;
+        mHeapCount = count;
+        mHeapBase = start;
+        mHeapFree = start;
+
+        mMemory[mHeapFree] = 0; // next
+        mMemory[mHeapFree + 1] = mHeapCount; // size
+    }
+
+    public int Alloc( int size )
+    {
+        int freeList = mHeapFree;
+        int resultBlock = 0;
+
+        if (size == 0)
+            return 0;
+
+        while ( resultBlock == 0 && freeList != 0 )
+        {
+            // freeList[0]: next
+            // freeList[1]: size
+
+            if ( mMemory[freeList + 1] > (size + 1) )
+            {
+                // Found first fit block that is big enough
+
+                // result block is allocated at the end of the free block's chunk of memory
+                resultBlock = freeList + mMemory[freeList + 1] - (size + 2);
+                mMemory[resultBlock] = 0;
+                mMemory[resultBlock+1] = size;
+
+                // reduce the free memory size from this block we just pulled from
+                mMemory[freeList + 1] = mMemory[freeList + 1] - (size + 2);
+            }
+
+            freeList = mMemory[freeList];
+        }
+
+        if (resultBlock == 0)
+        {
+            // Could not allocate memory
+            return 0;
+        }
+
+        // return the usable memory part of the block
+        return resultBlock + 2;
+    }
+
+    public void Free( int addr )
+    {
+        int prevFreeList;
+
+        if (addr == 0)
+            return;
+
+        // block address is usable memory pointer - 2
+        int block = addr - 2;
+
+        // block[0]: next
+        // block[1]: size
+
+        // append the block to the freeList
+        prevFreeList = mHeapFree;
+        mHeapFree = block;
+        mMemory[block] = prevFreeList;
+    }
+
+    public bool DeFrag()
+    {
+        // FIXME
+        return false;
+    }
+}
+
+///////////////////////////////////////////////
+// Built In functions object
+public class VMBuiltIn
+{
+    protected Dictionary<string, VMBuiltInFunc> mBuiltIn = new Dictionary<string, VMBuiltInFunc>();
+    protected Dictionary<int, VMBuiltInFunc> mBuiltInByLabel = new Dictionary<int, VMBuiltInFunc>();
+    protected Dictionary<string, int> mBuiltInLabels = new Dictionary<string, int>();
+
+    protected int mFuncIndex;
+
+    public void Register(string funcName, VMBuiltInFunc func)
+    {
+        if (mBuiltIn.ContainsKey(funcName))
+            return;
+
+        int funcLabel = -(++mFuncIndex);
+
+        mBuiltIn.Add(funcName, func);
+        mBuiltInByLabel.Add(funcLabel, func);
+        mBuiltInLabels.Add(funcName, funcLabel);
+    }
+
+    public VMBuiltInFunc Find(string funcName)
+    {
+        VMBuiltInFunc result = null;
+        mBuiltIn.TryGetValue(funcName, out result);
+        return result;
+    }
+
+    public VMBuiltInFunc Find(int label)
+    {
+        VMBuiltInFunc result = null;
+        mBuiltInByLabel.TryGetValue(label, out result);
+        return result;
+    }
+
+    public int FindLabel(string funcName)
+    {
+        int result = 0;
+        mBuiltInLabels.TryGetValue(funcName, out result);
+        return result;
+    }
+}
+
+///////////////////////////////////////////////
+// OS Built Ins 
+public class VMOS
+{
+    public static VMBuiltIn DefaultBuiltIns()
+    {
+        VMBuiltIn result = new VMBuiltIn();
+
+        result.Register("Memory.alloc", VMOS.MemoryAlloc);
+        result.Register("Memory.deAlloc", VMOS.MemoryFree);
+        result.Register("Memory.free", VMOS.MemoryFree);
+        result.Register("Memory.deFrag", VMOS.MemoryDefrag);
+
+        return result;
+    }
+
+    /** Finds an available RAM block of the given size and returns
+     *  a reference to its base address. */
+    // function int alloc(int size)
+    public static void MemoryAlloc(VM vm)
+    {
+        int size = vm.StackPop();
+        int address = vm.mHeap.Alloc( size );
+        vm.StackPush(address);
+    }
+
+    /** De-allocates the given object (cast as an array) by making
+     *  it available for future allocations. */
+    // function void deAlloc(int addr)
+    public static void MemoryFree(VM vm)
+    {
+        int address = vm.StackPop();
+        vm.mHeap.Free(address);
+    }
+
+    /** De fragments the free list. */
+    // function void deFrag()
+    public static void MemoryDefrag( VM vm )
+    {
+        vm.mHeap.DeFrag();
+    }
+}

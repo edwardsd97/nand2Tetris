@@ -14,6 +14,7 @@
     <Deterministic>true</Deterministic>
     <TargetFrameworkProfile />
     <LangVersion>latest</LangVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -26,7 +27,6 @@
     <MapFileExtensions>true</MapFileExtensions>
     <ApplicationRevision>0</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
-    <IsWebBootstrapper>false</IsWebBootstrapper>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
@@ -93,14 +93,15 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
-    <EmbeddedResource Include="HackOS\Array.jack" />
-    <EmbeddedResource Include="HackOS\Keyboard.jack" />
-    <EmbeddedResource Include="HackOS\Math.jack" />
-    <EmbeddedResource Include="HackOS\Memory.jack" />
-    <EmbeddedResource Include="HackOS\Output.jack" />
-    <EmbeddedResource Include="HackOS\Screen.jack" />
-    <EmbeddedResource Include="HackOS\String.jack" />
-    <EmbeddedResource Include="HackOS\Sys.jack" />
+    <EmbeddedResource Include="OSHack\Array.jack" />
+    <EmbeddedResource Include="OSHack\Keyboard.jack" />
+    <EmbeddedResource Include="OSHack\Math.jack" />
+    <EmbeddedResource Include="OSHack\Memory.jack" />
+    <EmbeddedResource Include="OSHack\Output.jack" />
+    <EmbeddedResource Include="OSHack\Screen.jack" />
+    <EmbeddedResource Include="OSHack\String.jack" />
+    <EmbeddedResource Include="OSHack\Sys.jack" />
+    <EmbeddedResource Include="OSVM\Memory.jack" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
