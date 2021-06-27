@@ -130,6 +130,19 @@ class VMSymbolTable
         return true;
     }
 
+    public static VMToken.Keyword FunctionType()
+    {
+        foreach (SymbolScope scope in mScopes)
+        {
+            if (scope.mFunctionType != VMToken.Keyword.NONE)
+            {
+                return scope.mFunctionType;
+            }
+        }
+
+        return VMToken.Keyword.NONE;
+    }
+
     public static void DefineContinueBreak( string labelContinue, string labelBreak )
     {
         if (mScopes.Count == 0)
@@ -283,7 +296,7 @@ class VMSymbolTable
             {
                 if (symbol.mKind == kind)
                 {
-                    // in Hack all symbols are 1 word and size is measured in words
+                    // All symbols are 1 dword and size is measured in dwords
                     result++;
                 }
             }

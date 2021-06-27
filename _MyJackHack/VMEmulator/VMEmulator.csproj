@@ -23,6 +23,7 @@
     <None Remove="TestCases\BasicClass.jack" />
     <None Remove="TestCases\Empty.jack" />
     <None Remove="TestCases\Expressions.jack" />
+    <None Remove="TestCases\Heap.jack" />
     <None Remove="TestCases\Main.jack" />
   </ItemGroup>
 
@@ -43,6 +44,7 @@
     <EmbeddedResource Include="TestCases\BasicClass.jack" />
     <EmbeddedResource Include="TestCases\Empty.jack" />
     <EmbeddedResource Include="TestCases\Expressions.jack" />
+    <EmbeddedResource Include="TestCases\Heap.jack" />
     <EmbeddedResource Include="TestCases\Main.jack" />
   </ItemGroup>
 

@@ -1,36 +1,22 @@
 /*
   Main: Main.main test
 
-  Should see these warnings:
-  
-  WARNING: < 7, 0 > Parameters for function main() will be passed 0
-  WARNING: < 9, 0 > Global statments will not execute with Main.main() or main() present
+  Should see this warning:
+  Parameters for function main() will be passed 0
 */
 
-int x = 1;
+int gGlobalValue = 1;
+
+function void main( int alwaysZero )
+{
+    // never called as Main.main takes priority
+    gGlobalValue = 3;
+}
 
 class Main
 {
-   int mMember;
-
-   function void main( int ignored )
+   function void main( int alwaysZero )
    {
-      mMember = 6;
-   }
-
-   constructor Main new()
-   {
-      mMember = 8;
-      return this;
-   }
-
-   method int addTwo( int value )
-   {
-      return value + 2;
-   }
-
-   method void dispose()
-   {
-      Memory.deAlloc(this);
+      gGlobalValue = 2;
    }
 }

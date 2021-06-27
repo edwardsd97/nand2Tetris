@@ -153,12 +153,25 @@ public class VM
         return false;
     }
 
+    public bool Finished()
+    {
+        return mCodeFrame >= mCode.Count;
+    }
+
+    public bool Halted()
+    {
+        return mErrors.Count > 0;
+    }
+
+    public bool Running()
+    {
+        return !(Halted() || Finished());
+    }
+
     public bool ExecuteStep()
     {
-        if (mErrors.Count > 0)
-        {
+        if ( !Running() )
             return false;
-        }
 
         if (mCodeFrame < mCode.Count)
         {

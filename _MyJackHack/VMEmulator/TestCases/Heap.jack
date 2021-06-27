@@ -1,0 +1,43 @@
+/*
+
+  Heap: 
+
+  Tests Memory.alloc, Memory.deAlloc, and Memory.deFrag
+   to ensure the heap is recycling memory correctly
+
+  Bottom of heap should be hex values A, B, C
+
+*/
+
+Array gValues;
+
+function void main()
+{
+	gValues = Array.new(3);
+	gValues[0] = 1;
+	gValues[1] = 2;
+	gValues[2] = 3;
+
+	Memory.deAlloc( gValues );
+
+	gValues = Array.new(3);
+	gValues[0] = 4;
+	gValues[1] = 5;
+	gValues[2] = 6;
+
+	Memory.deAlloc( gValues );
+
+	gValues = Array.new(3);
+	gValues[0] = 7;
+	gValues[1] = 8;
+	gValues[2] = 9;
+
+	Memory.deAlloc( gValues );
+
+	Memory.deFrag();
+
+	gValues = Array.new(3);
+	gValues[0] = 10;
+	gValues[1] = 11;
+	gValues[2] = 12;
+}

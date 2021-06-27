@@ -392,8 +392,9 @@ class VMTokenizer : IEnumerable
             mLine++;
         }
 
+        mLineStr = mLineStr + " "; // add a space to every line to cheat the parser logic when there is only one word in the line
 
-        if (mLineStr != "")
+        if (mLineStr != " ")
         {
             return true;
         }

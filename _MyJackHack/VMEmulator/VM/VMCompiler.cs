@@ -249,11 +249,20 @@ class VMCompiler
 
     public bool ValidateSymbol(string varName)
     {
-        if (VMSymbolTable.SegmentOf(varName) == VM.Segment.INVALID)
+        VM.Segment seg = VMSymbolTable.SegmentOf(varName);
+        if (seg == VM.Segment.INVALID)
         {
             Error("Undefined symbol '" + varName + "'");
             return false;
-            // System.Environment.Exit(-1);
+        }
+        else if (seg == VM.Segment.THIS )
+        {
+            VMToken.Keyword funcType = VMSymbolTable.FunctionType();
+            if (funcType != VMToken.Keyword.METHOD && funcType != VMToken.Keyword.CONSTRUCTOR)
+            {
+                Error("Cannot access class member outside of constructor or method '" + varName + "'");
+                return false;
+            }
         }
 
         return true;
@@ -324,6 +333,14 @@ class VMCompiler
         return info + "_L" + ++mFuncLabel[info];
     }
 
+    public bool MainCheck()
+    {
+        bool hasMain = MainCheck("Main.main");
+        if (!hasMain)
+            hasMain = MainCheck("main");
+        return hasMain;
+    }
+
     public bool MainCheck( string funcName )
     {
         if (mFunctions.ContainsKey(funcName))
@@ -336,6 +353,7 @@ class VMCompiler
                 for (int i = 0; i < func.parmTypes.Count; i++)
                     mVMWriter.WritePush(VM.Segment.CONST, 0);
                 mVMWriter.WriteCall(funcName, func.parmTypes.Count);
+                mVMWriter.WritePop(VM.Segment.TEMP, 0 );
                 mVMWriter.WriteCall("Sys.halt", 0);
                 return true;
             }
@@ -370,10 +388,7 @@ class VMCompiler
             CompilePrePass(mTokens);
         }
 
-        bool hasMain = MainCheck("Main.main");
-        if ( !hasMain )
-            hasMain = MainCheck("main");
-
+        bool calledMain = false;
         foreach (VMTokenizer tokens in mTokensSet)
         {
             mTokens = tokens;
@@ -381,11 +396,11 @@ class VMCompiler
 
             VMToken token = null;
 
-            while (mTokens.HasMoreTokens())
+            do
             {
                 mClassName = "";
 
-                if ( token == mTokens.Get() )
+                if (token == mTokens.Get())
                 {
                     Error("Invalid Syntax");
                     break;
@@ -396,25 +411,32 @@ class VMCompiler
                 switch (token.keyword)
                 {
                     case VMToken.Keyword.CLASS:
+                        if (!calledMain)
+                            calledMain = MainCheck();
                         CompileClass();
                         break;
 
                     case VMToken.Keyword.FUNCTION:
+                        if (!calledMain)
+                            calledMain = MainCheck();
                         CompileSubroutineDec();
                         break;
 
                     default:
                         if (CompileStatements() > 0)
                         {
-                            if (hasMain)
-                            {
-                                Warning("Global statments will not execute with Main.main() or main() present");
-                            }
-                            mVMWriter.WriteCall("Sys.halt", 0);
+                            calledMain = MainCheck();
+                            if (!calledMain)
+                                mVMWriter.WriteCall("Sys.halt", 0);
+                        }
+                        else if ( mTokens.mTokens.Count > 0 )
+                        {
+                            Error( "Expected statement" );
                         }
                         break;
                 }
-            }
+
+            } while ( mTokens.HasMoreTokens() );
         }
 
         mVMWriter.WriteLabel("_VM_PROGRAM_ENDED_");

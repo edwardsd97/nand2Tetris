@@ -41,7 +41,7 @@ namespace VMEmulator
             InitializeComponent();
 
             TestCaseInit();
-            TestCaseSet(1);
+            TestCaseSet("Empty");
 
             Compile();
         }
@@ -53,6 +53,9 @@ namespace VMEmulator
 
         private void buttonStep_Click(object sender, RoutedEventArgs e)
         {
+            if (!mVM.Running())
+                Reset();
+
             TimerStepSetup(-1);
             TimerUpdateSetup(-1);
             mVM.ExecuteStep();
@@ -61,10 +64,7 @@ namespace VMEmulator
 
         private void buttonReset_Click(object sender, RoutedEventArgs e)
         {
-            TimerStepSetup(-1);
-            TimerUpdateSetup(-1);
-            mVM.Reset();
-            UpdateForm();
+            Reset();
         }
 
         private void buttonTestCase_Click(object sender, RoutedEventArgs e)
@@ -79,18 +79,32 @@ namespace VMEmulator
 
         private void buttonPlay_Click(object sender, RoutedEventArgs e)
         {
+            if (!mVM.Running())
+                Reset();
             TimerStepSetup(100);
         }
 
         private void buttonPlayFast_Click(object sender, RoutedEventArgs e)
         {
+            if (!mVM.Running())
+                Reset();
             TimerStepSetup(15);
         }
 
         private void buttonPlayFull_Click(object sender, RoutedEventArgs e)
         {
+            if (!mVM.Running())
+                Reset();
             TimerStepSetup(0, false);
             TimerUpdateSetup(1000);
+        }
+
+        public void Reset()
+        {
+            TimerStepSetup(-1);
+            TimerUpdateSetup(-1);
+            mVM.Reset();
+            UpdateForm();
         }
 
         public void TimerUpdateSetup(int msTickRate = 50, bool updateForm = true)
@@ -224,9 +238,23 @@ namespace VMEmulator
             }
         }
 
-        public void TestCaseSet( int index )
+        public void TestCaseSet( string subString )
         {
-            mTestCase = index;
+            Assembly asm = Assembly.GetExecutingAssembly();
+
+            int testCaseIndex = -1;
+            foreach (string osName in asm.GetManifestResourceNames())
+            {
+                if (!osName.Contains(".TestCases."))
+                    continue;
+
+                testCaseIndex++;
+
+                if (osName.Contains(subString))
+                    break;
+            }
+
+            mTestCase = testCaseIndex;
             TestCaseUpdate();
         }
 
@@ -392,14 +420,21 @@ namespace VMEmulator
         public void UpdateErrors()
         {
             string errors = "";
+            bool vmErrors = false;
             for (int i = 0; i < compiler.mErrors.Count; i++)
             {
                 errors = errors + compiler.mErrors[i] + "\r\n";
             }
             for (int i = 0; i < mVM.mErrors.Count; i++)
             {
+                vmErrors = true;
                 errors = errors + mVM.mErrors[i] + "\r\n";
             }
+
+            if ( mVM.Halted() )
+                errors = errors + "PROGRAM HALTED\r\n";
+            else if (mVM.Finished())
+                errors = errors + "PROGRAM ENDED\r\n";
 
             if (textErrors != null)
                 textErrors.Text = errors;

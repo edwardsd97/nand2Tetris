@@ -77,9 +77,13 @@ public static class VMOS_Memory
     public static void Alloc(VM vm)
     {
         int size = vm.StackPop();
-        int address = vm.mHeap.Alloc(size);
-        if (address == 0)
-            vm.Error("Out of free heap memory");
+        int address = 0;
+        if (size > 0)
+        {
+            address = vm.mHeap.Alloc(size);
+            if (address == 0)
+                vm.Error("Out of free heap memory");
+        }
         vm.StackPush(address);
     }
 
