@@ -89,9 +89,9 @@ class VMToken
         symbols.Add('&', "&amp;"); symbols.Add('|', "|");
         symbols.Add('=', "="); symbols.Add('~', "~"); symbols.Add('!', "!");
         symbols.Add('<', "&lt;"); symbols.Add('>', "&gt;");
-        symbols.Add('%', "%");
+        symbols.Add('%', "%"); symbols.Add('^', "^");
 
-        // op: '~' | '*' | '/' | '%' | '+' | '-' | '<' | '>' | '=' | '&' | '|'
+        // op: '~' | '!'  >  '*' | '/' | '%'  >  '+' | '-'  >  '<' | '>'  >  '='  >  '&'  >  '|'
         // ( int values are C++ operator precedence https://en.cppreference.com/w/cpp/language/operator_precedence )
         ops = new Dictionary<char, int>();
         ops.Add('~', 3); ops.Add('!', 3);
@@ -100,6 +100,7 @@ class VMToken
         ops.Add('<', 9); ops.Add('>', 9);
         ops.Add('=', 10); // ==
         ops.Add('&', 11);
+        ops.Add('^', 12);
         ops.Add('|', 13);
 
         VMToken.mInitialized = true;

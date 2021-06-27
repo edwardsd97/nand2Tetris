@@ -1556,34 +1556,34 @@ class VMCompiler
         return compiledExpression;
     }
 
-    protected int ExpressionPrecCompare(object x, object y)
+    protected int ExpressionPrecCompare(object a, object b)
     {
-        if (x == null && y != null)
+        if (a == null && b != null)
             return -1; // null < non-null
 
-        if (x != null && y == null)
+        if (a != null && b == null)
             return 1; // non-null > null
 
-        if (x == null && y == null)
+        if (a == null && b == null)
             return 0; // null == null
 
-        bool isXOp = x.GetType() == typeof(char);
-        bool isYOp = y.GetType() == typeof(char);
+        bool isAOp = a.GetType() == typeof(char);
+        bool isBOp = b.GetType() == typeof(char);
 
-        if (isXOp && isYOp)
+        if (isAOp && isBOp)
         {
             // same operator is left-associative: + > +
-            if ((char)x == (char)y)
+            if ((char)a == (char)b)
                 return 1;
 
-            int delta = VMToken.OpPrecedence((char)x) - VMToken.OpPrecedence((char)y);
+            int delta = VMToken.OpPrecedence((char)a) - VMToken.OpPrecedence((char)b);
             return -delta;
         }
 
-        if (!isXOp && isYOp)
+        if (!isAOp && isBOp)
             return 1; // term > op
 
-        if (isXOp && !isYOp)
+        if (isAOp && !isBOp)
             return -1; // op < term
 
         return 0;
@@ -1638,6 +1638,13 @@ class VMCompiler
                 if (a == null && b == null)
                     return;
 
+                if (a == null && b.GetType().IsSubclassOf(typeof(Stream)))
+                {
+                    mVMWriter.WriteStream((Stream)b);
+                    ip++;
+                    continue;
+                }
+
                 // if a < b or a == b then
                 if (ExpressionPrecCompare(a, b) <= 0)
                 {
@@ -1670,7 +1677,9 @@ class VMCompiler
                             stack.RemoveAt(stack.Count - 1);
                         stack.Add("stackValue"); // placeholder to write nothing when it is encountered
 
-                    } while (stack.Count >= 3 && ExpressionPrecCompare(ExpressionTopOp(stack), opPopped) < 0);
+                        a = ExpressionTopOp(stack);
+
+                    } while (stack.Count >= 3 && ExpressionPrecCompare(a, opPopped) < 0);
                 }
             }
         }
@@ -1746,7 +1755,10 @@ class VMCompiler
             // unaryTerm: ('-'|'~') term
             char symbol = token.symbol;
             mTokens.Advance();
-            CompileExpression();
+            if ( mTokens.Get().symbol == '(' )
+                CompileExpression();
+            else
+                CompileTerm();
             if (symbol == '~')
             {
                 mVMWriter.WriteArithmetic(VM.Command.NOT);

@@ -14,6 +14,7 @@ Jack language extensions
 [x] allow class field read/write without accessor functions: object.fieldValue = 5; x = object.fieldArray[3];
 [x] add support for 'continue' and 'break' commands inside a for/while
 [x] add support for switch (case/default/break) statements (non-optimized)
+[ ] add support for two character operators like == != ++ etc
 [ ] add object inheritance - requires virtual objects to have a function table pointer built in
 [ ] OS implement Memory.deFrag() (low priority)
 [ ] optimize switch statements with a jump table when appropriate (low priority)
@@ -34,3 +35,7 @@ Hardware projects
   - Use VHDL / Verilog to rewrite the HDL programs from N2T1
   - Commit these programs to FPGA board (~$100)
   - Or use a free FPGA emulator software
+
+BUGS
+------------------------------
+[ ] global functions that follow a class are interpreted as being part of that class

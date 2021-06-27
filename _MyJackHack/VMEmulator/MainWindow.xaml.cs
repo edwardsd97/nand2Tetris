@@ -185,7 +185,6 @@ namespace VMEmulator
 
         void TimerCompileTick(object sender, object e)
         {
-            TimerCompileSetup(-1);
             Compile();
         }
 
@@ -262,6 +261,7 @@ namespace VMEmulator
         {
             TimerStepSetup(-1);
             TimerUpdateSetup(-1);
+            TimerCompileSetup(-1);
 
             byteCode = new MemoryStream();
             vmcommands = new MemoryStream();
