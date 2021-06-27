@@ -1,2 +1,6 @@
-_MyJackHack/VMEmulator/bin/*
-_MyJackHack/VMEmulator/obj/*
+/_MyJackHack/VMEmulator/bin/*
+/_MyJackHack/VMEmulator/obj/*
+*.dll
+*.pdb
+*.exe
+*.user
