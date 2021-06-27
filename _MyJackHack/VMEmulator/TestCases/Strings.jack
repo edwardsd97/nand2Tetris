@@ -12,10 +12,10 @@ gStaticString.dispose();
 int x = gString.length();
 int y = gString.charAt(0);
 
-gString.setCharAt( 2, 45 );
+gString.setCharAt( 2, '-' );
 int z = gString.charAt(3);
 int w = gString.length();
-gString.appendChar(46);
+gString.appendChar('.');
 int p = gString.length();
 
 int r = gString.length();

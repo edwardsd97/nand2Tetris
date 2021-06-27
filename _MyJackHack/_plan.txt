@@ -15,7 +15,7 @@ Jack language extensions
 [x] add support for 'continue' and 'break' commands inside a for/while
 [x] add support for switch (case/default/break) statements (non-optimized)
 [x] OS implement Memory.deFrag()
-[ ] add support for characters in code: '-' for 45 for example
+[x] add support for characters in code: '-' for 45 for example
 [ ] add support for two character operators like == != ++ etc
 [ ] add object inheritance - requires virtual objects to have a function table pointer built in
 [ ] optimize switch statements with a jump table when appropriate (low priority)

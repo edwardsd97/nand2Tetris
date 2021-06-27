@@ -8,7 +8,7 @@ class VMToken
     public enum Type
     {
         NONE,
-        KEYWORD, SYMBOL, IDENTIFIER, INT_CONST, STRING_CONST,
+        KEYWORD, SYMBOL, IDENTIFIER, INT_CONST, STRING_CONST, 
         EOF
     };
 
@@ -285,6 +285,7 @@ class VMTokenizer : IEnumerable
     protected bool mCommentTerminateWait;
     protected bool mReadingToken;
     protected bool mReadingString;
+    protected bool mReadingChar;
     protected string mTokenStr;
 
     public class State
@@ -501,9 +502,46 @@ class VMTokenizer : IEnumerable
             bool isWhitespace = VMToken.IsWhitespace(c);
             bool isSymbol = VMToken.IsSymbol(c);
             bool isQuote = (c == '"');
+            bool isSingleQuote = (c == '\'');
 
             if (mReadingToken)
             {
+                if (!mReadingChar && isSingleQuote)
+                {
+                    mReadingChar = true;
+                    mLineChar++;
+                    continue;
+                }
+                else if (mReadingChar && isSingleQuote)
+                {
+                    // Add the char
+                    VMToken token = new VMToken(mLine, mLineChar - mTokenStr.Length - 1);
+                    token.type = VMToken.Type.INT_CONST;
+                    try
+                    {
+                        token.intVal = char.Parse(mTokenStr);
+                    }
+                    catch
+                    {
+                        token.intVal = 0;
+                    }
+                    mTokens.Add(token);
+
+                    mReadingToken = false;
+                    mReadingChar = false;
+                    mTokenStr = "";
+                    mLineChar++;
+                    mTokenCurrent++;
+                    return token;
+                }
+                else if (mReadingChar)
+                {
+                    // keep reading without caring about anything but the end single quote
+                    mTokenStr += c;
+                    mLineChar++;
+                    continue;
+                }
+
                 if (!mReadingString && isQuote)
                 {
                     mReadingString = true;

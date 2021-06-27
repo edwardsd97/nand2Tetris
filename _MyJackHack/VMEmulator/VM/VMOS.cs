@@ -46,7 +46,6 @@ public static class VMOS_Memory
         builtIns.Register("Memory.poke", VMOS_Memory.Poke);
         builtIns.Register("Memory.alloc", VMOS_Memory.Alloc);
         builtIns.Register("Memory.deAlloc", VMOS_Memory.Free);
-        builtIns.Register("Memory.deFrag", VMOS_Memory.Defrag);
     }
 
     /** Returns the RAM value at the given address. */
@@ -95,13 +94,6 @@ public static class VMOS_Memory
     {
         int address = vm.StackPop();
         vm.mHeap.Free(address);
-    }
-
-    /** De fragments the free list. */
-    // function void deFrag()
-    public static void Defrag(VM vm)
-    {
-        vm.mHeap.DeFrag();
     }
 }
 

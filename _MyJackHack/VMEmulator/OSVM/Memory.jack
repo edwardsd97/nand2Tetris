@@ -16,7 +16,4 @@ class Memory
     /** De-allocates the given object (cast as an array) by making
      *  it available for future allocations. */
     function void deAlloc(int addr);
-
-    /** Defragments the free list. */
-    function void deFrag();
 }
