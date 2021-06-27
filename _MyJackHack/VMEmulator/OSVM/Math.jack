@@ -1,0 +1,23 @@
+
+// VM Built in function signatures for Math static class
+
+class Math 
+{
+    /** Returns the absolute value of x. */
+    function int abs(int x);
+
+    /** Returns the integer part of the square root of x. */
+    function int sqrt(int x);
+
+    /** Returns the greater number. */
+    function int max(int x, int y);
+
+    /** Returns the smaller number. */
+    function int min(int x, int y);
+
+    /** Returns x squared. */
+    function int sqr(int x);
+
+    /** Returns x to the power of y */
+    function int pow(int x, int y);
+}

@@ -1,0 +1,33 @@
+/*
+ BasicClass: implementation and execution of basic class
+ Global code that halts on its own.
+
+ Global 0 should be 4 when finished
+*/
+
+int x = 1;
+MyClass c = MyClass.new();
+x = x + c.addTwo( x );
+c.dispose();
+c = null;
+
+class MyClass
+{
+   int mMember;
+
+   constructor MyClass new()
+   {
+      mMember = 8;
+      return this;
+   }
+
+   method int addTwo( int value )
+   {
+      return value + 2;
+   }
+
+   method void dispose()
+   {
+      Memory.deAlloc(this);
+   }
+}

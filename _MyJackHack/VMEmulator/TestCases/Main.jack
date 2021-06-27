@@ -1,0 +1,36 @@
+/*
+  Main: Main.main test
+
+  Should see these warnings:
+  
+  WARNING: < 7, 0 > Parameters for function main() will be passed 0
+  WARNING: < 9, 0 > Global statments will not execute with Main.main() or main() present
+*/
+
+int x = 1;
+
+class Main
+{
+   int mMember;
+
+   function void main( int ignored )
+   {
+      mMember = 6;
+   }
+
+   constructor Main new()
+   {
+      mMember = 8;
+      return this;
+   }
+
+   method int addTwo( int value )
+   {
+      return value + 2;
+   }
+
+   method void dispose()
+   {
+      Memory.deAlloc(this);
+   }
+}

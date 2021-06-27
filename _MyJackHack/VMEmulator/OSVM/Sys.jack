@@ -1,0 +1,15 @@
+
+// VM Built in function signatures for Sys static class
+
+class Sys 
+{
+    /** Halts the program execution. */
+    function void halt();
+
+    /** Waits approximately duration milliseconds and returns.  */
+    function void wait(int durationMs);
+
+    /** Displays the given error code in the form "ERR<errorCode>",
+     *  and halts the program's execution. */
+    function void error(int errorCode);
+}

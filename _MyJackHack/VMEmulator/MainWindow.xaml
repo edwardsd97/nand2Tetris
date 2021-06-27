@@ -1,0 +1,34 @@
+﻿<Window x:Class="VMEmulator.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:VMEmulator"
+        mc:Ignorable="d"
+        Title="VM Emulator" Height="813" Width="1324" ResizeMode="CanMinimize">
+    <Grid>
+        <TextBox x:Name="textCode" HorizontalAlignment="Left" Text="int x = 1;" TextWrapping="Wrap" VerticalAlignment="Top" Width="419" Height="602" FontFamily="Courier New" AcceptsReturn="True" VerticalScrollBarVisibility="Visible" Margin="10,42,0,0" TextChanged="textCode_TextChanged" AcceptsTab="True"/>
+        <TextBox x:Name="textErrors" HorizontalAlignment="Left" Text="Errors" TextWrapping="Wrap" VerticalAlignment="Top" Width="852" Height="100" FontFamily="Courier New" AcceptsReturn="True" VerticalScrollBarVisibility="Visible" Margin="10,649,0,0"/>
+        <Label Content="High level code" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" IsHitTestVisible="False" Height="27"/>
+        <Label Content="VM Command text" HorizontalAlignment="Left" Margin="436,10,0,0" VerticalAlignment="Top" IsHitTestVisible="False" Height="27"/>
+        <TextBox x:Name="textVM" HorizontalAlignment="Left" Text="VM Comomands" TextWrapping="Wrap" VerticalAlignment="Top" Width="428" Height="602" FontFamily="Courier New" AcceptsReturn="True" VerticalScrollBarVisibility="Visible" Margin="434,42,0,0"/>
+        <Label Content="VM Byte Code" HorizontalAlignment="Left" Margin="870,10,0,0" VerticalAlignment="Top" IsHitTestVisible="False" Height="27"/>
+        <TextBox x:Name="textVMByteCode" HorizontalAlignment="Left" Text="VM Byte Code" TextWrapping="Wrap" VerticalAlignment="Top" Width="142" Height="602" FontFamily="Courier New" AcceptsReturn="True" VerticalScrollBarVisibility="Visible" Margin="867,42,0,0"/>
+        <Label Content="Stack" HorizontalAlignment="Left" Margin="1014,144,0,0" VerticalAlignment="Top" IsHitTestVisible="False" Height="27"/>
+        <TextBox x:Name="textStack" HorizontalAlignment="Left" Text="Stack" TextWrapping="Wrap" VerticalAlignment="Top" Width="149" Height="217" FontFamily="Courier New" AcceptsReturn="True" VerticalScrollBarVisibility="Visible" Margin="1014,171,0,0"/>
+        <TextBox x:Name="textSegmentPointers" HorizontalAlignment="Left" Text="Segment Pointers" TextWrapping="Wrap" VerticalAlignment="Top" Width="149" Height="102" FontFamily="Courier New" AcceptsReturn="True" VerticalScrollBarVisibility="Hidden" Margin="1014,42,0,0"/>
+        <Label Content="Segment Pointers" HorizontalAlignment="Left" Margin="1014,10,0,0" VerticalAlignment="Top" IsHitTestVisible="False" Height="27"/>
+        <Label Content="Globals" HorizontalAlignment="Left" Margin="1014,388,0,0" VerticalAlignment="Top" IsHitTestVisible="False" Height="27"/>
+        <TextBox x:Name="textGlobals" HorizontalAlignment="Left" Text="Globals" TextWrapping="Wrap" VerticalAlignment="Top" Width="149" Height="229" FontFamily="Courier New" AcceptsReturn="True" VerticalScrollBarVisibility="Visible" Margin="1014,415,0,0"/>
+        <TextBox x:Name="textHeap" HorizontalAlignment="Left" Text="Heap" TextWrapping="Wrap" VerticalAlignment="Top" Width="130" Height="602" FontFamily="Courier New" AcceptsReturn="True" VerticalScrollBarVisibility="Visible" Margin="1168,42,0,0"/>
+        <Label Content="Heap" HorizontalAlignment="Left" Margin="1168,10,0,0" VerticalAlignment="Top" IsHitTestVisible="False" Height="27"/>
+        <Button x:Name="buttonStep" Content="&gt;" HorizontalAlignment="Left" Margin="870,649,0,0" VerticalAlignment="Top" Height="36" Width="72" Click="buttonStep_Click"/>
+        <Button x:Name="buttonReset" Content="Reset" HorizontalAlignment="Left" Margin="870,713,0,0" VerticalAlignment="Top" Height="36" Width="72" Click="buttonReset_Click"/>
+        <Button x:Name="buttonTestCase" Content="Next Test" HorizontalAlignment="Left" Margin="1101,713,0,0" VerticalAlignment="Top" Height="36" Width="72" Click="buttonTestCase_Click"/>
+        <Button x:Name="buttonPlay" Content="&gt;&gt;" HorizontalAlignment="Left" Margin="947,649,0,0" VerticalAlignment="Top" Height="36" Width="72" Click="buttonPlay_Click"/>
+        <Button x:Name="buttonPlayFast" Content="&gt;&gt;&gt;" HorizontalAlignment="Left" Margin="1024,649,0,0" VerticalAlignment="Top" Height="36" Width="72" Click="buttonPlayFast_Click"/>
+        <Button x:Name="buttonPlayFull" Content="&gt;&gt;&gt;&gt;" HorizontalAlignment="Left" Margin="1101,649,0,0" VerticalAlignment="Top" Height="36" Width="72" Click="buttonPlayFull_Click"/>
+        <Button x:Name="buttonTestCasePrev" Content="Prev Test" HorizontalAlignment="Left" Margin="1024,713,0,0" VerticalAlignment="Top" Height="36" Width="72" Click="buttonTestCasePrev_Click"/>
+
+    </Grid>
+</Window>

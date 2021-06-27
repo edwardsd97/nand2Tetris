@@ -1,0 +1,35 @@
+
+/*
+ Expressions: Expression test cases
+ Globals should match these commented values...
+*/
+
+int value01; // 17
+int value02; // -1
+int value03; // -1
+int value04; // 1
+int value05; // 15
+int value06; // 11
+int value07; // 9
+int value08; // 14
+int value09; // 9
+int value10; // 0
+int value11; // -1
+int value12; // -1
+int value13; // -1
+int value14; // -1
+
+value01 = 5 + 6 * 2;
+value02 = 5 = 2 * 2 + 1;
+value03 = 5 = 1 + 2 * 2;
+value04 = 2 + 3 = 2 * 2 + 1;
+value05 = 1 + 2 + 3 * 4;
+value06 = 1 + 2 * 3 + 4;
+value07 = 1 * 2 + 3 + 4;
+value08 = 1 * 2 + 3 * 4;
+value09 = 2 + 2 * 2 + 2 / 2 + 2;
+value10 = 5 < 4 | 8 < 7 | 9 < 8;
+value11 = 5 < 4 | 8 < 9 | 9 < 8;
+value12 = 6 / 2 = 1 + 2;
+value13 = 5 > 4 & 4 < 5;
+value14 = 3 + 3 > 2 * 2 & 2 * 2 + 1 < 6;

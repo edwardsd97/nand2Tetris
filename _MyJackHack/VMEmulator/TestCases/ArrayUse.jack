@@ -1,0 +1,37 @@
+/*
+ ArrayUse:
+
+ Basic Array utilization
+*/
+
+Array a = Array.new( 3 );
+a[0] = Vector3.new();
+a[1] = Vector3.new();
+a[2] = Vector3.new();
+
+for ( int i = 0; i < 3; i = i + 1 )
+{
+    if ( a[i] )
+    {
+       Vector3 v = a[i];
+       v.dispose();
+    }
+}
+
+a.dispose();
+a = null;
+
+class Vector3
+{
+   int x, y, z;
+
+   constructor Vector3 new()
+   {
+      return this;
+   }
+
+   method void dispose()
+   {
+      Memory.deAlloc(this);
+   }
+}
