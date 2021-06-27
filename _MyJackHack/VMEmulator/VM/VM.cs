@@ -187,6 +187,7 @@ public class VM
                     break;
 
                 case VM.Command.LABEL:
+                    // Labels have no instructions - they index the instruction that follows
                     break;
 
                 case VM.Command.GOTO:
@@ -330,6 +331,7 @@ public class VM
 
         if (index < 0)
         {
+            // BUILT IN FUNCTION
             mStackPushedCount = 0;
             mStackPoppedCount = 0;
 
@@ -353,30 +355,34 @@ public class VM
             mCodeFrame++;
             return;
         }
+        else
+        {
+            // VM CODE FUNCTION
 
-        // push returnAddress
-        StackPush(mCodeFrame + 1);
+            // push returnAddress
+            StackPush(mCodeFrame + 1);
 
-        // push LCL pointer value
-        StackPush(mMemory[(int)SegPointer.LOCAL]);
+            // push LCL pointer value
+            StackPush(mMemory[(int)SegPointer.LOCAL]);
 
-        // push ARG pointer value
-        StackPush(mMemory[(int)SegPointer.ARG]);
+            // push ARG pointer value
+            StackPush(mMemory[(int)SegPointer.ARG]);
 
-        // push THIS pointer value
-        StackPush(mMemory[(int)SegPointer.THIS]);
+            // push THIS pointer value
+            StackPush(mMemory[(int)SegPointer.THIS]);
 
-        // push THAT pointer value
-        StackPush(mMemory[(int)SegPointer.THAT]);
+            // push THAT pointer value
+            StackPush(mMemory[(int)SegPointer.THAT]);
 
-        // ARG = SP - 5 - nArgs
-        mMemory[(int)SegPointer.ARG] = mMemory[(int)SegPointer.SP] - 5 - args;
+            // ARG = SP - 5 - nArgs
+            mMemory[(int)SegPointer.ARG] = mMemory[(int)SegPointer.SP] - 5 - args;
 
-        // LCL = SP
-        mMemory[(int)SegPointer.LOCAL] = mMemory[(int)SegPointer.SP];
+            // LCL = SP
+            mMemory[(int)SegPointer.LOCAL] = mMemory[(int)SegPointer.SP];
 
-        // goto functionName
-        mCodeFrame = index;
+            // goto functionName
+            mCodeFrame = index;
+        }
     }
 
     protected void DoReturn()

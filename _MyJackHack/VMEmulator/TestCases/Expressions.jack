@@ -4,9 +4,9 @@
  Globals should match these commented values...
 */
 
-int value01; // 17
+int value01; // -1
 int value02; // -1
-int value03; // -1
+int value03; // 17
 int value04; // 1
 int value05; // 15
 int value06; // 11
@@ -19,9 +19,9 @@ int value12; // -1
 int value13; // -1
 int value14; // -1
 
-value01 = 5 + 6 * 2;
-value02 = 5 = 2 * 2 + 1;
-value03 = 5 = 1 + 2 * 2;
+value01 = 5 = 2 * 2 + 1;
+value02 = 5 = 1 + 2 * 2;
+value03 = 5 + 6 * 2;
 value04 = 2 + 3 = 2 * 2 + 1;
 value05 = 1 + 2 + 3 * 4;
 value06 = 1 + 2 * 3 + 4;
