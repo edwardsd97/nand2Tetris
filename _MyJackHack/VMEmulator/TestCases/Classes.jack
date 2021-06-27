@@ -1,0 +1,55 @@
+/*
+ Classes: Test case for class members and class statics
+*/
+
+ClassA a = ClassA.new();
+ClassB b = ClassB.new();
+
+a.mMember = a.mMember + 1;
+b.mMember = b.mMember + 1;
+
+class ClassA
+{
+   static Array mStaticArray;
+
+   int mMember;
+
+   constructor ClassA new()
+   {
+      mMember = 4;
+      if ( !mStaticArray )
+      {
+          mStaticArray = Array.new(2);
+          mStaticArray[0] = 1;
+          mStaticArray[1] = 2;
+      }
+      ClassB.mStaticMember = ClassB.mStaticMember + 1;
+      return this;
+   }
+
+   method void dispose()
+   {
+      Memory.deAlloc(this);
+   }
+}
+
+class ClassB
+{
+   static int mStaticMember;
+
+   int mMember;
+
+   constructor ClassB new()
+   {
+      mMember = 8;
+      mStaticMember = 4;
+      if ( ClassA.mStaticArray )
+          ClassA.mStaticArray[0] = 3;
+      return this;
+   }
+
+   method void dispose()
+   {
+      Memory.deAlloc(this);
+   }
+}

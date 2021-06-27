@@ -54,10 +54,6 @@ using System.Reflection;
 
 class VMCompiler
 {
-    // Options - default true
-    static public bool mStaticStrings = true;
-    static public bool mOSClasses = true;
-
     static public Dictionary<string, ClassSpec> mClasses = new Dictionary<string, ClassSpec>(); // dictionary of known classes
     static public Dictionary<string, FuncSpec> mFunctions = new Dictionary<string, FuncSpec>(); // dictionary of function specs
     static public Dictionary<string, int> mStrings = new Dictionary<string, int>(); // static strings
@@ -74,7 +70,6 @@ class VMCompiler
 
     public class FuncSpec
     {
-        public string filePath;
         public string funcName;
         public string className;
         public VMToken.Keyword type;
@@ -95,18 +90,21 @@ class VMCompiler
         mTokensSet = new List<VMTokenizer>();
         mTokensSet.Add(tokens);
         mVMWriter = writer;
+        InitStaticStrings();
     }
 
     public VMCompiler( VMTokenizer tokens )
     {
         mTokensSet = new List<VMTokenizer>();
         mTokensSet.Add(tokens);
+        InitStaticStrings();
     }
 
     public VMCompiler(List<VMTokenizer> tokens)
     {
         mTokensSet = new List<VMTokenizer>();
         mTokensSet.AddRange( tokens );
+        InitStaticStrings();
     }
 
     public VMCompiler(List<VMTokenizer> tokens, IVMWriter writer)
@@ -114,6 +112,13 @@ class VMCompiler
         mTokensSet = new List<VMTokenizer>();
         mTokensSet.AddRange(tokens);
         mVMWriter = writer;
+        InitStaticStrings();
+    }
+
+    protected void InitStaticStrings()
+    {
+        if (!mStrings.ContainsKey(""))
+            mStrings.Add("", mStrings.Count);
     }
 
     public static void ResetAll()
@@ -140,6 +145,8 @@ class VMCompiler
         mIgnoreErrors = true;
 
         VMToken token = mTokens.Get();
+
+        mVMWriter.Disable();
 
         // Find and register all classes and their member variables so that we know what types are valid
         while (mTokens.HasMoreTokens())
@@ -222,6 +229,7 @@ class VMCompiler
 
         mTokens = tokensPrev;
 
+        mVMWriter.Enable();
         mIgnoreErrors = false;
     }
 
@@ -481,7 +489,25 @@ class VMCompiler
 
             if (VMSymbolTable.ExistsCurrentScope(varName))
                 Error("Symbol already defined '" + varName + "'");
-            VMSymbolTable.Define(varName, varType, varKind);
+
+            if (varKind == VMSymbolTable.Kind.GLOBAL)
+            {
+                string globalSym = mClassName + "." + varName;
+                
+                // Only define globals on the pre pass
+                if ( !mVMWriter.IsEnabled() )
+                {
+                    if (VMSymbolTable.Exists(globalSym, "global"))
+                        Error("Global symbol already defined '" + globalSym + "'");
+                    VMSymbolTable.Define(globalSym, varType, varKind, "global");
+                }
+
+                VMSymbolTable.Define(varName, varType, varKind, null, VMSymbolTable.OffsetOf(globalSym));
+            }
+            else
+            {
+                VMSymbolTable.Define(varName, varType, varKind );
+            }
 
             if (mTokens.Get().symbol == '=')
             {
@@ -655,12 +681,6 @@ class VMCompiler
                     mVMWriter.WritePop(VM.Segment.POINTER, 0);
                 }
 
-                // Before starting with Main.main, inject the allocation of all the static string constants
-                if (mClassName == "Main" && mFuncName == "main")
-                {
-                    CompileStaticStrings();
-                }
-
                 int compiledReturn = 0;
                 
                 CompileStatements( out compiledReturn );
@@ -688,8 +708,12 @@ class VMCompiler
 
             VMSymbolTable.ScopePop(); // "function"
 
+            mFuncName = null;
+
             return true;
         }
+
+        mFuncName = null;
 
         return false;
     }
@@ -947,6 +971,7 @@ class VMCompiler
         {
             if (memberName == null)
                 Error("Expected [ after '" + varName + "'");
+
             mVMWriter.WritePush(VM.Segment.CONST, 0);
         }
 
@@ -989,7 +1014,37 @@ class VMCompiler
 
     public void CompileClassMember()
     {
-        CompileArrayValue(); // handles class members as well
+        if (mTokens.Get().type == VMToken.Type.IDENTIFIER && mClasses.ContainsKey(mTokens.Get().identifier))
+        {
+            // static class member 
+            string className;
+            string varName;
+            string classGlobal;
+            ValidateTokenAdvance(VMToken.Type.IDENTIFIER, out className);
+            ValidateTokenAdvance('.');
+            ValidateTokenAdvance(VMToken.Type.IDENTIFIER, out varName);
+
+            classGlobal = className + '.' + varName;
+
+            if (ValidateSymbol(classGlobal))
+                mVMWriter.WritePush(VMSymbolTable.SegmentOf(classGlobal), VMSymbolTable.OffsetOf(classGlobal));
+
+            if (mTokens.Get().symbol == '[')
+            {
+                // static class member array
+                ValidateTokenAdvance('[');
+                CompileExpression();
+                ValidateTokenAdvance(']');
+                mVMWriter.WriteArithmetic(VM.Command.ADD);
+                mVMWriter.WritePop(VM.Segment.POINTER, 1);
+                mVMWriter.WritePush(VM.Segment.THAT, 0);
+            }
+        }
+        else
+        {
+            // handles class members and array variables
+            CompileArrayValue(); 
+        }
     }
 
     public void CompileStatementLet(bool eatKeyword = true, bool eatSemiColon = true)
@@ -1007,10 +1062,34 @@ class VMCompiler
 
         if (mTokens.Get().symbol == '[' || mTokens.Get().symbol == '.')
         {
-            isArray = true;
+            if (mTokens.Get().symbol == '.' && mClasses.ContainsKey(varName))
+            {
+                // assigning static global class member
+                string memberName;
+                ValidateTokenAdvance('.');
+                ValidateTokenAdvance(VMToken.Type.IDENTIFIER, out memberName);
+                varName = varName + "." + memberName;
 
-            // Push the array indexed address onto stack
-            CompileArrayAddress(varName);
+                if ( mTokens.Get().symbol == '[')
+                {
+                    isArray = true;
+
+                    ValidateTokenAdvance('[');
+                    CompileExpression();
+                    ValidateTokenAdvance(']');
+
+                    if (ValidateSymbol(varName))
+                        mVMWriter.WritePush(VMSymbolTable.SegmentOf(varName), VMSymbolTable.OffsetOf(varName));
+                    mVMWriter.WriteArithmetic(VM.Command.ADD);
+                }
+            }
+            else
+            {
+                isArray = true;
+
+                // Push the array indexed address onto stack
+                CompileArrayAddress(varName);
+            }
         }
 
         ValidateTokenAdvance('=');
@@ -1449,59 +1528,16 @@ class VMCompiler
 
         ValidateTokenAdvance(VMToken.Type.STRING_CONST, out str);
 
-        if (VMCompiler.mStaticStrings && VMCompiler.mOSClasses)
-        {
-            // Precompiled static strings
-            int strIndex;
+        // Precompiled static strings
+        int strIndex;
 
-            if (VMCompiler.mStrings.TryGetValue(str, out strIndex))
-            {
-                mVMWriter.WritePush(VM.Segment.CONST, strIndex);
-                mVMWriter.WriteCall("String.staticGet", 1);
-            }
-            else
-            {
-                Error("String not found '" + str + "'");
-            }
+        if (VMCompiler.mStrings.TryGetValue(str, out strIndex))
+        {
+            mVMWriter.WritePush(VM.Segment.CONST, strIndex);
         }
         else
         {
-            // On the fly string creation (HUGE MEMORY LEAK)
-            mVMWriter.WritePush(VM.Segment.CONST, str.Length);
-            mVMWriter.WriteCall("String.new", 1);
-            for (int i = 0; i < str.Length; i++)
-            {
-                mVMWriter.WritePush(VM.Segment.CONST, str[i]);
-                mVMWriter.WriteCall("String.appendChar", 2);
-            }
-        }
-    }
-
-    public void CompileStaticStrings()
-    {
-        if (VMCompiler.mStaticStrings && VMCompiler.mOSClasses && VMCompiler.mStrings.Count > 0 )
-        {
-            mVMWriter.WriteLine("/* Static String Allocation (Inserted by the compiler at the beginning of Main.main) */");
-
-            mVMWriter.WritePush(VM.Segment.CONST, VMCompiler.mStrings.Keys.Count);
-            mVMWriter.WriteCall("String.staticAlloc", 1);
-
-            foreach (string staticString in VMCompiler.mStrings.Keys)
-            {
-                int strLen = staticString.Length;
-                mVMWriter.WriteLine("// \"" + staticString + "\"");
-                mVMWriter.WritePush(VM.Segment.CONST, strLen);
-                mVMWriter.WriteCall("String.new", 1);
-                for (int i = 0; i < strLen; i++)
-                {
-                    mVMWriter.WritePush(VM.Segment.CONST, staticString[i]);
-                    mVMWriter.WriteCall("String.appendChar", 2);
-                }
-                mVMWriter.WritePush(VM.Segment.CONST, VMCompiler.mStrings[staticString]);
-                mVMWriter.WriteCall("String.staticSet", 2);
-            }
-
-            mVMWriter.WriteLine("/* Main.main statements begin ... */");
+            Error("String not found '" + str + "'");
         }
     }
 

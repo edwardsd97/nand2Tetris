@@ -18,13 +18,16 @@
     <None Remove="OSVM\Array.jack" />
     <None Remove="OSVM\Math.jack" />
     <None Remove="OSVM\Memory.jack" />
+    <None Remove="OSVM\String.jack" />
     <None Remove="OSVM\Sys.jack" />
     <None Remove="TestCases\ArrayUse.jack" />
     <None Remove="TestCases\BasicClass.jack" />
+    <None Remove="TestCases\Classes.jack" />
     <None Remove="TestCases\Empty.jack" />
     <None Remove="TestCases\Expressions.jack" />
     <None Remove="TestCases\Heap.jack" />
     <None Remove="TestCases\Main.jack" />
+    <None Remove="TestCases\Strings.jack" />
   </ItemGroup>
 
   <ItemGroup>
@@ -39,13 +42,16 @@
     <EmbeddedResource Include="OSVM\Array.jack" />
     <EmbeddedResource Include="OSVM\Math.jack" />
     <EmbeddedResource Include="OSVM\Memory.jack" />
+    <EmbeddedResource Include="OSVM\String.jack" />
     <EmbeddedResource Include="OSVM\Sys.jack" />
     <EmbeddedResource Include="TestCases\ArrayUse.jack" />
     <EmbeddedResource Include="TestCases\BasicClass.jack" />
+    <EmbeddedResource Include="TestCases\Classes.jack" />
     <EmbeddedResource Include="TestCases\Empty.jack" />
     <EmbeddedResource Include="TestCases\Expressions.jack" />
     <EmbeddedResource Include="TestCases\Heap.jack" />
     <EmbeddedResource Include="TestCases\Main.jack" />
+    <EmbeddedResource Include="TestCases\Strings.jack" />
   </ItemGroup>
 
 </Project>

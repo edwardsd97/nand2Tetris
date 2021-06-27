@@ -17,6 +17,45 @@ public static class VMStream
         value = System.BitConverter.ToInt32(bytes, 0);
         return bytes.Length;
     }
+
+    public static int Write(this Stream file, string value )
+    {
+        int strLength = value.Length;
+        int dwordAligned = VM.Align(strLength, 4);
+
+        VMStream.Write( file, strLength);
+
+        for (int i = 0; i < dwordAligned; i++)
+        {
+            if ( i < strLength )
+                file.WriteByte((byte)value[i]);
+            else
+                file.WriteByte(0);
+        }
+
+        return dwordAligned;
+    }
+
+    public static int Read(this Stream file, out string value )
+    {
+        int strLength = 0;
+        
+        VMStream.Read(file, out strLength);
+
+        int dwordAligned = VM.Align(strLength, 4);
+
+        value = "";
+
+        for (int i = 0; i < dwordAligned; i++)
+        {
+            if (i < strLength)
+                value += (char)file.ReadByte();
+            else
+                file.ReadByte(); // read the padding 0's
+        }
+
+        return dwordAligned;
+    }
 }
 
 class VMByteCode
@@ -70,6 +109,8 @@ class VMByteCode
         TranslateLabels( reader );
 
         reader.BaseStream.Seek( 0, SeekOrigin.Begin );
+
+        WriteStaticStrings();
 
         while (!reader.EndOfStream)
         {
@@ -130,6 +171,17 @@ class VMByteCode
         }
 
         return written;
+    }
+
+    protected int WriteStaticStrings()
+    {
+        int count = 0;
+        foreach (string str in VMCompiler.mStrings.Keys)
+        {
+            WriteStaticString(VM.Command.STATIC_STRING, str, VMCompiler.mStrings[str]);
+            count++;
+        }
+        return count;
     }
 
     protected int TranslateLabels( StreamReader reader )
@@ -211,17 +263,17 @@ class VMByteCode
         mStringToSegment.Add("that", VM.Segment.THAT);
         mStringToSegment.Add("this", VM.Segment.THIS);
     }
-    public int SegmentMask(VM.Segment segment)
+    public static int SegmentMask(VM.Segment segment)
     {
         return (( (int) segment ) << BITS_INDEX) & (int) MASK_SEGMENT;
     }
 
-    public int CommandMask(VM.Command command)
+    public static int CommandMask(VM.Command command)
     {
         return (((int)command) << (BITS_INDEX + BITS_SEGMENT)) & unchecked( (int) MASK_COMMAND );
     }
 
-    public int IndexMask(int index)
+    public static int IndexMask(int index)
     {
         return index & (int) MASK_INDEX;
     }
@@ -249,6 +301,17 @@ class VMByteCode
     public void WriteFunctionOrCall(VM.Command command, int labelOffset, int argCount )
     {
         Write( CommandMask(command) | SegmentMask((VM.Segment)argCount) | IndexMask(labelOffset) );
+    }
+
+    public void WriteStaticString(VM.Command command, string str, int strIndex )
+    {
+        Write(CommandMask(command) | IndexMask(strIndex));
+        VMStream.Write(mWriter, str);
+    }
+
+    public static int Translate( VM.VMCommand command )
+    {
+        return CommandMask(command.mCommand) | SegmentMask(command.mSegment) | IndexMask(command.mIndex);
     }
 
     public static VM.VMCommand Translate(int commandInt)

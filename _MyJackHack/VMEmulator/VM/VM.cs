@@ -8,7 +8,7 @@ public class VM
 {
     public List<string> mErrors = new List<string>();
 
-    public List<VMCommand> mCode;
+    public VMCommand[] mCode;
     public int mCodeFrame;
 
     public int[] mMemory;
@@ -18,6 +18,8 @@ public class VM
     public int mHeapDwords;
 
     public VMHeap mHeap;
+    public Dictionary<int, VMString> mStrings = new Dictionary<int, VMString>(); // string table
+    public int mStringsStatic;
 
     public VMBuiltIn mBuiltIns;
 
@@ -34,6 +36,7 @@ public class VM
     {
         PUSH, POP, FUNCTION, CALL, LABEL, GOTO, IF_GOTO, RETURN,
         ADD, SUB, NEG, EQ, LT, GT, AND, LAND, OR, XOR, LOR, NOT, LNOT, MUL, DIV, MOD,
+        STATIC_STRING, // used for loading only
         INVALID
     }
 
@@ -41,6 +44,18 @@ public class VM
     {
         GLOBAL, CONST, ARG, LOCAL, THIS, THAT, POINTER, TEMP,
         INVALID
+    }
+
+    public class VMString
+    {
+        public string mString;
+        public int mRef;
+        public VMString( string str, bool addRef = true )
+        {
+            mString = str;
+            if (addRef)
+                mRef++;
+        }
     }
 
     public class VMCommand
@@ -82,8 +97,16 @@ public class VM
         VMOS_Memory.Register(result);
         VMOS_Math.Register(result);
         VMOS_Array.Register(result);
+        VMOS_String.Register(result);
 
         return result;
+    }
+
+    public void ResetAll()
+    {
+        Reset();
+        mStrings = new Dictionary<int, VMString>();
+        mStringsStatic = 0;
     }
 
     public void Reset()
@@ -138,16 +161,36 @@ public class VM
 
     public bool Load(Stream code)
     {
-        mCode = new List<VMCommand>();
+        List<VMCommand> codeList = new List<VMCommand>();
 
         code.Seek(0, SeekOrigin.Begin);
 
         int commandInt;
 
-        while ( code.Position < code.Length )
+        while (code.Position < code.Length)
         {
             VMStream.Read(code, out commandInt);
-            mCode.Add(VMByteCode.Translate(commandInt));
+            VM.VMCommand cmd = VMByteCode.Translate(commandInt);
+            if (cmd.mCommand == Command.STATIC_STRING)
+            {
+                // static string 
+                string str;
+                VMStream.Read(code, out str );
+                mStrings.Add( cmd.mIndex, new VMString( str ));
+                mStringsStatic = Math.Max( mStringsStatic, cmd.mIndex + 1 );
+            }
+            else
+            {
+                // VM byte code instruction
+                codeList.Add(cmd);
+            }
+        }
+
+        // Convert the List to a simple array for indexing efficiency
+        mCode = new VMCommand[codeList.Count];
+        for (int i = 0; i < codeList.Count; i++)
+        {
+            mCode[i] = codeList[i];
         }
 
         return false;
@@ -155,7 +198,10 @@ public class VM
 
     public bool Finished()
     {
-        return mCodeFrame >= mCode.Count;
+        if (mCode == null)
+            return true;
+
+        return mCodeFrame >= mCode.Length;
     }
 
     public bool Halted()
@@ -173,49 +219,56 @@ public class VM
         if ( !Running() )
             return false;
 
-        if (mCodeFrame < mCode.Count)
+        try
         {
-            VMCommand cmd = mCode[mCodeFrame];
-            switch (cmd.mCommand)
+            if (mCodeFrame < mCode.Length)
             {
-                case VM.Command.PUSH:
-                    DoPush(cmd.mSegment, cmd.mIndex);
-                    break;
+                VMCommand cmd = mCode[mCodeFrame];
+                switch (cmd.mCommand)
+                {
+                    case VM.Command.PUSH:
+                        DoPush(cmd.mSegment, cmd.mIndex);
+                        break;
 
-                case VM.Command.POP:
-                    DoPop(cmd.mSegment, cmd.mIndex);
-                    break;
+                    case VM.Command.POP:
+                        DoPop(cmd.mSegment, cmd.mIndex);
+                        break;
 
-                case VM.Command.LABEL:
-                    // Labels have no instructions - they index the instruction that follows
-                    break;
+                    case VM.Command.LABEL:
+                        // Labels have no instructions - they index the instruction that follows
+                        break;
 
-                case VM.Command.GOTO:
-                    DoGoto(cmd.mIndex);
-                    break;
+                    case VM.Command.GOTO:
+                        DoGoto(cmd.mIndex);
+                        break;
 
-                case VM.Command.IF_GOTO:
-                    DoIfGoto(cmd.mIndex);
-                    break;
+                    case VM.Command.IF_GOTO:
+                        DoIfGoto(cmd.mIndex);
+                        break;
 
-                case VM.Command.FUNCTION:
-                    DoFunction(cmd.mSegment);
-                    break;
+                    case VM.Command.FUNCTION:
+                        DoFunction(cmd.mSegment);
+                        break;
 
-                case VM.Command.CALL:
-                    DoCall(cmd.mSegment, cmd.mIndex);
-                    break;
+                    case VM.Command.CALL:
+                        DoCall(cmd.mSegment, cmd.mIndex);
+                        break;
 
-                case VM.Command.RETURN:
-                    DoReturn();
-                    break;
+                    case VM.Command.RETURN:
+                        DoReturn();
+                        break;
 
-                default:
-                    DoArithmetic(cmd.mCommand);
-                    break;
+                    default:
+                        DoArithmetic(cmd.mCommand);
+                        break;
+                }
+
+                return true;
             }
-
-            return true;
+        }
+        catch
+        {
+            Error("Critical Error");
         }
 
         return false;
@@ -493,7 +546,7 @@ public class VMHeap
         mHeapFree = start;
 
         mMemory[mHeapFree] = 0; // next
-        mMemory[mHeapFree + 1] = mHeapCount; // size
+        mMemory[mHeapFree + 1] = mHeapCount - 2; // size
     }
 
     public int Alloc( int size )
@@ -509,17 +562,18 @@ public class VMHeap
             // freeList[0]: next
             // freeList[1]: size
 
-            if ( mMemory[freeList + 1] > (size + 1) )
+            if ( mMemory[freeList + 1] >= (size + 2) )
             {
                 // Found first fit block that is big enough
 
                 // result block is allocated at the end of the free block's chunk of memory
-                resultBlock = freeList + mMemory[freeList + 1] - (size + 2);
+                int allocSize = size + 2;
+                resultBlock = freeList + mMemory[freeList + 1] + 2 - allocSize;
                 mMemory[resultBlock] = 0;
                 mMemory[resultBlock+1] = size;
 
                 // reduce the free memory size from this block we just pulled from
-                mMemory[freeList + 1] = mMemory[freeList + 1] - (size + 2);
+                mMemory[freeList + 1] = mMemory[freeList + 1] - allocSize;
             }
 
             freeList = mMemory[freeList];
@@ -552,11 +606,53 @@ public class VMHeap
         prevFreeList = mHeapFree;
         mHeapFree = block;
         mMemory[block] = prevFreeList;
+
+        DeFrag();
     }
 
     public bool DeFrag()
     {
-        // FIXME
+        // mHeapFree[0]: next
+        // mHeapFree[1]: size
+
+        int lasti = -1;
+
+        for ( int i = mHeapFree; i != 0; i = mMemory[i])
+        {
+            int target = i + 2 + mMemory[i + 1];
+            int lastj = -1;
+
+            for (int j = mHeapFree; j != 0; j = mMemory[j] )
+            {
+                if ( j == i )
+                    continue;
+
+                if (j == target)
+                {
+                    // found a free block j that is right at the end of i block - merge them together
+
+                    // Expand i's size to encompass free block j
+                    mMemory[i + 1] = mMemory[i + 1] + mMemory[j + 1] + 2;
+
+                    // point the parent link to j to i instead
+                    if (lastj >= 0)
+                    {
+                        mMemory[lastj] = i;
+                    }
+                    else if (mHeapFree == j)
+                    {
+                        mHeapFree = i;
+                    }
+
+                    break;
+                }
+
+                lastj = j;
+            }
+
+            lasti = i;
+        }
+
         return false;
     }
 }

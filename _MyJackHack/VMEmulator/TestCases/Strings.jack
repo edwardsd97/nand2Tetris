@@ -1,0 +1,42 @@
+
+/*
+ Strings: Test cases for String class
+*/
+
+String gStaticString = "This is a static String";
+String gString = String.new( "My string" );
+
+// This silently does nothing 
+gStaticString.dispose();
+
+int x = gString.length();
+int y = gString.charAt(0);
+
+gString.setCharAt( 2, 45 );
+int z = gString.charAt(3);
+int w = gString.length();
+gString.appendChar(46);
+int p = gString.length();
+
+int r = gString.length();
+gString.append("another static string");
+int s = gString.length();
+
+int a = gString.length();
+gString.eraseLastChar();
+int b = gString.length();
+
+String gValString = "547";
+int c = gValString.intValue();
+
+gString.setInt( 768 );
+int d = gString.length();
+
+// Trying to modify a static string is an error
+// gStaticString.append( gString );
+
+// This frees the String class instance
+gString.dispose();
+
+// Use of a deleted String is an error
+// int e = gString.length();

@@ -25,12 +25,12 @@ namespace VMEmulator
     {
         VM mVM = new VM();
 
-        MemoryStream byteCode = new MemoryStream();
         MemoryStream vmcommands = new MemoryStream();
         VMCompiler compiler;
 
         int mTestCase = -1;
         int mTestCases = 0;
+        bool mStringsMode = false;
 
         DispatcherTimer dispatchStep;
         DispatcherTimer dispatchCompile;
@@ -44,6 +44,12 @@ namespace VMEmulator
             TestCaseSet("Empty");
 
             Compile();
+        }
+
+        private void buttonStrings_Click(object sender, RoutedEventArgs e)
+        {
+            mStringsMode = !mStringsMode;
+            UpdateForm();
         }
 
         private void textCode_TextChanged(object sender, TextChangedEventArgs e)
@@ -263,7 +269,8 @@ namespace VMEmulator
             TimerUpdateSetup(-1);
             TimerCompileSetup(-1);
 
-            byteCode = new MemoryStream();
+            MemoryStream byteCode = new MemoryStream();
+
             vmcommands = new MemoryStream();
 
             VMWriter writer = new VMWriter(vmcommands);
@@ -272,7 +279,7 @@ namespace VMEmulator
             VMByteCode convert = new VMByteCode();
             convert.ConvertVMText(vmcommands, byteCode);
 
-            mVM.Reset();
+            mVM.ResetAll();
             mVM.Load(byteCode);
             UpdateForm();
         }
@@ -367,26 +374,55 @@ namespace VMEmulator
         public void UpdateVMCommands()
         {
             string vmStr = "";
-            int codeFrame = 0;
-            vmcommands.Seek(0, SeekOrigin.Begin);
-            StreamReader vmreader = new StreamReader(vmcommands);
-            while (!vmreader.EndOfStream)
+
+            if (mStringsMode)
             {
-                string lineStr = vmreader.ReadLine();
-                string[] elements = VMByteCode.CommandElements(lineStr);
+                labelVM.Content = "String Table";
+                buttonStrings.Content = "VM Cmds";
 
-                if (elements[0] != "label" && codeFrame == mVM.mCodeFrame)
-                    lineStr = "> " + lineStr;
-                else
-                    lineStr = "  " + lineStr;
+                vmStr = vmStr + "Statics:\r\n";
 
-                if (elements[0] != "label")
-                    codeFrame++;
-
-                lineStr = lineStr + "\r\n";
-
-                vmStr = vmStr + lineStr;
+                foreach (int key in mVM.mStrings.Keys)
+                {
+                    string idStr = "" + key;
+                    if (key == mVM.mStringsStatic)
+                    {
+                        vmStr = vmStr + "\r\n";
+                        vmStr = vmStr + "Modifiable:\r\n";
+                    }
+                    while (idStr.Length < 4)
+                        idStr = " " + idStr;
+                    string lineStr = idStr + " \"" + mVM.mStrings[key].mString + "\"";
+                    lineStr = lineStr + "\r\n";
+                    vmStr = vmStr + lineStr;
+                }
             }
+            else
+            {
+                labelVM.Content = "VM Commands";
+                buttonStrings.Content = "Strings";
+                int codeFrame = 0;
+                vmcommands.Seek(0, SeekOrigin.Begin);
+                StreamReader vmreader = new StreamReader(vmcommands);
+                while (!vmreader.EndOfStream)
+                {
+                    string lineStr = vmreader.ReadLine();
+                    string[] elements = VMByteCode.CommandElements(lineStr);
+
+                    if (elements[0] != "label" && codeFrame == mVM.mCodeFrame)
+                        lineStr = "> " + lineStr;
+                    else
+                        lineStr = "  " + lineStr;
+
+                    if (elements[0] != "label")
+                        codeFrame++;
+
+                    lineStr = lineStr + "\r\n";
+
+                    vmStr = vmStr + lineStr;
+                }
+            }
+
             if (textVM != null)
                 textVM.Text = vmStr;
         }
@@ -394,12 +430,10 @@ namespace VMEmulator
         public void UpdateByteCode()
         {
             string byteStr = "";
-            byteCode.Seek(0, SeekOrigin.Begin);
-            int i = 0;
-            while (byteCode.Position < byteCode.Length)
+
+            for ( int i = 0; i < mVM.mCode.Length; i++ )
             {
-                int command = 0;
-                VMStream.Read(byteCode, out command);
+                int command = VMByteCode.Translate( mVM.mCode[i] );
                 string hexStr = Convert.ToString(command, 16);
                 while (hexStr.Length < 8)
                     hexStr = "0" + hexStr;
@@ -409,32 +443,27 @@ namespace VMEmulator
                 else
                     hexStr = "  " + hexStr;
                 byteStr = byteStr + hexStr + "\r\n";
-                i = i + 1;
             }
             if (textVMByteCode != null)
                 textVMByteCode.Text = byteStr;
-
-            byteCode.Seek(0, SeekOrigin.Begin);
         }
 
         public void UpdateErrors()
         {
             string errors = "";
-            bool vmErrors = false;
             for (int i = 0; i < compiler.mErrors.Count; i++)
             {
                 errors = errors + compiler.mErrors[i] + "\r\n";
             }
             for (int i = 0; i < mVM.mErrors.Count; i++)
             {
-                vmErrors = true;
                 errors = errors + mVM.mErrors[i] + "\r\n";
             }
 
             if ( mVM.Halted() )
                 errors = errors + "PROGRAM HALTED\r\n";
             else if (mVM.Finished())
-                errors = errors + "PROGRAM ENDED\r\n";
+                errors = errors + "Program ended\r\n";
 
             if (textErrors != null)
                 textErrors.Text = errors;

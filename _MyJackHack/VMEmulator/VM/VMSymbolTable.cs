@@ -81,7 +81,7 @@ class VMSymbolTable
         }
     }
 
-    public static bool Define(string varName, VMToken type, Kind kind)
+    public static bool Define(string varName, VMToken type, Kind kind, string specificScope = null, int specificOffset = -1 )
     {
         if (mScopes.Count == 0)
             return false;
@@ -111,21 +111,31 @@ class VMSymbolTable
         newVar.mVarName = varName;
         newVar.mOffset = 0;
 
+        SymbolScope defineScope = mScopes[mScopes.Count - 1];
+
         foreach (SymbolScope scope in mScopes)
         {
+            if (specificScope != null && scope.mName == specificScope )
+            {
+                defineScope = scope;
+            }
+
             foreach (Symbol symbol in scope.mSymbols.Values)
             {
                 if (symbol.mKind == newVar.mKind)
                 {
-                    newVar.mOffset = newVar.mOffset + 1;
+                    newVar.mOffset = Math.Max( symbol.mOffset + 1, newVar.mOffset );
                 }
             }
         }
 
-        if ( mScopes[mScopes.Count - 1].mSymbols.ContainsKey(varName) )
+        if (specificOffset >= 0 )
+            newVar.mOffset = specificOffset;
+
+        if ( defineScope.mSymbols.ContainsKey(varName) )
             return false;
 
-        mScopes[mScopes.Count - 1].mSymbols.Add(varName, newVar);
+        defineScope.mSymbols.Add(varName, newVar);
         mVarSize = Math.Max(mVarSize, VMSymbolTable.KindSize(VMSymbolTable.Kind.VAR));
         return true;
     }
@@ -180,16 +190,23 @@ class VMSymbolTable
         return null;
     }
 
-    public static bool Exists(string varName)
+    public static bool Exists(string varName, string specificScope = null )
     {
         // Walk backwards from most recently added scope backward to oldest looking for the symbol
         int iScope = mScopes.Count - 1;
 
         while (iScope >= 0)
         {
+            if (specificScope != null && mScopes[iScope].mName != specificScope)
+            {
+                iScope--;
+                continue;
+            }
+
             Symbol result = null;
             if (varName != null && mScopes[iScope].mSymbols.TryGetValue(varName, out result))
                 return true;
+
             iScope--;
         }
 

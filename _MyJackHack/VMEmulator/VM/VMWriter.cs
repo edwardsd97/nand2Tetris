@@ -19,6 +19,7 @@ public interface IVMWriter
 
     public void Enable();
     public void Disable();
+    public bool IsEnabled();
 
     public void OutputPush(Stream stream);
     public void OutputPop();
@@ -73,6 +74,11 @@ class VMWriterBase
     public void Disable()
     {
         mEnabled = false;
+    }
+
+    public bool IsEnabled()
+    {
+        return mEnabled;
     }
 
     public void OutputPush(Stream stream)

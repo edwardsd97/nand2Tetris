@@ -14,6 +14,7 @@ Jack language extensions
 [x] allow class field read/write without accessor functions: object.fieldValue = 5; x = object.fieldArray[3];
 [x] add support for 'continue' and 'break' commands inside a for/while
 [x] add support for switch (case/default/break) statements (non-optimized)
+[ ] add support for characters: '-' is 45 for example
 [ ] add support for two character operators like == != ++ etc
 [ ] add object inheritance - requires virtual objects to have a function table pointer built in
 [ ] OS implement Memory.deFrag() (low priority)
