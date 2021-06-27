@@ -32,7 +32,6 @@ namespace VMEmulator
         int mTestCases = 0;
         bool mStringsMode = false;
 
-        DispatcherTimer dispatchStep;
         DispatcherTimer dispatchCompile;
         DispatcherTimer dispatchUpdate;
 
@@ -62,8 +61,8 @@ namespace VMEmulator
             if (!mVM.Running())
                 Reset();
 
-            TimerStepSetup(-1);
             TimerUpdateSetup(-1);
+            mVM.ExecuteThread(false);
             mVM.ExecuteStep();
             UpdateForm();
         }
@@ -87,28 +86,30 @@ namespace VMEmulator
         {
             if (!mVM.Running())
                 Reset();
-            TimerStepSetup(100);
+            mVM.ExecuteThread(true, 100);
+            TimerUpdateSetup(100);
         }
 
         private void buttonPlayFast_Click(object sender, RoutedEventArgs e)
         {
             if (!mVM.Running())
                 Reset();
-            TimerStepSetup(15);
+            mVM.ExecuteThread(true, 15);
+            TimerUpdateSetup(50);
         }
 
         private void buttonPlayFull_Click(object sender, RoutedEventArgs e)
         {
             if (!mVM.Running())
                 Reset();
-            TimerStepSetup(0, false);
-            TimerUpdateSetup(1000);
+            mVM.ExecuteThread(true);
+            TimerUpdateSetup(50);
         }
 
         public void Reset()
         {
-            TimerStepSetup(-1);
             TimerUpdateSetup(-1);
+            mVM.ExecuteThread(false);
             mVM.Reset();
             UpdateForm();
         }
@@ -130,46 +131,14 @@ namespace VMEmulator
             }
         }
 
-        public void TimerStepSetup( int msTickRate = 50, bool updateForm = true )
-        {
-            if (dispatchStep != null)
-            {
-                dispatchStep.Stop();
-                dispatchStep = null;
-                TimerUpdateSetup(0);
-            }
-
-            if ( msTickRate >= 0 )
-            {
-                dispatchStep = new DispatcherTimer();
-                if ( updateForm )
-                    dispatchStep.Tick += TimerStepTickUpdate;
-                else
-                    dispatchStep.Tick += TimerStepTick;
-                dispatchStep.Interval = new TimeSpan(0, 0, 0, 0, msTickRate);
-                dispatchStep.Start();
-            }
-        }
-
-        void TimerStepTick(object sender, object e)
-        {
-            if (!mVM.ExecuteStep())
-            {
-                TimerStepSetup(-1);
-                TimerUpdateSetup(-1);
-                UpdateForm();
-            }
-        }
-
-        void TimerStepTickUpdate(object sender, object e)
-        {
-            TimerStepTick(sender, e);
-            UpdateForm();
-        }
-
         void TimerUpdateTick(object sender, object e)
         {
             UpdateForm();
+            if (!mVM.Running())
+            {
+                TimerUpdateSetup(-1);
+                UpdateForm();
+            }
         }
 
         public void TimerCompileSetup(int msTickRate = 750)
@@ -265,7 +234,7 @@ namespace VMEmulator
 
         public void Compile()
         {
-            TimerStepSetup(-1);
+            mVM.ExecuteThread(false);
             TimerUpdateSetup(-1);
             TimerCompileSetup(-1);
 

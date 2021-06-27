@@ -1,15 +1,14 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Threading;
 
 using VMBuiltInFunc = System.Action<VM>;
 
 public class VM
 {
-    public List<string> mErrors = new List<string>();
-
-    public VMCommand[] mCode;
-    public int mCodeFrame;
+    public VMCommand[] mCode;   // Loaded array of VM commands
+    public int mCodeFrame;      // Current (next) execution point
 
     public int[] mMemory;
     public int mMemoryDwords = 0;
@@ -18,13 +17,18 @@ public class VM
     public int mHeapDwords;
 
     public VMHeap mHeap;
+    public List<string> mErrors = new List<string>();
     public Dictionary<int, VMString> mStrings = new Dictionary<int, VMString>(); // string table
-    public int mStringsStatic;
+    public int mStringsStatic; // reserved static string count in mStrings
 
-    public VMBuiltIn mBuiltIns;
+    public VMBuiltIn mBuiltIns; // Builtin functions
 
     public int mStackPushedCount;
     public int mStackPoppedCount;
+
+    protected Thread mExecuteThread;    // Execution thread
+    protected bool mExecuteThreadStop;  // Execution thread stop request
+    protected int mExecuteThreadRateMs; // Execution thread tick rate in milliseconds
 
     public enum SegPointer : byte
     {
@@ -212,6 +216,50 @@ public class VM
     public bool Running()
     {
         return !(Halted() || Finished());
+    }
+
+    public bool ExecuteThread( bool enabled, int tickRateMs = -1)
+    {
+        if (mExecuteThreadRateMs != 0)
+        {
+            mExecuteThreadStop = true;
+
+            while (mExecuteThread != null && mExecuteThreadStop)
+            {
+                System.Threading.Thread.Sleep(1);
+            }
+        }
+
+        if (enabled)
+        {
+            ThreadStart threadFunc = ExecuteTick;
+            mExecuteThread = new Thread(threadFunc);
+            mExecuteThreadRateMs = tickRateMs;
+            mExecuteThreadStop = false;
+            mExecuteThread.Start();
+            return true;
+        }
+
+        return false;
+    }
+
+    protected void ExecuteTick()
+    {
+        while (!mExecuteThreadStop)
+        {
+            if (!ExecuteStep())
+            {
+                break;
+            }
+
+            if ( mExecuteThreadRateMs > 0 )
+            {
+                System.Threading.Thread.Sleep(mExecuteThreadRateMs);
+            }
+        }
+
+        mExecuteThreadStop = false;
+        mExecuteThreadRateMs = 0;
     }
 
     public bool ExecuteStep()
