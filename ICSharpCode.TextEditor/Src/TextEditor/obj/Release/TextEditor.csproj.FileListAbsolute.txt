@@ -1,0 +1,11 @@
+C:\Projects\nand2Tetris\ICSharpCode.TextEditor\Src\TextEditor\obj\Release\TextEditor.csprojAssemblyReference.cache
+C:\Projects\nand2Tetris\ICSharpCode.TextEditor\Src\TextEditor\obj\Release\TextEditor.FindAndReplaceForm.resources
+C:\Projects\nand2Tetris\ICSharpCode.TextEditor\Src\TextEditor\obj\Release\TextEditor.TextEditorForm.resources
+C:\Projects\nand2Tetris\ICSharpCode.TextEditor\Src\TextEditor\obj\Release\TextEditor.Properties.Resources.resources
+C:\Projects\nand2Tetris\ICSharpCode.TextEditor\Src\TextEditor\obj\Release\TextEditor.csproj.GenerateResource.cache
+C:\Projects\nand2Tetris\ICSharpCode.TextEditor\Src\TextEditor\obj\Release\TextEditor.csproj.CoreCompileInputs.cache
+C:\Projects\nand2Tetris\ICSharpCode.TextEditor\bin\Release\TextEditor.exe
+C:\Projects\nand2Tetris\ICSharpCode.TextEditor\bin\Release\TextEditor.pdb
+C:\Projects\nand2Tetris\ICSharpCode.TextEditor\Src\TextEditor\obj\Release\TextEditor.csproj.CopyComplete
+C:\Projects\nand2Tetris\ICSharpCode.TextEditor\Src\TextEditor\obj\Release\TextEditor.exe
+C:\Projects\nand2Tetris\ICSharpCode.TextEditor\Src\TextEditor\obj\Release\TextEditor.pdb

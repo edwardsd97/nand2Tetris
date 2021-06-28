@@ -15,6 +15,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Reflection;
 using System.Windows.Threading;
+using VM;
 
 namespace VMEmulator
 {
@@ -23,11 +24,11 @@ namespace VMEmulator
     /// </summary>
     public partial class MainWindow : Window
     {
-        // VM: Super tiny limits for easier viewing and tooling
-        VM mVM = new VM( 256, 172, 64 );
+        // Emulator: Super tiny limits for easier viewing and tooling
+        Emulator mVM = new Emulator( 256, 172, 64 );
 
-        MemoryStream vmcommands = new MemoryStream();
-        VMCompiler compiler;
+        MemoryStream Instructions = new MemoryStream();
+        Compiler compiler;
 
         int mTestCase = -1;
         int mTestCases = 0;
@@ -241,13 +242,13 @@ namespace VMEmulator
 
             MemoryStream byteCode = new MemoryStream();
 
-            vmcommands = new MemoryStream();
+            Instructions = new MemoryStream();
 
-            VMWriter writer = new VMWriter(vmcommands);
+            Writer writer = new Writer(Instructions);
             Compile(writer);
 
-            VMByteCode convert = new VMByteCode();
-            convert.ConvertVMText(vmcommands, byteCode, compiler);
+            ByteCode convert = new ByteCode();
+            convert.ConvertVMText(Instructions, byteCode, compiler);
 
             mVM.ResetAll();
             mVM.Load(byteCode);
@@ -256,7 +257,7 @@ namespace VMEmulator
 
         public void UpdateForm()
         {
-            UpdateVMCommands();
+            UpdateInstructions();
             UpdateByteCode();
             UpdateSegments();
             UpdateStack();
@@ -274,19 +275,19 @@ namespace VMEmulator
                 while (hexStr.Length < 8)
                     hexStr = "0" + hexStr;
                 memStr = memStr + "0x" + hexStr.ToUpper();
-                if (i == (int)VM.SegPointer.SP)
+                if (i == (int)SegPointer.SP)
                     memStr = memStr + " [SP]";
-                else if (i == (int)VM.SegPointer.ARG)
+                else if (i == (int)SegPointer.ARG)
                     memStr = memStr + " [ARG]";
-                else if (i == (int)VM.SegPointer.GLOBAL)
+                else if (i == (int)SegPointer.GLOBAL)
                     memStr = memStr + " [GLOBAL]";
-                else if (i == (int)VM.SegPointer.LOCAL)
+                else if (i == (int)SegPointer.LOCAL)
                     memStr = memStr + " [LOCAL]";
-                else if (i == (int)VM.SegPointer.THIS)
+                else if (i == (int)SegPointer.THIS)
                     memStr = memStr + " [THIS]";
-                else if (i == (int)VM.SegPointer.THAT)
+                else if (i == (int)SegPointer.THAT)
                     memStr = memStr + " [THAT]";
-                else if (i == (int)VM.SegPointer.TEMP)
+                else if (i == (int)SegPointer.TEMP)
                     memStr = memStr + " [TEMP]";
                 memStr = memStr + "\r\n";
             }
@@ -298,8 +299,8 @@ namespace VMEmulator
         public void UpdateStack()
         {
             string memStr = "";
-            int start = (int)VM.SegPointer.COUNT;
-            int end = mVM.mMemory[(int)VM.SegPointer.SP];
+            int start = (int)SegPointer.COUNT;
+            int end = mVM.mMemory[(int)SegPointer.SP];
             for (int i = start; i < end; i++)
             {
                 if (i >= 0 && i < mVM.mMemory.Length)
@@ -313,7 +314,7 @@ namespace VMEmulator
         public void UpdateGlobals()
         {
             string memStr = "";
-            int start = mVM.mMemory[(int)VM.SegPointer.GLOBAL];
+            int start = mVM.mMemory[(int)SegPointer.GLOBAL];
             int end = start + mVM.mGlobalDwords;
             for (int i = start; i < end; i++)
             {
@@ -341,14 +342,14 @@ namespace VMEmulator
                 textHeap.Text = memStr;
         }
 
-        public void UpdateVMCommands()
+        public void UpdateInstructions()
         {
             string vmStr = "";
 
             if (mStringsMode)
             {
                 labelVM.Content = "String Table";
-                buttonStrings.Content = "VM Cmds";
+                buttonStrings.Content = "Emulator Cmds";
 
                 vmStr = vmStr + "Statics:\r\n";
 
@@ -369,15 +370,15 @@ namespace VMEmulator
             }
             else
             {
-                labelVM.Content = "VM Commands";
+                labelVM.Content = "Emulator Commands";
                 buttonStrings.Content = "Strings";
                 int codeFrame = 0;
-                vmcommands.Seek(0, SeekOrigin.Begin);
-                StreamReader vmreader = new StreamReader(vmcommands);
+                Instructions.Seek(0, SeekOrigin.Begin);
+                StreamReader vmreader = new StreamReader(Instructions);
                 while (!vmreader.EndOfStream)
                 {
                     string lineStr = vmreader.ReadLine();
-                    string[] elements = VMByteCode.CommandElements(lineStr);
+                    string[] elements = ByteCode.CommandElements(lineStr);
 
                     if (elements[0] != "label" && codeFrame == mVM.mCodeFrame)
                         lineStr = "> " + lineStr;
@@ -403,7 +404,7 @@ namespace VMEmulator
 
             for ( int i = 0; i < mVM.mCode.Length; i++ )
             {
-                int command = VMByteCode.Translate( mVM.mCode[i] );
+                int command = ByteCode.Translate( mVM.mCode[i] );
                 string hexStr = Convert.ToString(command, 16);
                 while (hexStr.Length < 8)
                     hexStr = "0" + hexStr;
@@ -439,7 +440,7 @@ namespace VMEmulator
                 textErrors.Text = errors;
         }
 
-        public void Compile(IVMWriter writer)
+        public void Compile(IWriter writer)
         {
             string code = textCode.Text;
 
@@ -447,11 +448,10 @@ namespace VMEmulator
             MemoryStream stream = new MemoryStream(byteArray);
             StreamReader reader = new StreamReader(stream);
 
-            // Read all tokens into memory
-            VMTokenizer tokenizer = new VMTokenizer(reader);
+            Tokenizer tokenizer = new Tokenizer(reader);
             tokenizer.ReadAll();
 
-            compiler = new VMCompiler(tokenizer, writer);
+            compiler = new Compiler(tokenizer, writer);
             compiler.Compile();
         }
     }

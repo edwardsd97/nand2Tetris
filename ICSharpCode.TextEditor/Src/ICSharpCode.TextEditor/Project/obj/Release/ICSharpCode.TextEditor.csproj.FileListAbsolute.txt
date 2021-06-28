@@ -1,0 +1,3 @@
+C:\Projects\nand2Tetris\ICSharpCode.TextEditor\bin\Release\ICSharpCode.TextEditor.dll
+C:\Projects\nand2Tetris\ICSharpCode.TextEditor\Src\ICSharpCode.TextEditor\Project\obj\Release\ICSharpCode.TextEditor.csproj.CoreCompileInputs.cache
+C:\Projects\nand2Tetris\ICSharpCode.TextEditor\Src\ICSharpCode.TextEditor\Project\obj\Release\ICSharpCode.TextEditor.dll
