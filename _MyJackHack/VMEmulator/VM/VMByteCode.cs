@@ -69,6 +69,9 @@ class VMByteCode
     const uint MASK_INDEX       =    4194303; // 0000 0000  0011 1111  1111 1111  1111 1111
     const uint MASK_PUSH_CONST  = 2147483648; // 1000 0000  0000 0000  0000 0000  0000 0000 (indicates command is NOT push constant)
 
+    const uint MASK_NEG_BIT = (1 << BITS_INDEX - 1);
+    const uint MASK_NEG_IDX = MASK_SEGMENT | MASK_COMMAND | MASK_PUSH_CONST;
+
     static Dictionary<string, VM.Command> mStringToCommand;
     static Dictionary<string, VM.Segment> mStringToSegment;
 
@@ -338,12 +341,12 @@ class VMByteCode
             // Any command other than push constant N
             command = ((uint)commandInt & MASK_COMMAND) >> (BITS_SEGMENT + BITS_INDEX);
             segment = ((uint)commandInt & MASK_SEGMENT) >> BITS_INDEX;
-            index = ((uint)commandInt & MASK_INDEX);
+            index   = ((uint)commandInt & MASK_INDEX);
 
-            if ((index & (1 << BITS_INDEX - 1)) != 0)
+            if ( ( index & MASK_NEG_BIT ) != 0 )
             {
                 // Index is negative, fill in the rest of the left bits
-                index = index | MASK_SEGMENT | MASK_COMMAND | MASK_PUSH_CONST;
+                index = index | MASK_NEG_IDX;
             }
 
             return new VM.VMCommand((VM.Command)command, (VM.Segment)segment, (int)index);
