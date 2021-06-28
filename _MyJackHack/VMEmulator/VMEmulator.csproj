@@ -16,18 +16,31 @@
     <None Remove="OSHack\String.jack" />
     <None Remove="OSHack\Sys.jack" />
     <None Remove="OSVM\Array.jack" />
+    <None Remove="OSVM\Array.vms" />
     <None Remove="OSVM\Math.jack" />
+    <None Remove="OSVM\Math.vms" />
     <None Remove="OSVM\Memory.jack" />
+    <None Remove="OSVM\Memory.vms" />
     <None Remove="OSVM\String.jack" />
+    <None Remove="OSVM\String.vms" />
     <None Remove="OSVM\Sys.jack" />
+    <None Remove="OSVM\Sys.vms" />
     <None Remove="TestCases\ArrayUse.jack" />
+    <None Remove="TestCases\ArrayUse.vms" />
     <None Remove="TestCases\BasicClass.jack" />
+    <None Remove="TestCases\BasicClass.vms" />
     <None Remove="TestCases\Classes.jack" />
+    <None Remove="TestCases\Classes.vms" />
     <None Remove="TestCases\Empty.jack" />
+    <None Remove="TestCases\Empty.vms" />
     <None Remove="TestCases\Expressions.jack" />
+    <None Remove="TestCases\Expressions.vms" />
     <None Remove="TestCases\Heap.jack" />
+    <None Remove="TestCases\Heap.vms" />
     <None Remove="TestCases\Main.jack" />
+    <None Remove="TestCases\Main.vms" />
     <None Remove="TestCases\Strings.jack" />
+    <None Remove="TestCases\Strings.vms" />
   </ItemGroup>
 
   <ItemGroup>
@@ -39,19 +52,19 @@
     <EmbeddedResource Include="OSHack\Screen.jack" />
     <EmbeddedResource Include="OSHack\String.jack" />
     <EmbeddedResource Include="OSHack\Sys.jack" />
-    <EmbeddedResource Include="OSVM\Array.jack" />
-    <EmbeddedResource Include="OSVM\Math.jack" />
-    <EmbeddedResource Include="OSVM\Memory.jack" />
-    <EmbeddedResource Include="OSVM\String.jack" />
-    <EmbeddedResource Include="OSVM\Sys.jack" />
-    <EmbeddedResource Include="TestCases\ArrayUse.jack" />
-    <EmbeddedResource Include="TestCases\BasicClass.jack" />
-    <EmbeddedResource Include="TestCases\Classes.jack" />
-    <EmbeddedResource Include="TestCases\Empty.jack" />
-    <EmbeddedResource Include="TestCases\Expressions.jack" />
-    <EmbeddedResource Include="TestCases\Heap.jack" />
-    <EmbeddedResource Include="TestCases\Main.jack" />
-    <EmbeddedResource Include="TestCases\Strings.jack" />
+    <EmbeddedResource Include="OSVM\Array.vms" />
+    <EmbeddedResource Include="OSVM\Math.vms" />
+    <EmbeddedResource Include="OSVM\Memory.vms" />
+    <EmbeddedResource Include="OSVM\String.vms" />
+    <EmbeddedResource Include="OSVM\Sys.vms" />
+    <EmbeddedResource Include="TestCases\ArrayUse.vms" />
+    <EmbeddedResource Include="TestCases\BasicClass.vms" />
+    <EmbeddedResource Include="TestCases\Classes.vms" />
+    <EmbeddedResource Include="TestCases\Empty.vms" />
+    <EmbeddedResource Include="TestCases\Expressions.vms" />
+    <EmbeddedResource Include="TestCases\Heap.vms" />
+    <EmbeddedResource Include="TestCases\Main.vms" />
+    <EmbeddedResource Include="TestCases\Strings.vms" />
   </ItemGroup>
 
 </Project>

@@ -62,11 +62,12 @@ class VMByteCode
 {
     const int BITS_COMMAND = 5;
     const int BITS_SEGMENT = 4;
-    const int BITS_INDEX = 32 - BITS_SEGMENT - BITS_COMMAND;
+    const int BITS_INDEX = 31 - BITS_SEGMENT - BITS_COMMAND;
 
-    const uint MASK_COMMAND = 4160749568; // 1111 1000  0000 0000  0000 0000  0000 0000
-    const uint MASK_SEGMENT =  125829120; // 0000 0111  1000 0000  0000 0000  0000 0000
-    const uint MASK_INDEX   =    8388607; // 0000 0000  0111 1111  1111 1111  1111 1111
+    const uint MASK_COMMAND     = 2080374784; // 0111 1100  0000 0000  0000 0000  0000 0000
+    const uint MASK_SEGMENT     =   62914560; // 0000 0011  1100 0000  0000 0000  0000 0000
+    const uint MASK_INDEX       =    4194303; // 0000 0000  0011 1111  1111 1111  1111 1111
+    const uint MASK_PUSH_CONST  = 2147483648; // 1000 0000  0000 0000  0000 0000  0000 0000
 
     static Dictionary<string, VM.Command> mStringToCommand;
     static Dictionary<string, VM.Segment> mStringToSegment;
@@ -82,7 +83,12 @@ class VMByteCode
         mLabelsBuiltIn = builtIns;
     }
 
-    public static int IntParse(string str)
+    public static int IntMax()
+    {
+        return int.MaxValue;
+    }
+
+    public static int IntParse( string str )
     {
         int result = 0;
         try
@@ -285,33 +291,40 @@ class VMByteCode
 
     public void WriteSegmentCommand( VM.Command command, VM.Segment segment, int index)
     {
-        Write( CommandMask(command) | SegmentMask(segment) | IndexMask( index ) );
+        // push constant N is a special case where it uses all 32 bits - every other command has the high bit turned on
+        if ( command == VM.Command.PUSH && segment == VM.Segment.CONST )
+            Write( index );
+        else
+            Write( unchecked((int)MASK_PUSH_CONST) | CommandMask(command) | SegmentMask(segment) | IndexMask( index ) );
     }
 
     public void WriteCommand(VM.Command command)
     {
-        Write( CommandMask( command ) );
+        Write(unchecked((int)MASK_PUSH_CONST) | CommandMask( command ) );
     }
 
     public void WriteJumpCommand( VM.Command command, int labelOffset )
     {
-        Write( CommandMask(command) | IndexMask(labelOffset) );
+        Write(unchecked((int)MASK_PUSH_CONST) | CommandMask(command) | IndexMask(labelOffset) );
     }
 
     public void WriteFunctionOrCall(VM.Command command, int labelOffset, int argCount )
     {
-        Write( CommandMask(command) | SegmentMask((VM.Segment)argCount) | IndexMask(labelOffset) );
+        Write(unchecked((int)MASK_PUSH_CONST) | CommandMask(command) | SegmentMask((VM.Segment)argCount) | IndexMask(labelOffset) );
     }
 
     public void WriteStaticString(VM.Command command, string str, int strIndex )
     {
-        Write(CommandMask(command) | IndexMask(strIndex));
+        Write(unchecked((int)MASK_PUSH_CONST) | CommandMask(command) | IndexMask(strIndex));
         VMStream.Write(mWriter, str);
     }
 
     public static int Translate( VM.VMCommand command )
     {
-        return CommandMask(command.mCommand) | SegmentMask(command.mSegment) | IndexMask(command.mIndex);
+        if (command.mCommand == VM.Command.PUSH && command.mSegment == VM.Segment.CONST)
+            return command.mIndex;
+        else
+            return CommandMask(command.mCommand) | SegmentMask(command.mSegment) | IndexMask(command.mIndex);
     }
 
     public static VM.VMCommand Translate(int commandInt)
@@ -320,17 +333,27 @@ class VMByteCode
         uint segment;
         uint index;
 
-        command = ( (uint) commandInt & MASK_COMMAND ) >> ( BITS_SEGMENT + BITS_INDEX );
-        segment = ( (uint) commandInt & MASK_SEGMENT ) >> BITS_INDEX;
-        index =   ( (uint) commandInt & MASK_INDEX );
-
-        if ( ( index & ( 1 << BITS_INDEX - 1) ) != 0 ) 
+        if ((commandInt & unchecked((int)MASK_PUSH_CONST)) != 0)
         {
-            // Index is negative, fill in the rest of the left bits
-            index = index | MASK_SEGMENT | MASK_COMMAND;
+            // Any command other than push constant N
+            command = ((uint)commandInt & MASK_COMMAND) >> (BITS_SEGMENT + BITS_INDEX);
+            segment = ((uint)commandInt & MASK_SEGMENT) >> BITS_INDEX;
+            index = ((uint)commandInt & MASK_INDEX);
+
+            if ((index & (1 << BITS_INDEX - 1)) != 0)
+            {
+                // Index is negative, fill in the rest of the left bits
+                index = index | MASK_SEGMENT | MASK_COMMAND | MASK_PUSH_CONST;
+            }
+
+            return new VM.VMCommand((VM.Command)command, (VM.Segment)segment, (int)index);
+        }
+        else
+        {
+            // Special case of push const to use 32 bits
+            return new VM.VMCommand(VM.Command.PUSH, VM.Segment.CONST, commandInt);
         }
 
-        return new VM.VMCommand((VM.Command)command, (VM.Segment) segment, (int) index );
     }
 
     public static VM.VMCommand Translate(string commandStr)

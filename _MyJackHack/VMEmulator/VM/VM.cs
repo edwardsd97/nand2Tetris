@@ -46,7 +46,7 @@ public class VM
 
     public enum Segment : byte
     {
-        GLOBAL, CONST, ARG, LOCAL, THIS, THAT, POINTER, TEMP,
+        CONST, GLOBAL, ARG, LOCAL, THIS, THAT, POINTER, TEMP,
         INVALID
     }
 

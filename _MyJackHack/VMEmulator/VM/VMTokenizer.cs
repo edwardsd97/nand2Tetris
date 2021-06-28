@@ -315,21 +315,6 @@ class VMTokenizer : IEnumerable
         mTokenCurrent = -1;
     }
 
-    public static int IntParse(string str)
-    {
-        int result = 0;
-        try
-        {
-            result = int.Parse(str);
-        }
-        catch
-        {
-            result = 0;
-        }
-
-        return result;
-    }
-
     public void ReadAll()
     {
         while (HasMoreTokens())
@@ -586,14 +571,7 @@ class VMTokenizer : IEnumerable
                         else if (VMToken.IsNumber(mTokenStr[0]))
                         {
                             token.type = VMToken.Type.INT_CONST;
-                            try
-                            {
-                                token.intVal = IntParse(mTokenStr);
-                            }
-                            catch
-                            {
-                                token.intVal = 0;
-                            }
+                            token.intVal = VMByteCode.IntParse(mTokenStr );
                         }
                         else
                         {
