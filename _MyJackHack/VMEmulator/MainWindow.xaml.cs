@@ -23,7 +23,8 @@ namespace VMEmulator
     /// </summary>
     public partial class MainWindow : Window
     {
-        VM mVM = new VM();
+        // VM: Super tiny limits for easier viewing and tooling
+        VM mVM = new VM( 256, 172, 64 );
 
         MemoryStream vmcommands = new MemoryStream();
         VMCompiler compiler;
