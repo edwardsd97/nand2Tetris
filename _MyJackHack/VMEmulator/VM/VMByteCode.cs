@@ -67,7 +67,7 @@ class VMByteCode
     const uint MASK_COMMAND     = 2080374784; // 0111 1100  0000 0000  0000 0000  0000 0000
     const uint MASK_SEGMENT     =   62914560; // 0000 0011  1100 0000  0000 0000  0000 0000
     const uint MASK_INDEX       =    4194303; // 0000 0000  0011 1111  1111 1111  1111 1111
-    const uint MASK_PUSH_CONST  = 2147483648; // 1000 0000  0000 0000  0000 0000  0000 0000
+    const uint MASK_PUSH_CONST  = 2147483648; // 1000 0000  0000 0000  0000 0000  0000 0000 (indicates command is NOT push constant)
 
     static Dictionary<string, VM.Command> mStringToCommand;
     static Dictionary<string, VM.Segment> mStringToSegment;
@@ -324,7 +324,7 @@ class VMByteCode
         if (command.mCommand == VM.Command.PUSH && command.mSegment == VM.Segment.CONST)
             return command.mIndex;
         else
-            return CommandMask(command.mCommand) | SegmentMask(command.mSegment) | IndexMask(command.mIndex);
+            return unchecked((int)MASK_PUSH_CONST) | CommandMask(command.mCommand) | SegmentMask(command.mSegment) | IndexMask(command.mIndex);
     }
 
     public static VM.VMCommand Translate(int commandInt)
