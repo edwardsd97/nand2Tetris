@@ -87,7 +87,7 @@ namespace VMEmulator
         {
             if (!mVM.Running())
                 Reset();
-            mVM.ExecuteThread(true, 100);
+            mVM.ExecuteThread(true, 100000);
             TimerUpdateSetup(100);
         }
 
@@ -95,8 +95,8 @@ namespace VMEmulator
         {
             if (!mVM.Running())
                 Reset();
-            mVM.ExecuteThread(true, 15);
-            TimerUpdateSetup(50);
+            mVM.ExecuteThread(true, 15000);
+            TimerUpdateSetup(15);
         }
 
         private void buttonPlayFull_Click(object sender, RoutedEventArgs e)
@@ -247,7 +247,7 @@ namespace VMEmulator
             Compile(writer);
 
             VMByteCode convert = new VMByteCode();
-            convert.ConvertVMText(vmcommands, byteCode);
+            convert.ConvertVMText(vmcommands, byteCode, compiler);
 
             mVM.ResetAll();
             mVM.Load(byteCode);
@@ -441,8 +441,6 @@ namespace VMEmulator
 
         public void Compile(IVMWriter writer)
         {
-            VMCompiler.ResetAll();
-
             string code = textCode.Text;
 
             byte[] byteArray = Encoding.ASCII.GetBytes(code);

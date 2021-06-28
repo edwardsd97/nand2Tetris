@@ -26,9 +26,9 @@ public class VM
     public int mStackPushedCount;
     public int mStackPoppedCount;
 
-    protected Thread mExecuteThread;    // Execution thread
-    protected bool mExecuteThreadStop;  // Execution thread stop request
-    protected int mExecuteThreadRateMs; // Execution thread tick rate in milliseconds
+    protected Thread mExecuteThread;       // Execution thread
+    protected bool mExecuteThreadStop;     // Execution thread stop request
+    protected long mExecuteThreadRateMicro; // Execution thread tick rate in microseconds ( 1000 per 1 ms )
 
     public enum SegPointer : byte
     {
@@ -73,6 +73,29 @@ public class VM
             mCommand = command;
             mSegment = segment;
             mIndex = index;
+        }
+    }
+
+    public class VMTimer : System.Diagnostics.Stopwatch
+    {
+        readonly double _microSecPerTick =
+            1000000D / System.Diagnostics.Stopwatch.Frequency;
+
+        public VMTimer()
+        {
+            if (!System.Diagnostics.Stopwatch.IsHighResolution)
+            {
+                throw new Exception("On this system the high-resolution " +
+                                    "performance counter is not available");
+            }
+        }
+
+        public long ElapsedMicroseconds
+        {
+            get
+            {
+                return (long)(ElapsedTicks * _microSecPerTick);
+            }
         }
     }
 
@@ -218,9 +241,9 @@ public class VM
         return !(Halted() || Finished());
     }
 
-    public bool ExecuteThread( bool enabled, int tickRateMs = -1)
+    public bool ExecuteThread( bool enabled, long tickRateMicroSeconds = -1 )
     {
-        if (mExecuteThreadRateMs != 0)
+        if (mExecuteThreadRateMicro != 0)
         {
             mExecuteThreadStop = true;
 
@@ -232,9 +255,9 @@ public class VM
 
         if (enabled)
         {
-            ThreadStart threadFunc = ExecuteTick;
+            ThreadStart threadFunc = ExecuteThreadWorker;
             mExecuteThread = new Thread(threadFunc);
-            mExecuteThreadRateMs = tickRateMs;
+            mExecuteThreadRateMicro = tickRateMicroSeconds;
             mExecuteThreadStop = false;
             mExecuteThread.Start();
             return true;
@@ -243,23 +266,33 @@ public class VM
         return false;
     }
 
-    protected void ExecuteTick()
+    protected void ExecuteThreadWorker()
     {
+        VMTimer timer = new VMTimer();
+
         while (!mExecuteThreadStop)
         {
+            timer.Start();
+
             if (!ExecuteStep())
             {
+                timer.Stop();
                 break;
             }
 
-            if ( mExecuteThreadRateMs > 0 )
+            if ( mExecuteThreadRateMicro > 0 )
             {
-                System.Threading.Thread.Sleep(mExecuteThreadRateMs);
+                while (timer.ElapsedMicroseconds < mExecuteThreadRateMicro)
+                {
+                    // wait
+                }
             }
+
+            timer.Reset();
         }
 
         mExecuteThreadStop = false;
-        mExecuteThreadRateMs = 0;
+        mExecuteThreadRateMicro = 0;
     }
 
     public bool ExecuteStep()

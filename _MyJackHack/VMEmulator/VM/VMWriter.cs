@@ -200,13 +200,6 @@ class VMWriter : VMWriterBase, IVMWriter
 
     public void WriteCall(string function, int argCount)
     {
-        // mark this function as referenced
-        VMCompiler.FuncSpec funcSpec;
-        if (VMCompiler.mFunctions.TryGetValue(function, out funcSpec))
-        {
-            funcSpec.referenced = true;
-        }
-
         // call function argCount
         WriteLine("call " + function + " " + argCount);
     }

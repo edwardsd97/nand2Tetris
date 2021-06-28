@@ -178,11 +178,11 @@ class VMToken
         return 0;
     }
 
-    public bool IsType()
+    public bool IsType( VMCompiler compiler )
     {
         if (type == Type.KEYWORD && (keyword == Keyword.INT || keyword == Keyword.BOOL || keyword == Keyword.CHAR))
             return true;
-        if (type == Type.IDENTIFIER && VMCompiler.mClasses.ContainsKey(identifier))
+        if (type == Type.IDENTIFIER && compiler.mClasses.ContainsKey(identifier))
             return true;
         return false;
     }

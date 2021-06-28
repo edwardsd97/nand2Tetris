@@ -106,7 +106,7 @@ class VMByteCode
         return result;
     }
     
-    public int ConvertVMText( Stream input, Stream output )
+    public int ConvertVMText( Stream input, Stream output, VMCompiler compiler )
     {
         int written = 0;
 
@@ -119,7 +119,7 @@ class VMByteCode
 
         reader.BaseStream.Seek( 0, SeekOrigin.Begin );
 
-        WriteStaticStrings();
+        WriteStaticStrings( compiler );
 
         while (!reader.EndOfStream)
         {
@@ -182,12 +182,12 @@ class VMByteCode
         return written;
     }
 
-    protected int WriteStaticStrings()
+    protected int WriteStaticStrings( VMCompiler compiler )
     {
         int count = 0;
-        foreach (string str in VMCompiler.mStrings.Keys)
+        foreach (string str in compiler.mStrings.Keys)
         {
-            WriteStaticString(VM.Command.STATIC_STRING, str, VMCompiler.mStrings[str]);
+            WriteStaticString(VM.Command.STATIC_STRING, str, compiler.mStrings[str]);
             count++;
         }
         return count;

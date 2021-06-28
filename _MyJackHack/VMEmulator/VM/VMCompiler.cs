@@ -54,9 +54,9 @@ using System.Reflection;
 
 class VMCompiler
 {
-    static public Dictionary<string, ClassSpec> mClasses = new Dictionary<string, ClassSpec>(); // dictionary of known classes
-    static public Dictionary<string, FuncSpec> mFunctions = new Dictionary<string, FuncSpec>(); // dictionary of function specs
-    static public Dictionary<string, int> mStrings = new Dictionary<string, int>(); // static strings
+    public Dictionary<string, ClassSpec> mClasses = new Dictionary<string, ClassSpec>(); // dictionary of known classes
+    public Dictionary<string, FuncSpec> mFunctions = new Dictionary<string, FuncSpec>(); // dictionary of function specs
+    public Dictionary<string, int> mStrings = new Dictionary<string, int>(); // static strings
 
     List<VMTokenizer> mTokensSet;
     VMTokenizer mTokens;
@@ -90,21 +90,21 @@ class VMCompiler
         mTokensSet = new List<VMTokenizer>();
         mTokensSet.Add(tokens);
         mVMWriter = writer;
-        InitStaticStrings();
+        ResetAll();
     }
 
     public VMCompiler( VMTokenizer tokens )
     {
         mTokensSet = new List<VMTokenizer>();
         mTokensSet.Add(tokens);
-        InitStaticStrings();
+        ResetAll();
     }
 
     public VMCompiler(List<VMTokenizer> tokens)
     {
         mTokensSet = new List<VMTokenizer>();
         mTokensSet.AddRange( tokens );
-        InitStaticStrings();
+        ResetAll();
     }
 
     public VMCompiler(List<VMTokenizer> tokens, IVMWriter writer)
@@ -112,21 +112,15 @@ class VMCompiler
         mTokensSet = new List<VMTokenizer>();
         mTokensSet.AddRange(tokens);
         mVMWriter = writer;
-        InitStaticStrings();
+        ResetAll();
     }
 
-    protected void InitStaticStrings()
-    {
-        if (!mStrings.ContainsKey(""))
-            mStrings.Add("", mStrings.Count);
-    }
-
-    public static void ResetAll()
+    public void ResetAll()
     {
         mClasses = new Dictionary<string, ClassSpec>(); // dictionary of known classes
         mFunctions = new Dictionary<string, FuncSpec>(); // dictionary of function specs
         mStrings = new Dictionary<string, int>(); // static strings
-
+        mStrings.Add("", mStrings.Count);
         VMSymbolTable.Reset();
     }
 
@@ -324,7 +318,7 @@ class VMCompiler
 
     public bool ValidateFunctionReturnType(VMToken varType)
     {
-        if (varType.IsType())
+        if (varType.IsType( this ))
             return true;
 
         return varType.keyword == VMToken.Keyword.VOID;
@@ -360,14 +354,25 @@ class VMCompiler
                     Warning("parameters for function main() will be passed 0");
                 for (int i = 0; i < func.parmTypes.Count; i++)
                     mVMWriter.WritePush(VM.Segment.CONST, 0);
-                mVMWriter.WriteCall(funcName, func.parmTypes.Count);
+                WriteCall(funcName, func.parmTypes.Count);
                 mVMWriter.WritePop(VM.Segment.TEMP, 0 );
-                mVMWriter.WriteCall("Sys.halt", 0);
+                WriteCall("Sys.halt", 0);
                 return true;
             }
         }
 
         return false;
+    }
+
+    protected void WriteCall( string funcName, int argCount )
+    {
+        // mark this function as referenced
+        VMCompiler.FuncSpec funcSpec;
+        if ( mFunctions.TryGetValue(funcName, out funcSpec))
+        {
+            funcSpec.referenced = true;
+        }
+        mVMWriter.WriteCall(funcName, argCount);
     }
 
     public void Compile()
@@ -435,7 +440,7 @@ class VMCompiler
                         {
                             calledMain = MainCheck();
                             if (!calledMain)
-                                mVMWriter.WriteCall("Sys.halt", 0);
+                                WriteCall("Sys.halt", 0);
                         }
                         else if ( mTokens.mTokens.Count > 0 )
                         {
@@ -539,7 +544,7 @@ class VMCompiler
             tokenNext = mTokens.AdvanceAndRollback();
         }
 
-        if (token.IsType() && tokenNext.type == VMToken.Type.IDENTIFIER)
+        if (token.IsType( this ) && tokenNext.type == VMToken.Type.IDENTIFIER)
         {
             VMToken varType = mTokens.Get();
 
@@ -567,7 +572,7 @@ class VMCompiler
             tokenNext = mTokens.AdvanceAndRollback();
         }
 
-        if (token.IsType() && tokenNext.type == VMToken.Type.IDENTIFIER)
+        if (token.IsType(this) && tokenNext.type == VMToken.Type.IDENTIFIER)
         {
             VMToken varType = mTokens.Get();
 
@@ -578,7 +583,7 @@ class VMCompiler
 
             return true;
         }
-        else if (token.IsType())
+        else if (token.IsType(this))
         {
             Error("Expected identifier after type '" + token.GetTokenString() + "'");
         }
@@ -668,7 +673,7 @@ class VMCompiler
                     {
                         // Alloc "this" ( and it is pushed onto the stack )
                         mVMWriter.WritePush(VM.Segment.CONST, VMSymbolTable.KindSize(VMSymbolTable.Kind.FIELD));
-                        mVMWriter.WriteCall("Memory.alloc", 1);
+                        WriteCall("Memory.alloc", 1);
                     }
 
                     if (funcCallType == VMToken.Keyword.METHOD)
@@ -686,7 +691,7 @@ class VMCompiler
                 CompileStatements( out compiledReturn );
 
                 FuncSpec funcSpec;
-                if (VMCompiler.mFunctions.TryGetValue(FunctionName(mClassName, mFuncName), out funcSpec))
+                if ( mFunctions.TryGetValue(FunctionName(mClassName, mFuncName), out funcSpec))
                 {
                     funcSpec.compiled = true;
 
@@ -739,9 +744,9 @@ class VMCompiler
         ValidateTokenAdvance('(');
 
         // Only for functions that are methods, we need to push the this pointer as first argument
-        if ( mClassName != "" && objectName == null && VMCompiler.mFunctions.ContainsKey( FunctionName( mClassName, subroutineName ) ) )
+        if ( mClassName != "" && objectName == null && mFunctions.ContainsKey( FunctionName( mClassName, subroutineName ) ) )
         {
-            funcSpec = VMCompiler.mFunctions[FunctionName( mClassName, subroutineName)];
+            funcSpec = mFunctions[FunctionName( mClassName, subroutineName)];
 
             if (funcSpec.type != VMToken.Keyword.METHOD)
             {
@@ -752,9 +757,9 @@ class VMCompiler
             mVMWriter.WritePush(VM.Segment.POINTER, 0); // this
             argCount = argCount + 1;
         }
-        else if (VMSymbolTable.Exists(objectName) && VMCompiler.mFunctions.ContainsKey( FunctionName( VMSymbolTable.TypeOf(objectName), subroutineName )))
+        else if (VMSymbolTable.Exists(objectName) && mFunctions.ContainsKey( FunctionName( VMSymbolTable.TypeOf(objectName), subroutineName )))
         {
-            funcSpec = VMCompiler.mFunctions[FunctionName(VMSymbolTable.TypeOf(objectName), subroutineName)];
+            funcSpec = mFunctions[FunctionName(VMSymbolTable.TypeOf(objectName), subroutineName)];
 
             if (funcSpec.type != VMToken.Keyword.METHOD)
             {
@@ -765,9 +770,9 @@ class VMCompiler
             mVMWriter.WritePush(VMSymbolTable.SegmentOf(objectName), VMSymbolTable.OffsetOf(objectName)); // object pointer
             argCount = argCount + 1;
         }
-        else if ( VMCompiler.mFunctions.ContainsKey( FunctionName( objectName, subroutineName ) ))
+        else if ( mFunctions.ContainsKey( FunctionName( objectName, subroutineName ) ))
         {
-            funcSpec = VMCompiler.mFunctions[FunctionName( objectName, subroutineName)];
+            funcSpec = mFunctions[FunctionName( objectName, subroutineName)];
             if (funcSpec.type == VMToken.Keyword.METHOD)
             {
                 Error("Calling method as a function '" + subroutineName + "'");
@@ -795,13 +800,13 @@ class VMCompiler
         if (objectName != null)
         {
             if (VMSymbolTable.Exists(objectName))
-                mVMWriter.WriteCall( FunctionName( VMSymbolTable.TypeOf(objectName), subroutineName ), argCount);
+                WriteCall( FunctionName( VMSymbolTable.TypeOf(objectName), subroutineName ), argCount);
             else
-                mVMWriter.WriteCall( FunctionName( objectName, subroutineName ), argCount);
+                WriteCall( FunctionName( objectName, subroutineName ), argCount);
         }
         else
         {
-            mVMWriter.WriteCall( FunctionName( mClassName, subroutineName ), argCount);
+            WriteCall( FunctionName( mClassName, subroutineName ), argCount);
         }
     }
 
@@ -813,7 +818,7 @@ class VMCompiler
         // can be completely empty
 
         // parameterList: ( type varName (',' type varName)* )?
-        while (mTokens.Get().IsType())
+        while (mTokens.Get().IsType(this))
         {
             // handle argument
             VMToken varType = mTokens.GetAndAdvance();
@@ -917,7 +922,7 @@ class VMCompiler
 
             default:
                 // Check for non-keyword do/let/varDec
-                if (token.keyword == VMToken.Keyword.VAR || (token.IsType() && tokenNext.type == VMToken.Type.IDENTIFIER))
+                if (token.keyword == VMToken.Keyword.VAR || (token.IsType(this) && tokenNext.type == VMToken.Type.IDENTIFIER))
                 {
                     CompileVarDec(eatSemiColon);
                     return true;
@@ -1531,7 +1536,7 @@ class VMCompiler
         // Precompiled static strings
         int strIndex;
 
-        if (VMCompiler.mStrings.TryGetValue(str, out strIndex))
+        if ( mStrings.TryGetValue(str, out strIndex) )
         {
             mVMWriter.WritePush(VM.Segment.CONST, strIndex);
         }
