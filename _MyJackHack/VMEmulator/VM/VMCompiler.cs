@@ -58,6 +58,7 @@ class VMCompiler
     public Dictionary<string, FuncSpec> mFunctions = new Dictionary<string, FuncSpec>(); // dictionary of function specs
     public Dictionary<string, int> mStrings = new Dictionary<string, int>(); // static strings
 
+    VMSymbolTable mSymbolTable;
     List<VMTokenizer> mTokensSet;
     VMTokenizer mTokens;
     IVMWriter mVMWriter;
@@ -121,7 +122,9 @@ class VMCompiler
         mFunctions = new Dictionary<string, FuncSpec>(); // dictionary of function specs
         mStrings = new Dictionary<string, int>(); // static strings
         mStrings.Add("", mStrings.Count);
-        VMSymbolTable.Reset();
+
+        mSymbolTable = new VMSymbolTable();
+        mSymbolTable.Reset();
     }
 
     public void SetWriter( IVMWriter writer )
@@ -158,14 +161,14 @@ class VMCompiler
                     mClasses.Add(mClassName, classSpec);
                 }
 
-                mClasses[mClassName].fields = VMSymbolTable.ScopePush("class");
+                mClasses[mClassName].fields = mSymbolTable.ScopePush("class");
 
                 while (CompileClassVarDec())
                 {
                     // continue with classVarDec
                 }
 
-                VMSymbolTable.ScopePop();
+                mSymbolTable.ScopePop();
 
                 mClassName = "";
             }
@@ -251,7 +254,7 @@ class VMCompiler
 
     public bool ValidateSymbol(string varName)
     {
-        VM.Segment seg = VMSymbolTable.SegmentOf(varName);
+        VM.Segment seg = mSymbolTable.SegmentOf(varName);
         if (seg == VM.Segment.INVALID)
         {
             Error("Undefined symbol '" + varName + "'");
@@ -259,7 +262,7 @@ class VMCompiler
         }
         else if (seg == VM.Segment.THIS )
         {
-            VMToken.Keyword funcType = VMSymbolTable.FunctionType();
+            VMToken.Keyword funcType = mSymbolTable.FunctionType();
             if (funcType != VMToken.Keyword.METHOD && funcType != VMToken.Keyword.CONSTRUCTOR)
             {
                 Error("Cannot access class member outside of constructor or method '" + varName + "'");
@@ -464,7 +467,7 @@ class VMCompiler
         ValidateTokenAdvance(VMToken.Type.IDENTIFIER, out mClassName);
         ValidateTokenAdvance('{');
 
-        VMSymbolTable.ScopePush("class");
+        mSymbolTable.ScopePush("class");
 
         while (CompileClassVarDec())
         {
@@ -478,7 +481,7 @@ class VMCompiler
 
         ValidateTokenAdvance('}');
 
-        VMSymbolTable.ScopePop();
+        mSymbolTable.ScopePop();
 
         mClassName = "";
     }
@@ -492,7 +495,7 @@ class VMCompiler
             string varName;
             ValidateTokenAdvance(VMToken.Type.IDENTIFIER, out varName);
 
-            if (VMSymbolTable.ExistsCurrentScope(varName))
+            if (mSymbolTable.ExistsCurrentScope(varName))
                 Error("Symbol already defined '" + varName + "'");
 
             if (varKind == VMSymbolTable.Kind.GLOBAL)
@@ -502,16 +505,16 @@ class VMCompiler
                 // Only define globals on the pre pass
                 if ( !mVMWriter.IsEnabled() )
                 {
-                    if (VMSymbolTable.Exists(globalSym, "global"))
+                    if (mSymbolTable.Exists(globalSym, "global"))
                         Error("Global symbol already defined '" + globalSym + "'");
-                    VMSymbolTable.Define(globalSym, varType, varKind, "global");
+                    mSymbolTable.Define(globalSym, varType, varKind, "global");
                 }
 
-                VMSymbolTable.Define(varName, varType, varKind, null, VMSymbolTable.OffsetOf(globalSym));
+                mSymbolTable.Define(varName, varType, varKind, null, mSymbolTable.OffsetOf(globalSym));
             }
             else
             {
-                VMSymbolTable.Define(varName, varType, varKind );
+                mSymbolTable.Define(varName, varType, varKind );
             }
 
             if (mTokens.Get().symbol == '=')
@@ -522,7 +525,7 @@ class VMCompiler
                     Error("Expected expression after =");
 
                 if (ValidateSymbol(varName))
-                    mVMWriter.WritePop(VMSymbolTable.SegmentOf(varName), VMSymbolTable.OffsetOf(varName));
+                    mVMWriter.WritePop(mSymbolTable.SegmentOf(varName), mSymbolTable.OffsetOf(varName));
             }
 
         } while (mTokens.Get().symbol == ',');
@@ -626,7 +629,7 @@ class VMCompiler
             //////////////////////////////////////////////////////////////////////////
             // pre-compile statements to find peak local var space needed
             mIgnoreErrors = true;
-            VMSymbolTable.ScopePush("function", funcCallType);
+            mSymbolTable.ScopePush("function", funcCallType);
             VMTokenizer.State tokenStart = null;
             int localVarSize = 0;
             tokenStart = mTokens.StateGet();
@@ -641,16 +644,16 @@ class VMCompiler
             {
                 ValidateTokenAdvance('{');
                 mVMWriter.Disable();
-                VMSymbolTable.VarSizeBegin();
+                mSymbolTable.VarSizeBegin();
                 CompileStatements();
-                localVarSize = VMSymbolTable.VarSizeEnd();
+                localVarSize = mSymbolTable.VarSizeEnd();
             }
-            VMSymbolTable.ScopePop(); // "function"
+            mSymbolTable.ScopePop(); // "function"
             mIgnoreErrors = false;
 
             //////////////////////////////////////////////////////////////////////////
             // Rewind tokenizer and compile the function ignoring root level var declarations
-            VMSymbolTable.ScopePush("function", funcCallType);
+            mSymbolTable.ScopePush("function", funcCallType);
             mTokens.StateSet(tokenStart);
             mVMWriter.Enable();
             parameterTypes = CompileParameterList();
@@ -672,7 +675,7 @@ class VMCompiler
                     if (funcCallType == VMToken.Keyword.CONSTRUCTOR)
                     {
                         // Alloc "this" ( and it is pushed onto the stack )
-                        mVMWriter.WritePush(VM.Segment.CONST, VMSymbolTable.KindSize(VMSymbolTable.Kind.FIELD));
+                        mVMWriter.WritePush(VM.Segment.CONST, mSymbolTable.KindSize(VMSymbolTable.Kind.FIELD));
                         WriteCall("Memory.alloc", 1);
                     }
 
@@ -711,7 +714,7 @@ class VMCompiler
                 ValidateTokenAdvance('}');
             }
 
-            VMSymbolTable.ScopePop(); // "function"
+            mSymbolTable.ScopePop(); // "function"
 
             mFuncName = null;
 
@@ -757,17 +760,17 @@ class VMCompiler
             mVMWriter.WritePush(VM.Segment.POINTER, 0); // this
             argCount = argCount + 1;
         }
-        else if (VMSymbolTable.Exists(objectName) && mFunctions.ContainsKey( FunctionName( VMSymbolTable.TypeOf(objectName), subroutineName )))
+        else if (mSymbolTable.Exists(objectName) && mFunctions.ContainsKey( FunctionName( mSymbolTable.TypeOf(objectName), subroutineName )))
         {
-            funcSpec = mFunctions[FunctionName(VMSymbolTable.TypeOf(objectName), subroutineName)];
+            funcSpec = mFunctions[FunctionName(mSymbolTable.TypeOf(objectName), subroutineName)];
 
             if (funcSpec.type != VMToken.Keyword.METHOD)
             {
-                Error("Calling function as a method '" + FunctionName( objectName, subroutineName ) + "' (use " + VMSymbolTable.TypeOf(objectName) + "." + subroutineName + ")");
+                Error("Calling function as a method '" + FunctionName( objectName, subroutineName ) + "' (use " + mSymbolTable.TypeOf(objectName) + "." + subroutineName + ")");
             }
 
             // push pointer to object (this for object)
-            mVMWriter.WritePush(VMSymbolTable.SegmentOf(objectName), VMSymbolTable.OffsetOf(objectName)); // object pointer
+            mVMWriter.WritePush(mSymbolTable.SegmentOf(objectName), mSymbolTable.OffsetOf(objectName)); // object pointer
             argCount = argCount + 1;
         }
         else if ( mFunctions.ContainsKey( FunctionName( objectName, subroutineName ) ))
@@ -799,8 +802,8 @@ class VMCompiler
 
         if (objectName != null)
         {
-            if (VMSymbolTable.Exists(objectName))
-                WriteCall( FunctionName( VMSymbolTable.TypeOf(objectName), subroutineName ), argCount);
+            if (mSymbolTable.Exists(objectName))
+                WriteCall( FunctionName( mSymbolTable.TypeOf(objectName), subroutineName ), argCount);
             else
                 WriteCall( FunctionName( objectName, subroutineName ), argCount);
         }
@@ -830,7 +833,7 @@ class VMCompiler
 
             if (doCompile)
             {
-                VMSymbolTable.Define(varName, varType, VMSymbolTable.Kind.ARG);
+                mSymbolTable.Define(varName, varType, VMSymbolTable.Kind.ARG);
             }
 
             if (mTokens.Get().symbol != ',')
@@ -981,11 +984,11 @@ class VMCompiler
         }
 
         if (ValidateSymbol(varName))
-            mVMWriter.WritePush(VMSymbolTable.SegmentOf(varName), VMSymbolTable.OffsetOf(varName));
+            mVMWriter.WritePush(mSymbolTable.SegmentOf(varName), mSymbolTable.OffsetOf(varName));
 
-        if (memberName != null && mClasses.ContainsKey(VMSymbolTable.TypeOf(varName)))
+        if (memberName != null && mClasses.ContainsKey(mSymbolTable.TypeOf(varName)))
         {
-            ClassSpec classSpec = mClasses[VMSymbolTable.TypeOf(varName)];
+            ClassSpec classSpec = mClasses[mSymbolTable.TypeOf(varName)];
             if (!classSpec.fields.mSymbols.ContainsKey(memberName))
             {
                 Error("Class identifier unknown '" + memberName + "'");
@@ -1032,7 +1035,7 @@ class VMCompiler
             classGlobal = className + '.' + varName;
 
             if (ValidateSymbol(classGlobal))
-                mVMWriter.WritePush(VMSymbolTable.SegmentOf(classGlobal), VMSymbolTable.OffsetOf(classGlobal));
+                mVMWriter.WritePush(mSymbolTable.SegmentOf(classGlobal), mSymbolTable.OffsetOf(classGlobal));
 
             if (mTokens.Get().symbol == '[')
             {
@@ -1084,7 +1087,7 @@ class VMCompiler
                     ValidateTokenAdvance(']');
 
                     if (ValidateSymbol(varName))
-                        mVMWriter.WritePush(VMSymbolTable.SegmentOf(varName), VMSymbolTable.OffsetOf(varName));
+                        mVMWriter.WritePush(mSymbolTable.SegmentOf(varName), mSymbolTable.OffsetOf(varName));
                     mVMWriter.WriteArithmetic(VM.Command.ADD);
                 }
             }
@@ -1115,7 +1118,7 @@ class VMCompiler
         else
         {
             if (ValidateSymbol(varName))
-                mVMWriter.WritePop(VMSymbolTable.SegmentOf(varName), VMSymbolTable.OffsetOf(varName));
+                mVMWriter.WritePop(mSymbolTable.SegmentOf(varName), mSymbolTable.OffsetOf(varName));
         }
 
         if (eatSemiColon)
@@ -1163,11 +1166,11 @@ class VMCompiler
         {
             ValidateTokenAdvance('{');
 
-            VMSymbolTable.ScopePush("statements");
+            mSymbolTable.ScopePush("statements");
 
             CompileStatements();
 
-            VMSymbolTable.ScopePop();
+            mSymbolTable.ScopePop();
 
             ValidateTokenAdvance('}');
         }
@@ -1192,11 +1195,11 @@ class VMCompiler
             {
                 ValidateTokenAdvance('{');
 
-                VMSymbolTable.ScopePush("statements");
+                mSymbolTable.ScopePush("statements");
 
                 CompileStatements();
 
-                VMSymbolTable.ScopePop();
+                mSymbolTable.ScopePop();
 
                 ValidateTokenAdvance('}');
             }
@@ -1215,7 +1218,7 @@ class VMCompiler
 
         ValidateTokenAdvance(VMToken.Keyword.CONTINUE);
 
-        string label = VMSymbolTable.GetLabelContinue();
+        string label = mSymbolTable.GetLabelContinue();
         if (label != null)
         {
             mVMWriter.WriteGoto(label);
@@ -1234,7 +1237,7 @@ class VMCompiler
 
         ValidateTokenAdvance(VMToken.Keyword.BREAK);
 
-        string label = VMSymbolTable.GetLabelBreak();
+        string label = mSymbolTable.GetLabelBreak();
         if (label != null)
         {
             mVMWriter.WriteGoto(label);
@@ -1256,9 +1259,9 @@ class VMCompiler
         string labelExp = NewFuncFlowLabel("WHILE_EXP");
         string labelEnd = NewFuncFlowLabel("WHILE_END");
 
-        VMSymbolTable.ScopePush("whileStatement");
+        mSymbolTable.ScopePush("whileStatement");
 
-        VMSymbolTable.DefineContinueBreak(labelExp, labelEnd);
+        mSymbolTable.DefineContinueBreak(labelExp, labelEnd);
 
         mVMWriter.WriteLabel(labelExp);
 
@@ -1276,11 +1279,11 @@ class VMCompiler
         {
             ValidateTokenAdvance('{');
 
-            VMSymbolTable.ScopePush("statements");
+            mSymbolTable.ScopePush("statements");
 
             CompileStatements();
 
-            VMSymbolTable.ScopePop();
+            mSymbolTable.ScopePop();
 
             ValidateTokenAdvance('}');
         }
@@ -1293,7 +1296,7 @@ class VMCompiler
 
         mVMWriter.WriteLabel(labelEnd);
 
-        VMSymbolTable.ScopePop(); // "whileStatement"
+        mSymbolTable.ScopePop(); // "whileStatement"
 
     }
 
@@ -1311,9 +1314,9 @@ class VMCompiler
         string labelInc = NewFuncFlowLabel("FOR_INC");
         string labelBody = NewFuncFlowLabel("FOR_BODY");
 
-        VMSymbolTable.ScopePush("forStatement");
+        mSymbolTable.ScopePush("forStatement");
 
-        VMSymbolTable.DefineContinueBreak( labelInc, labelEnd );
+        mSymbolTable.DefineContinueBreak( labelInc, labelEnd );
 
         CompileStatementSingle(out returnCompiled, false);
 
@@ -1343,11 +1346,11 @@ class VMCompiler
         {
             ValidateTokenAdvance('{');
 
-            VMSymbolTable.ScopePush("statements");
+            mSymbolTable.ScopePush("statements");
 
             CompileStatements();
 
-            VMSymbolTable.ScopePop();
+            mSymbolTable.ScopePop();
 
             ValidateTokenAdvance('}');
         }
@@ -1360,7 +1363,7 @@ class VMCompiler
 
         mVMWriter.WriteLabel(labelEnd);
 
-        VMSymbolTable.ScopePop(); // "forStatement"
+        mSymbolTable.ScopePop(); // "forStatement"
     }
 
     public void CompileStatementSwitch()
@@ -1383,9 +1386,9 @@ class VMCompiler
         int caseLabelIndex = -1;
         int defaultLabelIndex = -1;
 
-        VMSymbolTable.ScopePush("switchStatement");
+        mSymbolTable.ScopePush("switchStatement");
 
-        VMSymbolTable.DefineContinueBreak( null, labelEnd );
+        mSymbolTable.DefineContinueBreak( null, labelEnd );
 
         ValidateTokenAdvance('(');
         CompileExpression();
@@ -1442,7 +1445,7 @@ class VMCompiler
             if (mTokens.Get().symbol == '{')
             {
                 ValidateTokenAdvance('{');
-                VMSymbolTable.ScopePush("case");
+                mSymbolTable.ScopePush("case");
                 wrapped = true;
             }
 
@@ -1451,7 +1454,7 @@ class VMCompiler
             if (wrapped)
             {
                 ValidateTokenAdvance('}');
-                VMSymbolTable.ScopePop(); // "case"
+                mSymbolTable.ScopePop(); // "case"
             }
 
             mVMWriter.OutputPop();
@@ -1500,7 +1503,7 @@ class VMCompiler
 
         mVMWriter.WriteLabel( labelEnd );
 
-        VMSymbolTable.ScopePop(); // "switchStatement"
+        mSymbolTable.ScopePop(); // "switchStatement"
     }
 
     public int CompileStatementReturn()
@@ -1866,12 +1869,12 @@ class VMCompiler
             CompileArrayValue();
             return true;
         }
-        else if (token.type == VMToken.Type.IDENTIFIER && VMSymbolTable.Exists(token.identifier))
+        else if (token.type == VMToken.Type.IDENTIFIER && mSymbolTable.Exists(token.identifier))
         {
             // varName
             ValidateConstTerm("variable", constOnly);
             if (ValidateSymbol(token.identifier))
-                mVMWriter.WritePush(VMSymbolTable.SegmentOf(token.identifier), VMSymbolTable.OffsetOf(token.identifier));
+                mVMWriter.WritePush(mSymbolTable.SegmentOf(token.identifier), mSymbolTable.OffsetOf(token.identifier));
             mTokens.Advance();
             return true;
         }
@@ -1898,7 +1901,7 @@ class VMCompiler
             mTokens.Advance();
             return true;
         }
-        else if ( token.type == VMToken.Type.IDENTIFIER && !VMSymbolTable.Exists(token.identifier) )
+        else if ( token.type == VMToken.Type.IDENTIFIER && !mSymbolTable.Exists(token.identifier) )
         {
             Error("Undefined symbol '" + token.identifier + "'");
         }

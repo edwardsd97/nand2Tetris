@@ -3,10 +3,10 @@ using System.Collections.Generic;
 
 class VMSymbolTable
 {
-    static List<SymbolScope> mScopes = new List<SymbolScope>();
-    static Dictionary<string, int> mLabels = new Dictionary<string, int>();
-    static VMSymbolTable mTheTable = new VMSymbolTable();
-    static int mVarSize;
+    List<SymbolScope> mScopes = new List<SymbolScope>();
+    Dictionary<string, int> mLabels = new Dictionary<string, int>();
+
+    int mVarSize;
 
     public class Symbol
     {
@@ -41,39 +41,39 @@ class VMSymbolTable
         NONE, GLOBAL, FIELD, ARG, VAR
     }
 
-    public static void Reset()
+    public void Reset()
     {
-        VMSymbolTable.mScopes = new List<SymbolScope>();
-        VMSymbolTable.ScopePush( "global" );
+        mScopes = new List<SymbolScope>();
+        ScopePush( "global" );
     }
 
-    public static void VarSizeBegin()
+    public void VarSizeBegin()
     {
         // Begins tracking the high water mark of VAR kind variables
-        VMSymbolTable.mVarSize = 0;
+        mVarSize = 0;
     }
 
-    public static int VarSizeEnd()
+    public int VarSizeEnd()
     {
         // Returns high water mark of VAR kind variables
-        return VMSymbolTable.mVarSize;
+        return mVarSize;
     }
 
-    public static SymbolScope ScopePush(string name, VMToken.Keyword functionType = VMToken.Keyword.NONE )
+    public SymbolScope ScopePush(string name, VMToken.Keyword functionType = VMToken.Keyword.NONE )
     {
         SymbolScope scope = new SymbolScope(name, functionType);
         mScopes.Add(scope);
         return scope;
     }
 
-    public static SymbolScope ScopePush(string name )
+    public SymbolScope ScopePush(string name )
     {
         SymbolScope scope = new SymbolScope(name);
         mScopes.Add(scope);
         return scope;
     }
 
-    public static void ScopePop()
+    public void ScopePop()
     {
         if (mScopes.Count > 0)
         {
@@ -81,7 +81,7 @@ class VMSymbolTable
         }
     }
 
-    public static bool Define(string varName, VMToken type, Kind kind, string specificScope = null, int specificOffset = -1 )
+    public bool Define(string varName, VMToken type, Kind kind, string specificScope = null, int specificOffset = -1 )
     {
         if (mScopes.Count == 0)
             return false;
@@ -136,11 +136,11 @@ class VMSymbolTable
             return false;
 
         defineScope.mSymbols.Add(varName, newVar);
-        mVarSize = Math.Max(mVarSize, VMSymbolTable.KindSize(VMSymbolTable.Kind.VAR));
+        mVarSize = Math.Max(mVarSize, KindSize(Kind.VAR));
         return true;
     }
 
-    public static VMToken.Keyword FunctionType()
+    public VMToken.Keyword FunctionType()
     {
         foreach (SymbolScope scope in mScopes)
         {
@@ -153,7 +153,7 @@ class VMSymbolTable
         return VMToken.Keyword.NONE;
     }
 
-    public static void DefineContinueBreak( string labelContinue, string labelBreak )
+    public void DefineContinueBreak( string labelContinue, string labelBreak )
     {
         if (mScopes.Count == 0)
             return;
@@ -162,7 +162,7 @@ class VMSymbolTable
         mScopes[mScopes.Count - 1].mLabelBreak = labelBreak;
     }
 
-    public static string GetLabelContinue()
+    public string GetLabelContinue()
     {
         int iScope = mScopes.Count - 1;
 
@@ -176,7 +176,7 @@ class VMSymbolTable
         return null;
     }
 
-    public static string GetLabelBreak()
+    public string GetLabelBreak()
     {
         int iScope = mScopes.Count - 1;
 
@@ -190,7 +190,7 @@ class VMSymbolTable
         return null;
     }
 
-    public static bool Exists(string varName, string specificScope = null )
+    public bool Exists(string varName, string specificScope = null )
     {
         // Walk backwards from most recently added scope backward to oldest looking for the symbol
         int iScope = mScopes.Count - 1;
@@ -213,7 +213,7 @@ class VMSymbolTable
         return false;
     }
 
-    public static bool ExistsCurrentScope(string varName)
+    public bool ExistsCurrentScope(string varName)
     {
         if (mScopes.Count == 0)
             return false;
@@ -225,7 +225,7 @@ class VMSymbolTable
         return false;
     }
 
-    public static Symbol Find(string varName)
+    public Symbol Find(string varName)
     {
         // Walk backwards from most recently added scope backward to oldest looking for the symbol
         Symbol result = null;
@@ -242,7 +242,7 @@ class VMSymbolTable
         return result;
     }
 
-    public static bool CompilingMethod()
+    public bool CompilingMethod()
     {
         // Walk backwards from most recently added scope backward to oldest looking for method
         int iScope = mScopes.Count - 1;
@@ -258,37 +258,37 @@ class VMSymbolTable
         return false;
     }
 
-    public static Kind KindOf(string varName)
+    public Kind KindOf(string varName)
     {
-        Symbol symbol = VMSymbolTable.Find(varName);
+        Symbol symbol = Find(varName);
         if (symbol != null)
             return symbol.mKind;
         return Kind.NONE;
     }
 
-    public static string TypeOf(string varName)
+    public string TypeOf(string varName)
     {
-        Symbol symbol = VMSymbolTable.Find(varName);
+        Symbol symbol = Find(varName);
         if (symbol != null)
             return symbol.mType.GetTokenString();
         return "";
     }
 
-    public static int OffsetOf(string varName)
+    public int OffsetOf(string varName)
     {
-        Symbol symbol = VMSymbolTable.Find(varName);
+        Symbol symbol = Find(varName);
         if (symbol != null)
         {
-            if (VMSymbolTable.CompilingMethod() && symbol.mKind == Kind.ARG)
+            if (CompilingMethod() && symbol.mKind == Kind.ARG)
                 return symbol.mOffset + 1; // skip over argument 0 (this)
             return symbol.mOffset;
         }
         return 0;
     }
 
-    public static VM.Segment SegmentOf(string varName)
+    public VM.Segment SegmentOf(string varName)
     {
-        Symbol symbol = VMSymbolTable.Find(varName);
+        Symbol symbol = Find(varName);
         if (symbol != null)
         {
             switch (symbol.mKind)
@@ -303,7 +303,7 @@ class VMSymbolTable
         return VM.Segment.INVALID;
     }
 
-    public static int KindSize(Kind kind)
+    public int KindSize(Kind kind)
     {
         int result = 0;
 
