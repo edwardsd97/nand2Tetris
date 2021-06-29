@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
-using System.Reflection;
 
 // GRAMMAR DEFINITION
 // Key: node* : zero or more of this node
@@ -54,7 +53,7 @@ using System.Reflection;
 
 namespace VM
 {
-    class Compiler
+    public class Compiler
     {
         public Dictionary<string, ClassSpec> mClasses;  // dictionary of known classes
         public Dictionary<string, FuncSpec> mFunctions; // dictionary of function specs
@@ -68,6 +67,9 @@ namespace VM
         string mFuncName;
         bool mIgnoreErrors;
         Dictionary<string, int> mFuncLabel = new Dictionary<string, int>();
+        Debugger mDebugger;
+
+        const string mHaltFunc = "Sys.halt";
 
         public List<string> mErrors = new List<string>();
 
@@ -88,33 +90,37 @@ namespace VM
             public SymbolTable.SymbolScope fields;
         };
 
-        public Compiler(Tokenizer tokens, IWriter writer)
+        public Compiler(Tokenizer tokens, IWriter writer, Debugger debug = null )
         {
+            mDebugger = debug;
             mTokensSet = new List<Tokenizer>();
             mTokensSet.Add(tokens);
-            mWriter = writer;
+            SetWriter(writer);
             ResetAll();
         }
 
-        public Compiler(Tokenizer tokens)
+        public Compiler(Tokenizer tokens, Debugger debug = null)
         {
+            mDebugger = debug;
             mTokensSet = new List<Tokenizer>();
             mTokensSet.Add(tokens);
             ResetAll();
         }
 
-        public Compiler(List<Tokenizer> tokens)
+        public Compiler(List<Tokenizer> tokens, Debugger debug = null)
         {
+            mDebugger = debug;
             mTokensSet = new List<Tokenizer>();
             mTokensSet.AddRange(tokens);
             ResetAll();
         }
 
-        public Compiler(List<Tokenizer> tokens, IWriter writer)
+        public Compiler(List<Tokenizer> tokens, IWriter writer, Debugger debug = null)
         {
+            mDebugger = debug;
             mTokensSet = new List<Tokenizer>();
             mTokensSet.AddRange(tokens);
-            mWriter = writer;
+            SetWriter(writer);
             ResetAll();
         }
 
@@ -124,20 +130,26 @@ namespace VM
             mFunctions = new Dictionary<string, FuncSpec>(); // dictionary of function specs
             mStrings = new Dictionary<string, int>(); // static strings
             mStrings.Add("", mStrings.Count);
-
-            mSymbolTable = new SymbolTable();
-            mSymbolTable.Reset();
+            mSymbolTable = new SymbolTable(mDebugger);
         }
 
         public void SetWriter(IWriter writer)
         {
             mWriter = writer;
+            mWriter.SetDebugger( mDebugger );
+        }
+
+        public void SetCurrentTokens(Tokenizer tokens)
+        {
+            mTokens = tokens;
+            if (mDebugger != null)
+                mDebugger.mTokens = tokens;
         }
 
         public void CompilePrePass(Tokenizer tokenizer)
         {
             Tokenizer tokensPrev = mTokens;
-            mTokens = tokenizer;
+            SetCurrentTokens( tokenizer );
 
             mTokens.Reset();
 
@@ -152,6 +164,7 @@ namespace VM
             {
                 if (token.keyword == Token.Keyword.CLASS)
                 {
+                    Token classToken = token;
                     ValidateTokenAdvance(Token.Keyword.CLASS);
                     ValidateTokenAdvance(Token.Type.IDENTIFIER, out mClassName);
                     ValidateTokenAdvance('{');
@@ -163,14 +176,14 @@ namespace VM
                         mClasses.Add(mClassName, classSpec);
                     }
 
-                    mClasses[mClassName].fields = mSymbolTable.ScopePush("class");
+                    mClasses[mClassName].fields = mSymbolTable.ScopePush("class", classToken);
 
                     while (CompileClassVarDec())
                     {
                         // continue with classVarDec
                     }
 
-                    mSymbolTable.ScopePop();
+                    mSymbolTable.ScopePop(mTokens.Get());
 
                     mClassName = "";
                 }
@@ -226,7 +239,7 @@ namespace VM
 
             mTokens.Reset();
 
-            mTokens = tokensPrev;
+            SetCurrentTokens( tokensPrev );
 
             mWriter.Enable();
             mIgnoreErrors = false;
@@ -349,12 +362,14 @@ namespace VM
         }
 
         public bool MainCheck(string funcName)
-        {
+        {            
             if (mFunctions.ContainsKey(funcName))
             {
                 FuncSpec func = mFunctions[funcName];
                 if (func.type == Token.Keyword.FUNCTION)
                 {
+                    if (mDebugger != null)
+                        mDebugger.mAddedCode = true;
                     if (func.parmTypes.Count > 0)
                         Warning("parameters for function main() will be passed 0");
                     for (int i = 0; i < func.parmTypes.Count; i++)
@@ -362,6 +377,8 @@ namespace VM
                     WriteCall(funcName, func.parmTypes.Count);
                     mWriter.WritePop(Segment.TEMP, 0);
                     WriteCall("Sys.halt", 0);
+                    if (mDebugger != null)
+                        mDebugger.mAddedCode = false;
                     return true;
                 }
             }
@@ -380,36 +397,40 @@ namespace VM
             mWriter.WriteCall(funcName, argCount);
         }
 
+        protected void WriteHalt()
+        {
+            if (mDebugger != null)
+                mDebugger.mAddedCode = true;
+            if (mFunctions.ContainsKey(mHaltFunc))
+            {
+                WriteCall(mHaltFunc, 0);
+            }
+            else
+            {
+                mWriter.WriteLabel("_VM_PROGRAM_HALT_");
+                mWriter.WriteGoto("_VM_PROGRAM_HALT_");
+            }
+            if (mDebugger != null)
+                mDebugger.mAddedCode = false;
+        }
+
         public void Compile()
         {
-            // Pre-process the operating system classes that are part of the compiler itself
-            Assembly asm = Assembly.GetExecutingAssembly();
-            foreach (string osName in asm.GetManifestResourceNames())
-            {
-                if (!osName.Contains(".OSVM."))
-                    continue;
-
-                Stream resourceStream = asm.GetManifestResourceStream(osName);
-                if (resourceStream != null)
-                {
-                    StreamReader sRdr = new StreamReader(resourceStream);
-                    Tokenizer tokens = new Tokenizer(sRdr);
-                    tokens.ReadAll();
-                    CompilePrePass(tokens);
-                }
-            }
+            mSymbolTable.ScopePush("global");
 
             // Pre process the source code
             foreach (Tokenizer tokens in mTokensSet)
             {
-                mTokens = tokens;
-                CompilePrePass(mTokens);
+                SetCurrentTokens( tokens );
+                CompilePrePass( tokens );
             }
 
             bool calledMain = false;
+            bool calledHalt = false;
+
             foreach (Tokenizer tokens in mTokensSet)
             {
-                mTokens = tokens;
+                SetCurrentTokens( tokens );
                 mTokens.Reset();
 
                 Token token = null;
@@ -444,8 +465,11 @@ namespace VM
                             if (CompileStatements() > 0)
                             {
                                 calledMain = MainCheck();
-                                if (!calledMain)
-                                    WriteCall("Sys.halt", 0);
+                                if ( !calledMain ) 
+                                {
+                                    WriteHalt();
+                                    calledHalt = true;
+                                }
                             }
                             else if (mTokens.mTokens.Count > 0)
                             {
@@ -457,19 +481,25 @@ namespace VM
                 } while (mTokens.HasMoreTokens());
             }
 
-            mWriter.WriteLabel("_VM_PROGRAM_ENDED_");
-            mWriter.WriteGoto("_VM_PROGRAM_ENDED_");
+            if ( !calledHalt )
+            {
+                WriteHalt();
+                calledHalt = true;
+            }
+
+            mSymbolTable.ScopePop(); // "global"
         }
 
         public void CompileClass()
         {
             // class: 'class' className '{' classVarDec* subroutineDec* '}'
 
+            Token classToken = mTokens.Get();
             ValidateTokenAdvance(Token.Keyword.CLASS);
             ValidateTokenAdvance(Token.Type.IDENTIFIER, out mClassName);
             ValidateTokenAdvance('{');
 
-            mSymbolTable.ScopePush("class");
+            mSymbolTable.ScopePush("class", classToken);
 
             while (CompileClassVarDec())
             {
@@ -483,7 +513,7 @@ namespace VM
 
             ValidateTokenAdvance('}');
 
-            mSymbolTable.ScopePop();
+            mSymbolTable.ScopePop( mTokens.Get() );
 
             mClassName = "";
         }
@@ -615,6 +645,7 @@ namespace VM
 
             if (token.type == Token.Type.KEYWORD && (token.keyword == Token.Keyword.CONSTRUCTOR || token.keyword == Token.Keyword.FUNCTION || token.keyword == Token.Keyword.METHOD))
             {
+                Token functionToken = token;
                 Token.Keyword funcCallType = token.keyword;
                 mTokens.Advance();
 
@@ -631,7 +662,7 @@ namespace VM
                 //////////////////////////////////////////////////////////////////////////
                 // pre-compile statements to find peak local var space needed
                 mIgnoreErrors = true;
-                mSymbolTable.ScopePush("function", funcCallType);
+                mSymbolTable.ScopePush("function", funcCallType, functionToken);
                 Tokenizer.State tokenStart = null;
                 int localVarSize = 0;
                 tokenStart = mTokens.StateGet();
@@ -650,12 +681,12 @@ namespace VM
                     CompileStatements();
                     localVarSize = mSymbolTable.VarSizeEnd();
                 }
-                mSymbolTable.ScopePop(); // "function"
+                mSymbolTable.ScopePop(mTokens.Get()); // "function"
                 mIgnoreErrors = false;
 
                 //////////////////////////////////////////////////////////////////////////
                 // Rewind tokenizer and compile the function ignoring root level var declarations
-                mSymbolTable.ScopePush("function", funcCallType);
+                mSymbolTable.ScopePush("function", funcCallType, functionToken);
                 mTokens.StateSet(tokenStart);
                 mWriter.Enable();
                 parameterTypes = CompileParameterList();
@@ -716,7 +747,7 @@ namespace VM
                     ValidateTokenAdvance('}');
                 }
 
-                mSymbolTable.ScopePop(); // "function"
+                mSymbolTable.ScopePop( mTokens.Get() ); // "function"
 
                 mFuncName = null;
 
@@ -1168,11 +1199,11 @@ namespace VM
             {
                 ValidateTokenAdvance('{');
 
-                mSymbolTable.ScopePush("statements");
+                mSymbolTable.ScopePush("statements", mTokens.Get());
 
                 CompileStatements();
 
-                mSymbolTable.ScopePop();
+                mSymbolTable.ScopePop(mTokens.Get());
 
                 ValidateTokenAdvance('}');
             }
@@ -1197,11 +1228,11 @@ namespace VM
                 {
                     ValidateTokenAdvance('{');
 
-                    mSymbolTable.ScopePush("statements");
+                    mSymbolTable.ScopePush("statements", mTokens.Get());
 
                     CompileStatements();
 
-                    mSymbolTable.ScopePop();
+                    mSymbolTable.ScopePop(mTokens.Get());
 
                     ValidateTokenAdvance('}');
                 }
@@ -1256,12 +1287,13 @@ namespace VM
         {
             // whileStatement: 'while' '(' expression ')' ( statement | '{' statements '}' )
 
+            Token whileToken = mTokens.Get();
             ValidateTokenAdvance(Token.Keyword.WHILE);
 
             string labelExp = NewFuncFlowLabel("WHILE_EXP");
             string labelEnd = NewFuncFlowLabel("WHILE_END");
 
-            mSymbolTable.ScopePush("whileStatement");
+            mSymbolTable.ScopePush("whileStatement", whileToken );
 
             mSymbolTable.DefineContinueBreak(labelExp, labelEnd);
 
@@ -1281,11 +1313,11 @@ namespace VM
             {
                 ValidateTokenAdvance('{');
 
-                mSymbolTable.ScopePush("statements");
+                mSymbolTable.ScopePush("statements", mTokens.Get());
 
                 CompileStatements();
 
-                mSymbolTable.ScopePop();
+                mSymbolTable.ScopePop(mTokens.Get());
 
                 ValidateTokenAdvance('}');
             }
@@ -1298,7 +1330,7 @@ namespace VM
 
             mWriter.WriteLabel(labelEnd);
 
-            mSymbolTable.ScopePop(); // "whileStatement"
+            mSymbolTable.ScopePop( mTokens.Get() ); // "whileStatement"
 
         }
 
@@ -1308,6 +1340,7 @@ namespace VM
 
             int returnCompiled = 0;
 
+            Token forToken = mTokens.Get();
             ValidateTokenAdvance(Token.Keyword.FOR);
             ValidateTokenAdvance('(');
 
@@ -1316,7 +1349,7 @@ namespace VM
             string labelInc = NewFuncFlowLabel("FOR_INC");
             string labelBody = NewFuncFlowLabel("FOR_BODY");
 
-            mSymbolTable.ScopePush("forStatement");
+            mSymbolTable.ScopePush("forStatement", forToken );
 
             mSymbolTable.DefineContinueBreak(labelInc, labelEnd);
 
@@ -1348,11 +1381,11 @@ namespace VM
             {
                 ValidateTokenAdvance('{');
 
-                mSymbolTable.ScopePush("statements");
+                mSymbolTable.ScopePush("statements", mTokens.Get());
 
                 CompileStatements();
 
-                mSymbolTable.ScopePop();
+                mSymbolTable.ScopePop(mTokens.Get());
 
                 ValidateTokenAdvance('}');
             }
@@ -1365,7 +1398,7 @@ namespace VM
 
             mWriter.WriteLabel(labelEnd);
 
-            mSymbolTable.ScopePop(); // "forStatement"
+            mSymbolTable.ScopePop(mTokens.Get()); // "forStatement"
         }
 
         public void CompileStatementSwitch()
@@ -1379,6 +1412,7 @@ namespace VM
 
             // ** For the purposes of this compiler we will treat all switch statements as an if/else if/.... **
 
+            Token switchToken = mTokens.Get();
             ValidateTokenAdvance(Token.Keyword.SWITCH);
 
             string labelEnd = NewFuncFlowLabel("SWITCH_END");
@@ -1388,7 +1422,7 @@ namespace VM
             int caseLabelIndex = -1;
             int defaultLabelIndex = -1;
 
-            mSymbolTable.ScopePush("switchStatement");
+            mSymbolTable.ScopePush("switchStatement", switchToken );
 
             mSymbolTable.DefineContinueBreak(null, labelEnd);
 
@@ -1447,7 +1481,7 @@ namespace VM
                 if (mTokens.Get().symbol == '{')
                 {
                     ValidateTokenAdvance('{');
-                    mSymbolTable.ScopePush("case");
+                    mSymbolTable.ScopePush("case", mTokens.Get());
                     wrapped = true;
                 }
 
@@ -1456,7 +1490,7 @@ namespace VM
                 if (wrapped)
                 {
                     ValidateTokenAdvance('}');
-                    mSymbolTable.ScopePop(); // "case"
+                    mSymbolTable.ScopePop(mTokens.Get()); // "case"
                 }
 
                 mWriter.OutputPop();
@@ -1505,7 +1539,7 @@ namespace VM
 
             mWriter.WriteLabel(labelEnd);
 
-            mSymbolTable.ScopePop(); // "switchStatement"
+            mSymbolTable.ScopePop(mTokens.Get()); // "switchStatement"
         }
 
         public int CompileStatementReturn()

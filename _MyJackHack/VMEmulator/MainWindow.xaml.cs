@@ -37,6 +37,8 @@ namespace VMEmulator
         DispatcherTimer dispatchCompile;
         DispatcherTimer dispatchUpdate;
 
+        Debugger mDebugger;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -257,6 +259,7 @@ namespace VMEmulator
 
         public void UpdateForm()
         {
+            UpdateCodeHighlight();
             UpdateInstructions();
             UpdateByteCode();
             UpdateSegments();
@@ -264,6 +267,50 @@ namespace VMEmulator
             UpdateGlobals();
             UpdateHeap();
             UpdateErrors();
+        }
+
+        public void UpdateCodeHighlight()
+        {
+            textCode.Focus();
+
+            if ( mVM.Running() && mVM.mCodeFrame > 0 )
+            {
+                int selectStart = -1;
+                int selectLength = -1;
+
+                Debugger.DebugCommand dbgCmd;
+                if (mDebugger.mCommandMap.TryGetValue(mVM.mCodeFrame, out dbgCmd))
+                {
+                    int line = 1;
+                    int c = 0;
+                    string text = textCode.Text;
+
+                    while (c < text.Length)
+                    {
+                        if (selectStart < 0 && line == dbgCmd.mSourceLine)
+                            selectStart = c;
+
+                        if (text[c] == '\n')
+                        {
+                            if (selectStart >= 0)
+                            {
+                                selectLength = c - selectStart;
+                                break;
+                            }
+                            line++;
+                        }
+
+                        c++;
+                    }
+                }
+
+                if ( selectStart > -1 && selectLength > -1 )
+                    textCode.Select(selectStart, selectLength);
+            }
+            else
+            {
+                textCode.Select(0, 0);
+            }
         }
 
         public void UpdateSegments()
@@ -448,10 +495,31 @@ namespace VMEmulator
             MemoryStream stream = new MemoryStream(byteArray);
             StreamReader reader = new StreamReader(stream);
 
+            List<Tokenizer> tokenizers = new List<Tokenizer>();
+
+            // Include the operating system class declarations
+            Assembly asm = Assembly.GetExecutingAssembly();
+            foreach (string osName in asm.GetManifestResourceNames())
+            {
+                if (!osName.Contains(".OSVM."))
+                    continue;
+
+                Stream resourceStream = asm.GetManifestResourceStream(osName);
+                if (resourceStream != null)
+                {
+                    StreamReader sRdr = new StreamReader(resourceStream);
+                    Tokenizer tokens = new Tokenizer( sRdr, osName );
+                    tokens.ReadAll();
+                    tokenizers.Add(tokens);
+                }
+            }
+
             Tokenizer tokenizer = new Tokenizer(reader);
             tokenizer.ReadAll();
+            tokenizers.Add(tokenizer);
 
-            compiler = new Compiler(tokenizer, writer);
+            mDebugger = new Debugger();
+            compiler = new Compiler(tokenizers, writer, mDebugger);
             compiler.Compile();
         }
     }

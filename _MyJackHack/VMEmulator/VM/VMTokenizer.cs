@@ -2,10 +2,11 @@
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 
 namespace VM
 {
-    class Token
+    public class Token : ISerializable
     {
         public enum Type
         {
@@ -227,12 +228,34 @@ namespace VM
         // For error reporting
         public int lineNumber;
         public int lineCharacter;
+        public Tokenizer tokenizer;
 
-        public Token(int lineNum, int lineChar, Type typeIn = Type.NONE)
+        public Token( Tokenizer parent, int lineNum, int lineChar, Type typeIn = Type.NONE)
         {
+            tokenizer = parent;
             lineNumber = lineNum;
             lineCharacter = lineChar;
             type = typeIn;
+        }
+
+        public Token(SerializationInfo info, StreamingContext context)
+        {
+            type = (Type)info.GetValue("type", typeof(Type));
+            keyword = (Keyword)info.GetValue("keyword", typeof(Keyword));
+            symbol = (char)info.GetValue("symbol", typeof(char));
+            intVal = (int)info.GetValue("int", typeof(int));
+            stringVal = (string)info.GetValue("string", typeof(string));
+            identifier = (string)info.GetValue("identifier", typeof(string));
+        }
+
+        public void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+             info.AddValue("type", type, typeof(Type));
+             info.AddValue("keyword", keyword, typeof(Keyword));
+             info.AddValue("symbol", symbol, typeof(char));
+             info.AddValue("int", intVal, typeof(int));
+             info.AddValue("string", stringVal, typeof(string));
+             info.AddValue("identifier", identifier, typeof(string));
         }
 
         public string GetXMLString()
@@ -273,10 +296,12 @@ namespace VM
         }
     }
 
-    class Tokenizer : IEnumerable
+    public class Tokenizer : IEnumerable
     {
         // All the tokens saved in a list
-        public List<Token> mTokens;
+        public List<Token> mTokens;     // the set of all tokens
+        public string mSource;          // path name of source file or resource name
+
         protected int mTokenCurrent;
 
         // Token parsing vars
@@ -300,16 +325,19 @@ namespace VM
 
         public Tokenizer(string fileInput)
         {
+            mSource = fileInput;
             Init(new StreamReader(fileInput));
         }
 
-        public Tokenizer(StreamReader streamReader)
+        public Tokenizer(StreamReader streamReader, string source = "" )
         {
+            mSource = source;
             Init(streamReader);
         }
 
-        protected void Init(StreamReader streamReader)
+        protected void Init(StreamReader streamReader, string source = "" )
         {
+            mSource = source;
             mFile = streamReader;
             mTokens = new List<Token>();
             mLineStr = "";
@@ -397,9 +425,9 @@ namespace VM
                 return mTokens[mTokenCurrent];
 
             if (mTokens.Count > 0)
-                return new Token(mTokens[mTokens.Count - 1].lineNumber, mTokens[mTokens.Count - 1].lineCharacter, Token.Type.EOF);
+                return new Token(this, mTokens[mTokens.Count - 1].lineNumber, mTokens[mTokens.Count - 1].lineCharacter, Token.Type.EOF);
 
-            return new Token(0, 0, Token.Type.EOF);
+            return new Token(this, 0, 0, Token.Type.EOF);
         }
 
         public Token GetAndAdvance()
@@ -502,7 +530,7 @@ namespace VM
                     else if (mReadingChar && isSingleQuote)
                     {
                         // Add the char
-                        Token token = new Token(mLine, mLineChar - mTokenStr.Length - 1);
+                        Token token = new Token(this, mLine, mLineChar - mTokenStr.Length - 1);
                         token.type = Token.Type.INT_CONST;
                         try
                         {
@@ -538,7 +566,7 @@ namespace VM
                     else if (mReadingString && isQuote)
                     {
                         // Add the string
-                        Token token = new Token(mLine, mLineChar - mTokenStr.Length - 1);
+                        Token token = new Token(this, mLine, mLineChar - mTokenStr.Length - 1);
                         token.type = Token.Type.STRING_CONST;
                         token.stringVal = mTokenStr;
                         mTokens.Add(token);
@@ -563,7 +591,7 @@ namespace VM
                         if (mTokenStr.Length > 0)
                         {
                             // Have a token string to add before adding the symbol
-                            Token token = new Token(mLine, mLineChar - mTokenStr.Length);
+                            Token token = new Token(this, mLine, mLineChar - mTokenStr.Length);
                             Token.Keyword keyword = Token.GetKeyword(mTokenStr);
                             if (keyword != Token.Keyword.NONE)
                             {
@@ -591,7 +619,7 @@ namespace VM
                         if (isSymbol)
                         {
                             // Add the symbol
-                            Token token = new Token(mLine, mLineChar);
+                            Token token = new Token(this, mLine, mLineChar);
                             token.type = Token.Type.SYMBOL;
                             token.symbol = c;
                             mTokens.Add(token);

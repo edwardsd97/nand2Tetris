@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Collections.Generic;
 
 namespace VM
@@ -25,16 +24,17 @@ namespace VM
 
         public void OutputPush(Stream stream);
         public void OutputPop();
+
+        public void SetDebugger(Debugger debugger);
     }
 
-    class WriterBase
+    public class WriterBase
     {
         protected StreamWriter mFile;
         protected bool mEnabled = true;
         protected List<StreamWriter> mOutput = new List<StreamWriter>();
 
-        public int mCommandsWritten = 0;
-        public int mCommandStart = 0;
+        public Debugger mDebugger;
 
         public WriterBase(string outFile)
         {
@@ -55,17 +55,27 @@ namespace VM
             if (mEnabled)
             {
                 mOutput[mOutput.Count - 1].WriteLine(line);
-                mCommandsWritten++;
+                if (mOutput[mOutput.Count - 1] == mFile && mDebugger != null)
+                    mDebugger.WriteCommand(line);
             }
         }
 
-        public virtual void Write(int value)
+        public virtual void WriteStream(Stream stream)
         {
-            if (mEnabled)
+            StreamReader reader = new StreamReader(stream);
+            stream.Seek(0, SeekOrigin.Begin);
+            while (!reader.EndOfStream)
             {
-                mOutput[mOutput.Count - 1].Write(value);
-                mCommandsWritten++;
+                string line = reader.ReadLine();
+                mOutput[mOutput.Count - 1].WriteLine(line);
+                if (mOutput[mOutput.Count - 1] == mFile && mDebugger != null)
+                    mDebugger.WriteCommand(line );
             }
+        }
+
+        public void SetDebugger(Debugger debugger)
+        {
+            mDebugger = debugger;
         }
 
         public void Enable()
@@ -95,18 +105,6 @@ namespace VM
             {
                 mOutput[mOutput.Count - 1].Flush();
                 mOutput.RemoveAt(mOutput.Count - 1);
-            }
-        }
-
-        public virtual void WriteStream(Stream stream)
-        {
-            StreamReader reader = new StreamReader(stream);
-            stream.Seek(0, SeekOrigin.Begin);
-            while (!reader.EndOfStream)
-            {
-                string line = reader.ReadLine();
-                mOutput[mOutput.Count - 1].WriteLine(line);
-                mCommandsWritten++;
             }
         }
     }

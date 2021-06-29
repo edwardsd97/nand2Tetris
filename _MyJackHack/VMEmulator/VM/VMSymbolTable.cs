@@ -1,24 +1,44 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 
 namespace VM
 {
-    class SymbolTable
+    public class SymbolTable
     {
         List<SymbolScope> mScopes = new List<SymbolScope>();
         Dictionary<string, int> mLabels = new Dictionary<string, int>();
+        Debugger mDebugger;
 
         int mVarSize;
 
-        public class Symbol
+        public class Symbol : ISerializable
         {
-            public string mVarName;   // varName
-            public Kind mKind;      // STATIC, FIELD, ARG, VAR
-            public Token mType;      // int, boolean, char, ClassName
-            public int mOffset;     // segment offset
+            public string mVarName;     // varName
+            public Kind mKind;          // STATIC, FIELD, ARG, VAR
+            public Token mType;         // int, boolean, char, ClassName
+            public int mOffset;         // segment offset
+
+            public Symbol() { }
+
+            public Symbol(SerializationInfo info, StreamingContext context)
+            {
+                mVarName = (string)info.GetValue("name", typeof(string));
+                mKind = (Kind)info.GetValue("kind", typeof(Kind));
+                mType = (Token)info.GetValue("type", typeof(Token));
+                mOffset = (int)info.GetValue("offset", typeof(int));
+            }
+
+            public void GetObjectData(SerializationInfo info, StreamingContext context)
+            {
+                info.AddValue("name", mVarName, typeof(string));
+                info.AddValue("kind", mKind, typeof(Kind));
+                info.AddValue("type", mType, typeof(Token));
+                info.AddValue("offset", mOffset, typeof(int));
+            }
         }
 
-        public class SymbolScope
+        public class SymbolScope : ISerializable
         {
             public Dictionary<string, Symbol> mSymbols = new Dictionary<string, Symbol>();
             public string mName;
@@ -36,17 +56,35 @@ namespace VM
             {
                 mName = name;
             }
-        };
+
+            public SymbolScope(SerializationInfo info, StreamingContext context)
+            {
+                mName = (string)info.GetValue("name", typeof(string));
+                mFunctionType = (Token.Keyword)info.GetValue("functionType", typeof(Token.Keyword));
+            }
+
+            public void GetObjectData(SerializationInfo info, StreamingContext context)
+            {
+                ((ISerializable)mSymbols).GetObjectData(info, context);
+                info.AddValue("name", mName, typeof(string));
+                info.AddValue("functionType", mFunctionType, typeof(Token.Keyword));
+            }
+        }
 
         public enum Kind
         {
             NONE, GLOBAL, FIELD, ARG, VAR
         }
 
+        public SymbolTable(Debugger debug = null )
+        {
+            mDebugger = debug;
+            Reset();
+        }
+
         public void Reset()
         {
             mScopes = new List<SymbolScope>();
-            ScopePush("global");
         }
 
         public void VarSizeBegin()
@@ -61,24 +99,37 @@ namespace VM
             return mVarSize;
         }
 
-        public SymbolScope ScopePush(string name, Token.Keyword functionType = Token.Keyword.NONE)
+        public SymbolScope ScopePush(SymbolScope scope)
+        {
+            if ( scope != null )
+                mScopes.Add(scope);
+            return scope;
+        }
+
+        public SymbolScope ScopePush(string name, Token.Keyword functionType, Token tknSource = null )
         {
             SymbolScope scope = new SymbolScope(name, functionType);
             mScopes.Add(scope);
+            if (mDebugger != null)
+                mDebugger.ScopePush(scope, tknSource);
             return scope;
         }
 
-        public SymbolScope ScopePush(string name)
+        public SymbolScope ScopePush(string name, Token tknSource = null)
         {
             SymbolScope scope = new SymbolScope(name);
             mScopes.Add(scope);
+            if (mDebugger != null)
+                mDebugger.ScopePush(scope, tknSource);
             return scope;
         }
 
-        public void ScopePop()
+        public void ScopePop( Token tknSource = null )
         {
             if (mScopes.Count > 0)
             {
+                if (mDebugger != null)
+                    mDebugger.ScopePop(mScopes[mScopes.Count - 1], tknSource);
                 mScopes.RemoveAt(mScopes.Count - 1);
             }
         }

@@ -9,10 +9,10 @@ namespace VM
         const int BITS_SEGMENT = 4;
         const int BITS_INDEX = 31 - BITS_SEGMENT - BITS_COMMAND;
 
-        const uint MASK_COMMAND = 2080374784; // 0111 1100  0000 0000  0000 0000  0000 0000
-        const uint MASK_SEGMENT = 62914560; // 0000 0011  1100 0000  0000 0000  0000 0000
-        const uint MASK_INDEX = 4194303; // 0000 0000  0011 1111  1111 1111  1111 1111
-        const uint MASK_PUSH_CONST = 2147483648; // 1000 0000  0000 0000  0000 0000  0000 0000 (indicates command is NOT push constant)
+        const uint MASK_COMMAND     = 2080374784; // 0111 1100  0000 0000  0000 0000  0000 0000
+        const uint MASK_SEGMENT     =   62914560; // 0000 0011  1100 0000  0000 0000  0000 0000
+        const uint MASK_INDEX       =    4194303; // 0000 0000  0011 1111  1111 1111  1111 1111
+        const uint MASK_PUSH_CONST  = 2147483648; // 1000 0000  0000 0000  0000 0000  0000 0000  (indicates command is NOT push constant)
 
         const uint MASK_NEG_BIT = (1 << BITS_INDEX - 1);
         const uint MASK_NEG_IDX = MASK_SEGMENT | MASK_COMMAND | MASK_PUSH_CONST;
