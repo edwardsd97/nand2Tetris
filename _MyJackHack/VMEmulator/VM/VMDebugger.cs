@@ -102,12 +102,48 @@ namespace VM
             }
         }
 
+        public bool GetSymbolValue(Emulator vm, string source, int line, string varName, out int value)
+        {
+            value = 0;
+
+            SymbolTable table = GetSymbolTable(source, line);
+            if (table != null)
+            {
+                SymbolTable.Symbol symbol = table.Find(varName);
+
+                if (symbol != null)
+                {
+                    switch (symbol.mKind)
+                    {
+                        case SymbolTable.Kind.ARG:
+                            value = vm.mMemory[vm.mMemory[(int)SegPointer.ARG] + symbol.mOffset];
+                            break;
+                        case SymbolTable.Kind.GLOBAL:
+                            value = vm.mMemory[vm.mMemory[(int)SegPointer.GLOBAL] + symbol.mOffset];
+                            break;
+                        case SymbolTable.Kind.VAR:
+                            value = vm.mMemory[vm.mMemory[(int)SegPointer.LOCAL] + symbol.mOffset];
+                            break;
+                        case SymbolTable.Kind.FIELD:
+                            // FIXME
+                            value = 999999;
+                            break;
+                    }
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public SymbolTable GetSymbolTable(string source, int lineNumber)
         {
             DebugSymbolMap map;
             if (mSymbolMap.TryGetValue( source, out map )) 
             {
-                return map.GetSymbolTable(lineNumber);
+                SymbolTable result = map.GetSymbolTable(lineNumber);
+                return result;
             }
 
             return null;

@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         Title="VM Emulator" Height="813" Width="1324" ResizeMode="CanMinimize">
     <Grid>
-        <TextBox x:Name="textCode" HorizontalAlignment="Left" Text="int x = 1;" TextWrapping="NoWrap" VerticalAlignment="Top" Width="419" Height="602" FontFamily="Courier New" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" Margin="10,42,0,0" TextChanged="textCode_TextChanged" AcceptsTab="True" HorizontalScrollBarVisibility="Auto"/>
+        <TextBox x:Name="textCode" HorizontalAlignment="Left" Text="int x = 1;" TextWrapping="NoWrap" VerticalAlignment="Top" Width="419" Height="602" FontFamily="Courier New" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" Margin="10,42,0,0" TextChanged="textCode_TextChanged" SelectionChanged="textCode_SelectChanged" AcceptsTab="True" HorizontalScrollBarVisibility="Auto"/>
         <TextBox x:Name="textErrors" HorizontalAlignment="Left" Text="Errors" TextWrapping="Wrap" VerticalAlignment="Top" Width="852" Height="100" FontFamily="Courier New" AcceptsReturn="True" VerticalScrollBarVisibility="Visible" Margin="10,649,0,0" IsReadOnly="True"/>
         <Label Content="High level code   (Go ahead and type in here)" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" IsHitTestVisible="False" Height="27"/>
         <Label x:Name="labelVM" Content="VM Command text" HorizontalAlignment="Left" Margin="436,10,0,0" VerticalAlignment="Top" IsHitTestVisible="False" Height="27"/>

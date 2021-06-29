@@ -60,6 +60,37 @@ namespace VMEmulator
             TimerCompileSetup();
         }
 
+        private void textCode_SelectChanged(object sender, RoutedEventArgs e)
+        {
+            if ( mDebugger != null )
+            {
+                string select = textCode.Text.Substring(textCode.SelectionStart, textCode.SelectionLength);
+                select = select.Trim();
+                if ( select != "" )
+                {
+                    // this is ugly
+                    int line = 1;
+                    int c = 0;
+                    string text = textCode.Text;
+
+                    while (c <= textCode.SelectionStart)
+                    {
+                        if (text[c] == '\n')
+                        {
+                            line++;
+                        }
+                        c++;
+                    }
+
+                    int value;
+                    if ( mDebugger.GetSymbolValue( mVM, "", line, select, out value ) )
+                    {
+                        textErrors.Text = textErrors.Text + select + " = " + value + "\r\n";
+                    }
+                }
+            }
+        }
+
         private void buttonStep_Click(object sender, RoutedEventArgs e)
         {
             if (!mVM.Running())
