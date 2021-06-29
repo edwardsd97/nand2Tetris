@@ -654,6 +654,10 @@ namespace VM
                 {
                     Error("Return type unrecognized '" + funcReturnType.GetTokenString() + "'");
                 }
+                if (functionToken.keyword == Token.Keyword.CONSTRUCTOR && funcReturnType.identifier != mClassName)
+                {
+                    Error("Constructor must return an instance of its class type");
+                }
 
                 ValidateTokenAdvance(Token.Type.IDENTIFIER, out mFuncName);
 
@@ -734,11 +738,21 @@ namespace VM
                     {
                         funcSpec.compiled = true;
 
+                        if (funcSpec.type == Token.Keyword.CONSTRUCTOR && compiledReturn == 0)
+                        {
+                            // Just return 'this' for them
+                            mWriter.WritePush(Segment.POINTER, 0);
+                            mWriter.WriteReturn();
+                            compiledReturn = 2;
+                        }
                         if (funcSpec.returnType.keyword != Token.Keyword.VOID && compiledReturn < 2)
+                        {
                             Error("Subroutine " + FunctionName(mClassName, mFuncName) + " missing return value");
-
-                        if (funcSpec.returnType.keyword == Token.Keyword.VOID && compiledReturn == 2)
+                        }
+                        else if (funcSpec.returnType.keyword == Token.Keyword.VOID && compiledReturn == 2)
+                        {
                             Error("void Subroutine " + FunctionName(mClassName, mFuncName) + " returning value");
+                        }
 
                         if (compiledReturn == 0)
                         {
@@ -1552,6 +1566,31 @@ namespace VM
             ValidateTokenAdvance(Token.Keyword.RETURN);
 
             Token token = mTokens.Get();
+
+            FuncSpec funcSpec;
+            if (mFunctions.TryGetValue(FunctionName(mClassName, mFuncName), out funcSpec))
+            {
+                if ( funcSpec.type == Token.Keyword.CONSTRUCTOR )
+                {
+                    if ( token.keyword != Token.Keyword.THIS && token.symbol != ';' )
+                        Error("Constructors must return 'this' or no value to be done for you" );
+
+                    if (token.symbol == ';')
+                    {
+                        mTokens.Advance();
+                    }
+                    else
+                    {
+                        CompileExpression();
+                        ValidateTokenAdvance(';');
+                        mWriter.WritePop(Segment.TEMP, 0);
+                    }
+
+                    mWriter.WritePush(  Segment.POINTER, 0 );
+                    mWriter.WriteReturn();
+                    return 2;
+                }
+            }
 
             if (token.symbol == ';')
             {

@@ -31,6 +31,7 @@
     <None Remove="TestCases\BasicClass.vms" />
     <None Remove="TestCases\Classes.jack" />
     <None Remove="TestCases\Classes.vms" />
+    <None Remove="TestCases\Debug.vms" />
     <None Remove="TestCases\Empty.jack" />
     <None Remove="TestCases\Empty.vms" />
     <None Remove="TestCases\Expressions.jack" />
@@ -60,6 +61,7 @@
     <EmbeddedResource Include="TestCases\ArrayUse.vms" />
     <EmbeddedResource Include="TestCases\BasicClass.vms" />
     <EmbeddedResource Include="TestCases\Classes.vms" />
+    <EmbeddedResource Include="TestCases\Debug.vms" />
     <EmbeddedResource Include="TestCases\Empty.vms" />
     <EmbeddedResource Include="TestCases\Expressions.vms" />
     <EmbeddedResource Include="TestCases\Heap.vms" />

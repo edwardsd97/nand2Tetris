@@ -1,0 +1,47 @@
+
+////////////////////////////////////
+// Debug: Test cases for debugger //
+////////////////////////////////////
+
+int gGlobalInt = 1;
+Class gGlobalClass = Class.new();
+
+gGlobalInt = getTwo();
+gGlobalInt = gGlobalClass.getMember();
+gGlobalClass.dispose();
+gGlobalClass = null;
+
+function int getTwo()
+{
+   int local;
+
+   for ( int scope = 1; scope < 3; scope = scope + 1 )
+   {
+      local = scope;
+   }
+
+   return local;
+}
+
+class Class
+{
+   static int mStatic;
+   int mMember;
+
+   constructor Class new()
+   {
+      mStatic = 's';
+      mMember = 3;
+      return this;
+   }
+
+   method int getMember()
+   {
+      return mMember;
+   }
+
+   method void dispose()
+   {
+      Memory.deAlloc( this );
+   }
+}

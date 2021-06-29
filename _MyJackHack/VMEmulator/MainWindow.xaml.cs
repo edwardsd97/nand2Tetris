@@ -33,6 +33,7 @@ namespace VMEmulator
         int mTestCase = -1;
         int mTestCases = 0;
         bool mStringsMode = false;
+        bool mJustCompiled = false;
 
         DispatcherTimer dispatchCompile;
         DispatcherTimer dispatchUpdate;
@@ -306,6 +307,8 @@ namespace VMEmulator
             UpdateGlobals();
             UpdateHeap();
             UpdateErrors();
+
+            mJustCompiled = false;
         }
 
         public void UpdateCodeHighlight()
@@ -475,13 +478,16 @@ namespace VMEmulator
                     string lineStr = vmreader.ReadLine();
                     string[] elements = ByteCode.CommandElements(lineStr);
 
-                    if (elements[0] != "label" && codeFrame == mVM.mCodeFrame)
-                        lineStr = ">" + lineStr;
-                    else
-                        lineStr = " " + lineStr;
+                    lineStr = " " + lineStr;
 
                     if (elements[0] != "label")
-                        codeFrame++;
+                    {
+                        if ( codeFrame == mVM.mCodeFrame )
+                            lineStr = ">" + lineStr;
+
+                        if (elements[0] != "label")
+                            codeFrame++;
+                    }
 
                     lineStr = lineStr + "\r\n";
 
@@ -569,6 +575,8 @@ namespace VMEmulator
             mDebugger = new Debugger();
             compiler = new Compiler(tokenizers, writer, mDebugger);
             compiler.Compile();
+
+            mJustCompiled = true;
         }
     }
 }
