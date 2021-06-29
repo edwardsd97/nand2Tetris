@@ -487,7 +487,7 @@ namespace VM
                 calledHalt = true;
             }
 
-            mSymbolTable.ScopePop(); // "global"
+            mSymbolTable.ScopePop(mTokens.Get()); // "global"
         }
 
         public void CompileClass()
@@ -662,6 +662,8 @@ namespace VM
                 //////////////////////////////////////////////////////////////////////////
                 // pre-compile statements to find peak local var space needed
                 mIgnoreErrors = true;
+                Debugger prevDebugger = mSymbolTable.mDebugger;
+                mSymbolTable.mDebugger = null;
                 mSymbolTable.ScopePush("function", funcCallType, functionToken);
                 Tokenizer.State tokenStart = null;
                 int localVarSize = 0;
@@ -683,6 +685,7 @@ namespace VM
                 }
                 mSymbolTable.ScopePop(mTokens.Get()); // "function"
                 mIgnoreErrors = false;
+                mSymbolTable.mDebugger = prevDebugger;
 
                 //////////////////////////////////////////////////////////////////////////
                 // Rewind tokenizer and compile the function ignoring root level var declarations

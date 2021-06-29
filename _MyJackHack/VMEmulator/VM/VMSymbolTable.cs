@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.Serialization;
 
 namespace VM
 {
@@ -8,37 +7,20 @@ namespace VM
     {
         List<SymbolScope> mScopes = new List<SymbolScope>();
         Dictionary<string, int> mLabels = new Dictionary<string, int>();
-        Debugger mDebugger;
+
+        public Debugger mDebugger;
 
         int mVarSize;
 
-        public class Symbol : ISerializable
+        public class Symbol
         {
             public string mVarName;     // varName
             public Kind mKind;          // STATIC, FIELD, ARG, VAR
             public Token mType;         // int, boolean, char, ClassName
             public int mOffset;         // segment offset
-
-            public Symbol() { }
-
-            public Symbol(SerializationInfo info, StreamingContext context)
-            {
-                mVarName = (string)info.GetValue("name", typeof(string));
-                mKind = (Kind)info.GetValue("kind", typeof(Kind));
-                mType = (Token)info.GetValue("type", typeof(Token));
-                mOffset = (int)info.GetValue("offset", typeof(int));
-            }
-
-            public void GetObjectData(SerializationInfo info, StreamingContext context)
-            {
-                info.AddValue("name", mVarName, typeof(string));
-                info.AddValue("kind", mKind, typeof(Kind));
-                info.AddValue("type", mType, typeof(Token));
-                info.AddValue("offset", mOffset, typeof(int));
-            }
         }
 
-        public class SymbolScope : ISerializable
+        public class SymbolScope
         {
             public Dictionary<string, Symbol> mSymbols = new Dictionary<string, Symbol>();
             public string mName;
@@ -55,19 +37,6 @@ namespace VM
             public SymbolScope(string name)
             {
                 mName = name;
-            }
-
-            public SymbolScope(SerializationInfo info, StreamingContext context)
-            {
-                mName = (string)info.GetValue("name", typeof(string));
-                mFunctionType = (Token.Keyword)info.GetValue("functionType", typeof(Token.Keyword));
-            }
-
-            public void GetObjectData(SerializationInfo info, StreamingContext context)
-            {
-                ((ISerializable)mSymbols).GetObjectData(info, context);
-                info.AddValue("name", mName, typeof(string));
-                info.AddValue("functionType", mFunctionType, typeof(Token.Keyword));
             }
         }
 
@@ -241,6 +210,24 @@ namespace VM
             }
 
             return null;
+        }
+
+        public string SegmentSymbol(Kind kind, int offset)
+        {
+            // Walk backwards from most recently added scope backward to oldest looking for the symbol
+            int iScope = mScopes.Count - 1;
+
+            while (iScope >= 0)
+            {
+                foreach ( Symbol symb in mScopes[iScope].mSymbols.Values )
+                {
+                    if ( symb.mKind == kind && symb.mOffset == offset)
+                        return symb.mVarName;
+                }
+                iScope--;
+            }
+
+            return "";
         }
 
         public bool Exists(string varName, string specificScope = null)

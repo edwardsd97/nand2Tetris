@@ -1,22 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.Serialization;
 
 namespace VM
 {
-    public class Debugger : ISerializable
+    public class Debugger
     {
         // Persistent data
         public Dictionary<int, DebugCommand> mCommandMap = new Dictionary<int, DebugCommand>();
         public Dictionary<string, DebugSymbolMap> mSymbolMap = new Dictionary<string, DebugSymbolMap>();
         public SymbolTable.SymbolScope mGlobals;
-
-        public void GetObjectData(SerializationInfo info, StreamingContext context)
-        {
-            ((ISerializable)mSymbolMap).GetObjectData(info, context);
-            ((ISerializable)mCommandMap).GetObjectData(info, context);
-            ((ISerializable)mGlobals).GetObjectData(info, context);
-        }
 
         // Data used while compiling
         public int mCommandsWritten = 0;
@@ -29,7 +21,8 @@ namespace VM
             // One of these per source file
             // Provide a line number and this will generate a SymbolTable by walking from the first line pushing and popping scope
             // Essentially a recording of symbol scopes while compiling the file
-            public Dictionary<int, SymbolTable.SymbolScope> mScopes = new Dictionary<int, SymbolTable.SymbolScope>();
+            public Dictionary<uint, SymbolTable.SymbolScope> mScopes = new Dictionary<uint, SymbolTable.SymbolScope>();
+            public Dictionary<int, int> mLineChars = new Dictionary<int, int>();
             public SymbolTable.SymbolScope mGlobals;
 
             public DebugSymbolMap(SymbolTable.SymbolScope globals)
@@ -37,26 +30,52 @@ namespace VM
                 mGlobals = globals;
             }
 
-            public SymbolTable GetSymbolTable(int lineNumber)
+            public SymbolTable GetSymbolTable(int lineNum, int charNum )
             {
                 SymbolTable result = new SymbolTable();
+                SymbolTable.SymbolScope scope;
 
                 result.ScopePush( mGlobals );
 
-                // "Play back" the file from line 1 to the desired line re-pushing and re-popping scopes along the way
-                for (int i = 1; i <= lineNumber; i++)
+                // "Play back" the file from line 1 to the desired line and character re-pushing and re-popping scopes along the way
+                for (int i = 1; i <= lineNum; i++)
                 {
-                    SymbolTable.SymbolScope scope;
-                    if (mScopes.TryGetValue(i, out scope))
+                    int lineChars;
+                    if (mLineChars.TryGetValue(lineNum, out lineChars))
                     {
-                        if (scope != null)
-                            result.ScopePush(scope);
-                        else
-                            result.ScopePop();
+                        for (int c = 0; c <= lineChars; c++)
+                        {
+                            uint key = ScopeMarkerKey(i, c);
+                            if (mScopes.TryGetValue(key, out scope))
+                            {
+                                if (scope != null)
+                                    result.ScopePush(scope);
+                                else
+                                    result.ScopePop();
+                            }
+                        }
                     }
                 }
 
                 return result;
+            }
+
+            public uint ScopeMarkerKey(int lineNum, int charNum)
+            {
+                return (uint)(lineNum << 10) | (uint)charNum;
+            }
+
+            public void AddScopeMarker(int lineNum, int charNum, SymbolTable.SymbolScope scope)
+            {
+                // Make sure we are keeping track of the max character count per line where it matters
+                if (mLineChars.ContainsKey(lineNum))
+                    mLineChars[lineNum] = Math.Max(mLineChars[lineNum], charNum);
+                else
+                    mLineChars.Add(lineNum, charNum);
+
+                uint key = ScopeMarkerKey(lineNum, charNum);
+                if( !mScopes.ContainsKey(key) )
+                    mScopes.Add(key, scope);
             }
         }
 
@@ -102,11 +121,29 @@ namespace VM
             }
         }
 
-        public bool GetSymbolValue(Emulator vm, string source, int line, string varName, out int value)
+        public void SetMaxLineChar(int lineNum, int charNum)
+        {
+
+        }
+
+        public string GetSegmentSymbol(SymbolTable.Kind kind, int offset, string source, int lineNum, int charNum )
+        {
+            string result = "";
+
+            SymbolTable table = GetSymbolTable(source, lineNum, charNum);
+            if (table != null)
+            {
+                result = table.SegmentSymbol( kind, offset );
+            }
+
+            return result;
+        }
+
+        public bool GetSymbolValue(Emulator vm, string source, int lineNum, int charNum, string varName, out int value)
         {
             value = 0;
 
-            SymbolTable table = GetSymbolTable(source, line);
+            SymbolTable table = GetSymbolTable(source, lineNum, charNum );
             if (table != null)
             {
                 SymbolTable.Symbol symbol = table.Find(varName);
@@ -125,8 +162,9 @@ namespace VM
                             value = vm.mMemory[vm.mMemory[(int)SegPointer.LOCAL] + symbol.mOffset];
                             break;
                         case SymbolTable.Kind.FIELD:
-                            // FIXME
-                            value = 999999;
+                            int pThis = vm.mMemory[(int)SegPointer.THIS];
+                            if ( pThis != 0 )
+                                value = vm.mMemory[pThis + symbol.mOffset];
                             break;
                     }
 
@@ -137,12 +175,12 @@ namespace VM
             return false;
         }
 
-        public SymbolTable GetSymbolTable(string source, int lineNumber)
+        public SymbolTable GetSymbolTable(string source, int lineNum, int charNum )
         {
             DebugSymbolMap map;
             if (mSymbolMap.TryGetValue( source, out map )) 
             {
-                SymbolTable result = map.GetSymbolTable(lineNumber);
+                SymbolTable result = map.GetSymbolTable(lineNum, charNum);
                 return result;
             }
 
@@ -176,25 +214,26 @@ namespace VM
         {
             if ( tknSource != null )
             {
+                DebugSymbolMap map;
                 string key = tknSource.tokenizer.mSource;
 
-                if (!mSymbolMap.ContainsKey(key))
+                if (!mSymbolMap.TryGetValue(key, out map))
                 {
-                    DebugSymbolMap map = new DebugSymbolMap( mGlobals );
+                    map = new DebugSymbolMap(mGlobals);
                     mSymbolMap.Add(key, map);
                 }
-                
-                DebugSymbolsPush pushed = mScopeStack[mScopeStack.Count - 1];
-                if ( pushed.mScope.mSymbols.Count > 0 )
+
+                if (mScopeStack.Count > 1)
                 {
-                    if ( !mSymbolMap[key].mScopes.ContainsKey(pushed.mSourceLine) )
-                        mSymbolMap[key].mScopes.Add(pushed.mSourceLine, pushed.mScope);
+                    DebugSymbolsPush pushed = mScopeStack[mScopeStack.Count - 1];
+                    if (pushed.mScope.mSymbols.Count > 0)
+                    {
+                        map.AddScopeMarker(pushed.mSourceLine, pushed.mSourceChar, pushed.mScope);
+                        map.AddScopeMarker(tknSource.lineNumber, tknSource.lineCharacter, null);
+                    }
 
-                    if (!mSymbolMap[key].mScopes.ContainsKey(tknSource.lineNumber))
-                        mSymbolMap[key].mScopes.Add(tknSource.lineNumber, null);
+                    mScopeStack.RemoveAt(mScopeStack.Count - 1);
                 }
-
-                mScopeStack.RemoveAt(mScopeStack.Count - 1);
             }
         }
     }

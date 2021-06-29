@@ -2,11 +2,10 @@
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.Serialization;
 
 namespace VM
 {
-    public class Token : ISerializable
+    public class Token
     {
         public enum Type
         {
@@ -238,26 +237,6 @@ namespace VM
             type = typeIn;
         }
 
-        public Token(SerializationInfo info, StreamingContext context)
-        {
-            type = (Type)info.GetValue("type", typeof(Type));
-            keyword = (Keyword)info.GetValue("keyword", typeof(Keyword));
-            symbol = (char)info.GetValue("symbol", typeof(char));
-            intVal = (int)info.GetValue("int", typeof(int));
-            stringVal = (string)info.GetValue("string", typeof(string));
-            identifier = (string)info.GetValue("identifier", typeof(string));
-        }
-
-        public void GetObjectData(SerializationInfo info, StreamingContext context)
-        {
-             info.AddValue("type", type, typeof(Type));
-             info.AddValue("keyword", keyword, typeof(Keyword));
-             info.AddValue("symbol", symbol, typeof(char));
-             info.AddValue("int", intVal, typeof(int));
-             info.AddValue("string", stringVal, typeof(string));
-             info.AddValue("identifier", identifier, typeof(string));
-        }
-
         public string GetXMLString()
         {
             string lineStr = "<" + TypeString(type) + "> ";
@@ -325,24 +304,33 @@ namespace VM
 
         public Tokenizer(string fileInput)
         {
-            mSource = fileInput;
-            Init(new StreamReader(fileInput));
+            Init(new StreamReader(fileInput), fileInput);
         }
 
         public Tokenizer(StreamReader streamReader, string source = "" )
         {
-            mSource = source;
-            Init(streamReader);
+            Init(streamReader, source);
         }
 
         protected void Init(StreamReader streamReader, string source = "" )
         {
-            mSource = source;
+            SetSource(source);
             mFile = streamReader;
             mTokens = new List<Token>();
             mLineStr = "";
             mTokenStr = "";
             mTokenCurrent = -1;
+        }
+
+        public void SetSource( string source )
+        {
+            // Set it to the final file name of whatever the path is
+            // e.g. "Folder/OtherFolder/File.ext"
+            //      becomes "File.ext"
+            mSource = source;
+            string[] parts = source.Split(new char[3] { '/', '\\', '.' });
+            if (parts.Length >= 2)
+                mSource = parts[parts.Length - 2] + "." + parts[parts.Length - 1];
         }
 
         public void ReadAll()

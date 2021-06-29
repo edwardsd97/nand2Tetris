@@ -62,6 +62,10 @@ namespace VMEmulator
 
         private void textCode_SelectChanged(object sender, RoutedEventArgs e)
         {
+            if (textValue == null)
+                return;
+
+            textValue.Content = "";
             if ( mDebugger != null )
             {
                 string select = textCode.Text.Substring(textCode.SelectionStart, textCode.SelectionLength);
@@ -69,7 +73,8 @@ namespace VMEmulator
                 if ( select != "" )
                 {
                     // this is ugly
-                    int line = 1;
+                    int lineNum = 1;
+                    int charNum = 0;
                     int c = 0;
                     string text = textCode.Text;
 
@@ -77,15 +82,18 @@ namespace VMEmulator
                     {
                         if (text[c] == '\n')
                         {
-                            line++;
+                            lineNum++;
+                            charNum = 0;
                         }
+
+                        charNum++;
                         c++;
                     }
 
                     int value;
-                    if ( mDebugger.GetSymbolValue( mVM, "", line, select, out value ) )
+                    if ( mDebugger.GetSymbolValue( mVM, "", lineNum, charNum, select, out value ) )
                     {
-                        textErrors.Text = textErrors.Text + select + " = " + value + "\r\n";
+                        textValue.Content = select + " " + value;
                     }
                 }
             }
@@ -396,8 +404,17 @@ namespace VMEmulator
             int end = start + mVM.mGlobalDwords;
             for (int i = start; i < end; i++)
             {
-                if ( i >= 0 && i < mVM.mMemory.Length )
+                if (i >= 0 && i < mVM.mMemory.Length)
+                {
+                    if (mDebugger != null)
+                    {
+                        int offset = i - start;
+                        string varName = mDebugger.GetSegmentSymbol(SymbolTable.Kind.GLOBAL, offset, "", 0, 0 );
+                        if (varName != "")
+                            memStr = memStr + varName + " ";
+                    }
                     memStr = memStr + mVM.mMemory[i] + "\r\n";
+                }
             }
 
             if (textGlobals != null)
@@ -459,9 +476,9 @@ namespace VMEmulator
                     string[] elements = ByteCode.CommandElements(lineStr);
 
                     if (elements[0] != "label" && codeFrame == mVM.mCodeFrame)
-                        lineStr = "> " + lineStr;
+                        lineStr = ">" + lineStr;
                     else
-                        lineStr = "  " + lineStr;
+                        lineStr = " " + lineStr;
 
                     if (elements[0] != "label")
                         codeFrame++;
@@ -488,9 +505,9 @@ namespace VMEmulator
                     hexStr = "0" + hexStr;
                 hexStr = "0x" + hexStr.ToUpper();
                 if (i == mVM.mCodeFrame)
-                    hexStr = "> " + hexStr;
+                    hexStr = ">" + hexStr;
                 else
-                    hexStr = "  " + hexStr;
+                    hexStr = " " + hexStr;
                 byteStr = byteStr + hexStr + "\r\n";
             }
             if (textVMByteCode != null)
