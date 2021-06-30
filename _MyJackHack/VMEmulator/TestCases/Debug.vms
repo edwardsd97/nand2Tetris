@@ -42,6 +42,6 @@ class Class
 
    method void dispose()
    {
-      Memory.deAlloc( this );
+      Memory.free( this );
    }
 }

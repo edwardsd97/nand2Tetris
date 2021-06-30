@@ -29,7 +29,7 @@ class ClassA
 
    method void dispose()
    {
-      Memory.deAlloc(this);
+      Memory.free(this);
    }
 }
 
@@ -50,6 +50,6 @@ class ClassB
 
    method void dispose()
    {
-      Memory.deAlloc(this);
+      Memory.free(this);
    }
 }

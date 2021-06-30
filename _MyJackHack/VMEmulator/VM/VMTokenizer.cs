@@ -71,6 +71,7 @@ namespace VM
             strToKeyword.Add("default", Token.Keyword.DEFAULT);
             strToKeyword.Add("return", Token.Keyword.RETURN);
             strToKeyword.Add("true", Token.Keyword.TRUE);
+
             strToKeyword.Add("false", Token.Keyword.FALSE);
             strToKeyword.Add("null", Token.Keyword.NULL);
             strToKeyword.Add("this", Token.Keyword.THIS);

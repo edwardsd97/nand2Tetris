@@ -32,7 +32,7 @@ namespace VM
                 return vm.mObjects.Get("string", -id );
             }
 
-            if (vm.OptionGet(Emulator.Option.FAKE_HEAP_OBJECTS))
+            if (vm.OptionGet(Emulator.Option.HEAP_OBJECTS))
                 id = vm.mMemory[id];
 
             return vm.mObjects.Get( "string", id );
@@ -68,7 +68,7 @@ namespace VM
                     strId = obj.mId;
             }
 
-            if (vm.OptionGet(Emulator.Option.FAKE_HEAP_OBJECTS) && obj != null)
+            if (vm.OptionGet(Emulator.Option.HEAP_OBJECTS) && obj != null)
                 vm.StackPush(obj.mHeapAddress);
             else
                 vm.StackPush(strId);

@@ -47,7 +47,7 @@ namespace VM
             builtIns.Register("Memory.peek", VMOS_Memory.Peek);
             builtIns.Register("Memory.poke", VMOS_Memory.Poke);
             builtIns.Register("Memory.alloc", VMOS_Memory.Alloc);
-            builtIns.Register("Memory.deAlloc", VMOS_Memory.Free);
+            builtIns.Register("Memory.free", VMOS_Memory.Free);
         }
 
         /** Returns the RAM value at the given address. */

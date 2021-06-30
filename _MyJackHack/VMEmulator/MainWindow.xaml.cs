@@ -138,7 +138,7 @@ namespace VMEmulator
 
             TimerUpdateSetup(-1);
             mVM.ExecuteThread(false);
-            mDebugger.StepSingle(mVM);
+            mDebugger.StepCommand(mVM);
             UpdateForm();
         }
 
@@ -314,12 +314,15 @@ namespace VMEmulator
 
         public void UpdateCodeHighlight()
         {
-            textCode.Focus();
-
             if ( mVM.Running() )
             {
                 int selectStart = -1;
                 int selectLength = -1;
+
+                if (mVM.mCodeFrame <= 0)
+                    return;
+
+                textCode.Focus();
 
                 Debugger.DebugCommand dbgCmd;
                 if (mDebugger.mCommandMap.TryGetValue(mVM.mCodeFrame, out dbgCmd))
@@ -352,6 +355,7 @@ namespace VMEmulator
             }
             else
             {
+                textCode.Focus();
                 textCode.Select(0, 0);
             }
         }
@@ -589,7 +593,7 @@ namespace VMEmulator
 
             // Setup the VM so that it uses fake heap memory for emulated objects like strings or other game objects
             mVM.ResetAll();
-            mVM.OptionSet(Emulator.Option.FAKE_HEAP_OBJECTS, true);
+            mVM.OptionSet(Emulator.Option.HEAP_OBJECTS, true);
             mVM.mObjects.RegisterType("string", 2);
 
             mVM.Load(byteCode);

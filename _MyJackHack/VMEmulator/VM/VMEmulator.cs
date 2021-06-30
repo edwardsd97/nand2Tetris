@@ -36,7 +36,8 @@ namespace VM
 
         public enum Option
         {
-            FAKE_HEAP_OBJECTS,
+            HEAP_OBJECTS,   // EmulatedObject instances use the VM heap to store the id with optional "virtual" memory attached
+
             COUNT
         }
 
@@ -567,135 +568,6 @@ namespace VM
             }
 
             StackPush(result);
-        }
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////
-    // Heap - manages heap section of an already allocated int array of memory
-    public class Heap
-    {
-        int[] mMemory;
-
-        int mHeapBase;
-        int mHeapFree;
-        int mHeapCount;
-
-        public Heap(int[] memory, int start, int count)
-        {
-            mMemory = memory;
-            mHeapCount = count;
-            mHeapBase = start;
-            mHeapFree = start;
-
-            mMemory[mHeapFree] = 0; // next
-            mMemory[mHeapFree + 1] = mHeapCount - 2; // size
-        }
-
-        public int Alloc(int size)
-        {
-            int freeList = mHeapFree;
-            int resultBlock = 0;
-
-            if (size == 0)
-                return 0;
-
-            while (resultBlock == 0 && freeList != 0)
-            {
-                // freeList[0]: next
-                // freeList[1]: size
-
-                if (mMemory[freeList + 1] >= (size + 2))
-                {
-                    // Found first fit block that is big enough
-
-                    // result block is allocated at the end of the free block's chunk of memory
-                    int allocSize = size + 2;
-                    resultBlock = freeList + mMemory[freeList + 1] + 2 - allocSize;
-                    mMemory[resultBlock] = 0;
-                    mMemory[resultBlock + 1] = size;
-
-                    // reduce the free memory size from this block we just pulled from
-                    mMemory[freeList + 1] = mMemory[freeList + 1] - allocSize;
-                }
-
-                freeList = mMemory[freeList];
-            }
-
-            if (resultBlock == 0)
-            {
-                // Could not allocate memory
-                return 0;
-            }
-
-            // return the usable memory part of the block
-            return resultBlock + 2;
-        }
-
-        public void Free(int addr)
-        {
-            int prevFreeList;
-
-            if (addr == 0)
-                return;
-
-            // block address is usable memory pointer - 2
-            int block = addr - 2;
-
-            // block[0]: next
-            // block[1]: size
-
-            // append the block to the freeList
-            prevFreeList = mHeapFree;
-            mHeapFree = block;
-            mMemory[block] = prevFreeList;
-
-            DeFrag();
-        }
-
-        public bool DeFrag()
-        {
-            // mHeapFree[0]: next
-            // mHeapFree[1]: size
-
-            int lasti = -1;
-
-            for (int i = mHeapFree; i != 0; i = mMemory[i])
-            {
-                int target = i + 2 + mMemory[i + 1];
-                int lastj = -1;
-
-                for (int j = mHeapFree; j != 0; j = mMemory[j])
-                {
-                    if (j == i)
-                        continue;
-
-                    if (j == target)
-                    {
-                        // found a free block j that is right at the end of i block - merge them together
-
-                        // Expand i's size to encompass free block j
-                        mMemory[i + 1] = mMemory[i + 1] + mMemory[j + 1] + 2;
-
-                        // point the parent link to j to i instead
-                        if (lastj >= 0)
-                        {
-                            mMemory[lastj] = i;
-                        }
-                        else if (mHeapFree == j)
-                        {
-                            mHeapFree = i;
-                        }
-
-                        break;
-                    }
-
-                    lastj = j;
-                }
-
-                lasti = i;
-            }
-
-            return false;
         }
     }
 

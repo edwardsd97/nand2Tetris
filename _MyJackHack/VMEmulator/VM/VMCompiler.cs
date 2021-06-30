@@ -59,19 +59,31 @@ namespace VM
         public Dictionary<string, FuncSpec> mFunctions; // dictionary of function specs
         public Dictionary<string, int> mStrings;        // static strings
 
-        SymbolTable mSymbolTable;
-        List<Tokenizer> mTokensSet;
-        Tokenizer mTokens;
-        IWriter mWriter;
-        string mClassName;
-        string mFuncName;
-        bool mIgnoreErrors;
-        Dictionary<string, int> mFuncLabel = new Dictionary<string, int>();
-        Debugger mDebugger;
+        protected SymbolTable mSymbolTable;
+        protected List<Tokenizer> mTokensSet;
+        protected Tokenizer mTokens;
+        protected IWriter mWriter;
+        protected string mClassName;
+        protected string mFuncName;
+        protected bool mIgnoreErrors;
+        protected Dictionary<string, int> mFuncLabel = new Dictionary<string, int>();
+        protected Debugger mDebugger;
 
-        const string mHaltFunc = "Sys.halt";
+        protected int mOptions;
+        protected Dictionary<int, string> mOptionStrings = new Dictionary<int, string>();
 
         public List<string> mErrors = new List<string>();
+
+        public enum Option
+        {
+            FUNCTION,   // Supports functions
+            CLASS,      // Supports classes
+
+            FUNC_HALT,  // Function to call to halt
+            FUNC_ALLOC, // Function to call to alloc heap memory
+
+            COUNT
+        }
 
         public class FuncSpec
         {
@@ -92,6 +104,7 @@ namespace VM
 
         public Compiler(Tokenizer tokens, IWriter writer, Debugger debug = null )
         {
+            OptionSetDefaults();
             mDebugger = debug;
             mTokensSet = new List<Tokenizer>();
             mTokensSet.Add(tokens);
@@ -101,6 +114,7 @@ namespace VM
 
         public Compiler(Tokenizer tokens, Debugger debug = null)
         {
+            OptionSetDefaults();
             mDebugger = debug;
             mTokensSet = new List<Tokenizer>();
             mTokensSet.Add(tokens);
@@ -109,6 +123,7 @@ namespace VM
 
         public Compiler(List<Tokenizer> tokens, Debugger debug = null)
         {
+            OptionSetDefaults();
             mDebugger = debug;
             mTokensSet = new List<Tokenizer>();
             mTokensSet.AddRange(tokens);
@@ -117,11 +132,50 @@ namespace VM
 
         public Compiler(List<Tokenizer> tokens, IWriter writer, Debugger debug = null)
         {
+            OptionSetDefaults();
             mDebugger = debug;
             mTokensSet = new List<Tokenizer>();
             mTokensSet.AddRange(tokens);
             SetWriter(writer);
             ResetAll();
+        }
+
+        public void OptionSetDefaults()
+        {
+            OptionSet(Option.CLASS, true);
+            OptionSet(Option.FUNCTION, true);
+
+            OptionSet(Option.FUNC_HALT, "Sys.halt");
+            OptionSet(Option.FUNC_ALLOC, "Memory.alloc" );
+        }
+
+        public void OptionSet(Option op, bool enabled)
+        {
+            if (enabled)
+                mOptions = mOptions | (1 << (int)op);
+            else
+                mOptions = mOptions & ~(1 << (int)op);
+        }
+
+        public void OptionSet(Option op, string strOption)
+        {
+            OptionSet(op, true);
+            if (mOptionStrings.ContainsKey((int)op) )
+                mOptionStrings[(int)op] = strOption;
+            else
+                mOptionStrings.Add( (int)op, strOption );
+        }
+
+        public bool OptionGet(Option op)
+        {
+            return (mOptions & (1 << (int)op)) != 0;
+        }
+
+        public string OptionGetString(Option op)
+        {
+            if (mOptionStrings.ContainsKey((int)op))
+                return mOptionStrings[(int)op];
+            return null;
         }
 
         public void ResetAll()
@@ -402,11 +456,12 @@ namespace VM
 
         protected void WriteHalt()
         {
+            string haltFunc = OptionGetString(Option.FUNC_HALT);
             if (mDebugger != null)
                 mDebugger.mAddedCode = true;
-            if (mFunctions.ContainsKey(mHaltFunc))
+            if ( haltFunc != null && OptionGet( Option.FUNC_HALT ) && mFunctions.ContainsKey(haltFunc))
             {
-                WriteCall(mHaltFunc, 0);
+                WriteCall(haltFunc, 0);
             }
             else
             {
@@ -720,7 +775,9 @@ namespace VM
                         {
                             // Alloc "this" ( and it is pushed onto the stack )
                             mWriter.WritePush(Segment.CONST, mSymbolTable.KindSize(SymbolTable.Kind.FIELD));
-                            WriteCall("Memory.alloc", 1);
+                            string memAllocFunc = OptionGetString(Option.FUNC_ALLOC);
+                            if ( memAllocFunc != null )
+                                WriteCall(memAllocFunc, 1);
                         }
 
                         if (funcCallType == Token.Keyword.METHOD)

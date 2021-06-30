@@ -2,7 +2,7 @@
 
   Heap: 
 
-  Tests Memory.alloc, Memory.deAlloc, and Memory.deFrag
+  Tests Memory.alloc, Memory.free
    to ensure the heap is recycling memory correctly
 
   After running:
@@ -30,6 +30,6 @@ function void main()
 		gValues[1] = i + 1;
 		gValues[2] = i + 2;
 
-		Memory.deAlloc( gValues );
+		Memory.free( gValues );
 	}
 }

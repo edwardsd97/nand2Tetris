@@ -28,6 +28,6 @@ class MyClass
 
    method void dispose()
    {
-      Memory.deAlloc(this);
+      Memory.free(this);
    }
 }

@@ -129,7 +129,7 @@ namespace VM
             }
         }
 
-        public int StepSingle(Emulator vm)
+        public int StepCommand(Emulator vm)
         {
             vm.ExecuteStep();
             return 1;
@@ -149,6 +149,12 @@ namespace VM
             }
 
             return steps;
+        }
+
+        public int StepInto(Emulator vm)
+        {
+            // FIXME
+            return 0;
         }
 
         public void Disable()
@@ -211,14 +217,65 @@ namespace VM
         public bool GetSymbolValue(Emulator vm, string source, int lineNum, int charNum, string varName, out int value)
         {
             int pThis = vm.mMemory[(int)SegPointer.THIS];
+            int arrayIndex = -1;
 
             value = 0;
+            varName = varName.Trim();
 
-            if ( varName == "this" )
+            Token.Keyword keyWord = Token.GetKeyword(varName);
+            switch (keyWord)         
             {
-                // special case
-                value = pThis;
-                return true;
+                case Token.Keyword.THIS: 
+                    value = pThis;
+                    return true;
+                case Token.Keyword.FALSE:
+                    return true;
+                case Token.Keyword.TRUE:
+                    value = -1;
+                    return true;
+            }
+
+            if ( varName.Length > 0 && varName[0] >= '0' && varName[0] <= '9' )
+            {
+                try
+                {
+                    value = int.Parse(varName);
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+
+            if ( varName.Length >= 4 && varName[varName.Length - 1] == ']')
+            {
+                string[] parts = varName.Split(new char[5] { '[', ']', '.', ' ', '\t' });
+
+                // FIXME Why is this necessary? - Split should not be including "" here
+                if (parts.Length > 0 && parts[parts.Length -1] == "" )
+                {
+                    string[] temp = new string[parts.Length - 1];
+                    for (int i = 0; i < temp.Length; i++)
+                        temp[i] = parts[i];
+                    parts = temp;
+                }
+
+                try
+                {
+                    if (parts.Length >= 2)
+                    {
+                        if (GetSymbolValue(vm, source, lineNum, charNum, parts[parts.Length - 1], out arrayIndex ) )
+                        {
+                            varName = parts[0];
+                            if (parts.Length >= 3)
+                                varName = varName + parts[1];
+                        }
+                    }
+                }
+                catch
+                {
+                }
             }
 
             SymbolTable table = GetSymbolTable(source, lineNum, charNum );
@@ -246,8 +303,13 @@ namespace VM
                         case SymbolTable.Kind.FIELD:
                             if ( pThis != 0 )
                                 value = vm.mMemory[pThis + symbol.mOffset];
+                            else
+                                return false;
                             break;
                     }
+
+                    if (arrayIndex >= 0)
+                        value = vm.mMemory[value + arrayIndex];
 
                     return true;
                 }

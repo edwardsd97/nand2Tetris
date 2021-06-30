@@ -78,7 +78,7 @@ namespace VM
             {
                 EmulatedObject.Info info = mObjectInfo[type];
 
-                bool fakeHeapObjects = mVM.OptionGet(Emulator.Option.FAKE_HEAP_OBJECTS);
+                bool fakeHeapObjects = mVM.OptionGet(Emulator.Option.HEAP_OBJECTS);
                 int heapAddress = 0;
 
                 int virtualSize = info.mVirtualSize;

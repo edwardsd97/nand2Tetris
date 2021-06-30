@@ -1,5 +1,5 @@
 
-Jack language extensions
+Compiler
 ------------------------------
 [x] remove requirement for do and let
 [x] compiler: provide better error information and catch more errors like trying to call methods from a function
@@ -17,8 +17,10 @@ Jack language extensions
 [x] OS implement Memory.deFrag()
 [x] add support for characters in code: '-' for 45 for example
 [ ] add support for two character operators like == != ++ etc
+[ ] Option.FUNCTION and Option.CLASS support working
 [ ] add object inheritance - requires virtual objects to have a function table pointer built in
 [ ] optimize switch statements with a jump table when appropriate (low priority)
+[ ] typeless variable declaration: "x = 5;" and it assumes you meant to define "int x = 5;"" - inherit type from right hand (dangerous for case typos)
 
 VM projects
 ------------------------------

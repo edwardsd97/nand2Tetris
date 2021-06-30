@@ -32,6 +32,6 @@ class Vector3
 
    method void dispose()
    {
-      Memory.deAlloc(this);
+      Memory.free(this);
    }
 }
