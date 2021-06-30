@@ -7,14 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="OSHack\Array.jack" />
-    <None Remove="OSHack\Keyboard.jack" />
-    <None Remove="OSHack\Math.jack" />
-    <None Remove="OSHack\Memory.jack" />
-    <None Remove="OSHack\Output.jack" />
-    <None Remove="OSHack\Screen.jack" />
-    <None Remove="OSHack\String.jack" />
-    <None Remove="OSHack\Sys.jack" />
     <None Remove="OSVM\Array.jack" />
     <None Remove="OSVM\Array.vms" />
     <None Remove="OSVM\Math.jack" />
@@ -45,14 +37,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="OSHack\Array.jack" />
-    <EmbeddedResource Include="OSHack\Keyboard.jack" />
-    <EmbeddedResource Include="OSHack\Math.jack" />
-    <EmbeddedResource Include="OSHack\Memory.jack" />
-    <EmbeddedResource Include="OSHack\Output.jack" />
-    <EmbeddedResource Include="OSHack\Screen.jack" />
-    <EmbeddedResource Include="OSHack\String.jack" />
-    <EmbeddedResource Include="OSHack\Sys.jack" />
     <EmbeddedResource Include="OSVM\Array.vms" />
     <EmbeddedResource Include="OSVM\Math.vms" />
     <EmbeddedResource Include="OSVM\Memory.vms" />

@@ -129,7 +129,6 @@ namespace VM
             mClasses = new Dictionary<string, ClassSpec>(); // dictionary of known classes
             mFunctions = new Dictionary<string, FuncSpec>(); // dictionary of function specs
             mStrings = new Dictionary<string, int>(); // static strings
-            mStrings.Add("", mStrings.Count);
             mSymbolTable = new SymbolTable(mDebugger);
         }
 
@@ -158,6 +157,8 @@ namespace VM
             Token token = mTokens.Get();
 
             mWriter.Disable();
+            if (mDebugger != null)
+                mDebugger.Disable();
 
             // Find and register all classes and their member variables so that we know what types are valid
             while (mTokens.HasMoreTokens())
@@ -243,6 +244,8 @@ namespace VM
 
             mWriter.Enable();
             mIgnoreErrors = false;
+            if (mDebugger != null)
+                mDebugger.Enable();
         }
 
         public void Warning(string msg = "", bool forceWarning = false)
@@ -656,7 +659,7 @@ namespace VM
                 }
                 if (functionToken.keyword == Token.Keyword.CONSTRUCTOR && funcReturnType.identifier != mClassName)
                 {
-                    Error("Constructor must return an instance of its class type");
+                    Error("Constructor must return its class type");
                 }
 
                 ValidateTokenAdvance(Token.Type.IDENTIFIER, out mFuncName);
@@ -666,8 +669,8 @@ namespace VM
                 //////////////////////////////////////////////////////////////////////////
                 // pre-compile statements to find peak local var space needed
                 mIgnoreErrors = true;
-                Debugger prevDebugger = mSymbolTable.mDebugger;
-                mSymbolTable.mDebugger = null;
+                if (mDebugger != null)
+                    mDebugger.Disable();
                 mSymbolTable.ScopePush("function", funcCallType, functionToken);
                 Tokenizer.State tokenStart = null;
                 int localVarSize = 0;
@@ -689,7 +692,8 @@ namespace VM
                 }
                 mSymbolTable.ScopePop(mTokens.Get()); // "function"
                 mIgnoreErrors = false;
-                mSymbolTable.mDebugger = prevDebugger;
+                if (mDebugger != null)
+                    mDebugger.Enable();
 
                 //////////////////////////////////////////////////////////////////////////
                 // Rewind tokenizer and compile the function ignoring root level var declarations
@@ -1402,7 +1406,7 @@ namespace VM
 
                 CompileStatements();
 
-                mSymbolTable.ScopePop(mTokens.Get());
+                mSymbolTable.ScopePop(mTokens.Get()); // "statements"
 
                 ValidateTokenAdvance('}');
             }
@@ -1415,7 +1419,8 @@ namespace VM
 
             mWriter.WriteLabel(labelEnd);
 
-            mSymbolTable.ScopePop(mTokens.Get()); // "forStatement"
+            mTokens.Rollback(1);
+            mSymbolTable.ScopePop(mTokens.GetAndAdvance()); // "forStatement"
         }
 
         public void CompileStatementSwitch()
@@ -1619,7 +1624,8 @@ namespace VM
 
             if (mStrings.TryGetValue(str, out strIndex))
             {
-                mWriter.WritePush(Segment.CONST, strIndex);
+                mWriter.WritePush(Segment.CONST, strIndex + 1);
+                mWriter.WriteArithmetic( Command.NEG );
             }
             else
             {

@@ -1,7 +1,7 @@
 
 /*
  Expressions: Expression test cases
- Globals should be 17 (-1) values
+ Globals should be all -1
 */
 
 int value01, value02, value03, value04;

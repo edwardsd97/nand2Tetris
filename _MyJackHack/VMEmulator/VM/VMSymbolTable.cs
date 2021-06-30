@@ -5,7 +5,8 @@ namespace VM
 {
     public class SymbolTable
     {
-        List<SymbolScope> mScopes = new List<SymbolScope>();
+        public List<SymbolScope> mScopes = new List<SymbolScope>();
+        
         Dictionary<string, int> mLabels = new Dictionary<string, int>();
 
         public Debugger mDebugger;
@@ -18,6 +19,7 @@ namespace VM
             public Kind mKind;          // STATIC, FIELD, ARG, VAR
             public Token mType;         // int, boolean, char, ClassName
             public int mOffset;         // segment offset
+            public SymbolScope mScope;  // parent scope
         }
 
         public class SymbolScope
@@ -132,14 +134,13 @@ namespace VM
             newVar.mType = type;
             newVar.mVarName = varName;
             newVar.mOffset = 0;
-
-            SymbolScope defineScope = mScopes[mScopes.Count - 1];
+            newVar.mScope = mScopes[mScopes.Count - 1];
 
             foreach (SymbolScope scope in mScopes)
             {
                 if (specificScope != null && scope.mName == specificScope)
                 {
-                    defineScope = scope;
+                    newVar.mScope = scope;
                 }
 
                 foreach (Symbol symbol in scope.mSymbols.Values)
@@ -154,10 +155,10 @@ namespace VM
             if (specificOffset >= 0)
                 newVar.mOffset = specificOffset;
 
-            if (defineScope.mSymbols.ContainsKey(varName))
+            if (newVar.mScope.mSymbols.ContainsKey(varName))
                 return false;
 
-            defineScope.mSymbols.Add(varName, newVar);
+            newVar.mScope.mSymbols.Add(varName, newVar);
             mVarSize = Math.Max(mVarSize, KindSize(Kind.VAR));
             return true;
         }

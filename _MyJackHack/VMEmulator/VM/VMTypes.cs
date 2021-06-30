@@ -23,18 +23,6 @@ namespace VM
         INVALID
     }
 
-    public class String
-    {
-        public string mString;
-        public int mRef;
-        public String(string str, bool addRef = true)
-        {
-            mString = str;
-            if (addRef)
-                mRef++;
-        }
-    }
-
     public class Instruction
     {
         public Command mCommand;

@@ -20,8 +20,8 @@ namespace VM
 
         public Heap mHeap;
         public List<string> mErrors = new List<string>();
-        public Dictionary<int, String> mStrings = new Dictionary<int, String>(); // string table
-        public int mStringsStatic; // reserved static string count in mStrings
+        public EmulatedObjects mObjects; // string table and other emulated application objects
+        public int mStringsStatic;       // reserved static string count in mStrings
 
         public BuiltIn mBuiltIns; // Builtin functions
 
@@ -31,6 +31,14 @@ namespace VM
         protected Thread mExecuteThread;        // Execution thread
         protected bool mExecuteThreadStop;      // Execution thread stop request
         protected long mExecuteThreadRateMicro; // Execution thread tick rate in microseconds ( 1000 per 1 ms )
+
+        protected int mOptions;
+
+        public enum Option
+        {
+            FAKE_HEAP_OBJECTS,
+            COUNT
+        }
 
         public static int Align(int value, int alignment)
         {
@@ -45,6 +53,8 @@ namespace VM
             if (builtIns == null)
                 builtIns = Emulator.DefaultBuiltIns();
             mBuiltIns = builtIns;
+
+            mObjects = new EmulatedObjects(this);
 
             Reset(stackSizeBytes, heapSizeBytes, globalSizeBytes);
         }
@@ -62,11 +72,25 @@ namespace VM
             return result;
         }
 
+        public void OptionSet(Option op, bool enabled )
+        {
+            if ( enabled )
+                mOptions = mOptions | (1 << (int)op);
+            else
+                mOptions = mOptions & ~(1 << (int)op);
+        }
+
+        public bool OptionGet(Option op)
+        {
+            return (mOptions & (1 << (int)op)) != 0;
+        }
+
         public void ResetAll()
         {
             Reset();
-            mStrings = new Dictionary<int, String>();
+            mObjects = new EmulatedObjects(this);
             mStringsStatic = 0;
+            mOptions = 0;
         }
 
         public void Reset()
@@ -136,7 +160,8 @@ namespace VM
                     // static string 
                     string str;
                     StreamExtensions.Read(code, out str);
-                    mStrings.Add(cmd.mIndex, new String(str));
+                    mObjects.RegisterType("string");
+                    mObjects.Alloc("string", str, str.ToCharArray() );
                     mStringsStatic = Math.Max(mStringsStatic, cmd.mIndex + 1);
                 }
                 else
@@ -174,7 +199,7 @@ namespace VM
             return !(Halted() || Finished());
         }
 
-        public bool ExecuteThread(bool enabled, long tickRateMicroSeconds = -1)
+        public bool ExecuteThread(bool enabled, long tickRateMicroSeconds = -1, ThreadPriority threadPriority = ThreadPriority.Normal )
         {
             if (mExecuteThreadRateMicro != 0)
             {
@@ -182,7 +207,7 @@ namespace VM
 
                 while (mExecuteThread != null && mExecuteThreadStop)
                 {
-                    System.Threading.Thread.Sleep(1);
+                    Thread.Sleep(1);
                 }
             }
 
@@ -190,6 +215,7 @@ namespace VM
             {
                 ThreadStart threadFunc = ExecuteThreadWorker;
                 mExecuteThread = new Thread(threadFunc);
+                mExecuteThread.Priority = threadPriority;
                 mExecuteThreadRateMicro = tickRateMicroSeconds;
                 mExecuteThreadStop = false;
                 mExecuteThread.Start();
@@ -215,9 +241,11 @@ namespace VM
 
                 if (mExecuteThreadRateMicro > 0)
                 {
-                    while (timer.ElapsedMicroseconds < mExecuteThreadRateMicro)
+                    while ( ( timer.ElapsedMicroseconds < mExecuteThreadRateMicro ) && !mExecuteThreadStop )
                     {
                         // wait
+                        if ( timer.ElapsedMicroseconds >= 1000 )
+                            Thread.Sleep( (int) ( timer.ElapsedMicroseconds / 1000 ));
                     }
                 }
 

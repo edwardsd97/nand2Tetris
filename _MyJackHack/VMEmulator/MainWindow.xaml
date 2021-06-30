@@ -22,15 +22,17 @@
         <TextBox x:Name="textGlobals" HorizontalAlignment="Left" Text="Globals" TextWrapping="NoWrap" VerticalAlignment="Top" Width="207" Height="229" FontFamily="Courier New" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" Margin="975,415,0,0" IsReadOnly="True"/>
         <TextBox x:Name="textHeap" HorizontalAlignment="Left" Text="Heap" TextWrapping="NoWrap" VerticalAlignment="Top" Width="111" Height="602" FontFamily="Courier New" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" Margin="1187,42,0,0" IsReadOnly="True"/>
         <Label Content="Heap" HorizontalAlignment="Left" Margin="1187,10,0,0" VerticalAlignment="Top" IsHitTestVisible="False" Height="27"/>
-        <Button x:Name="buttonStep" Content="&gt;" HorizontalAlignment="Left" Margin="870,649,0,0" VerticalAlignment="Top" Height="36" Width="72" Click="buttonStep_Click"/>
+        <Button x:Name="buttonStep" Content="&gt;" HorizontalAlignment="Left" Margin="947,649,0,0" VerticalAlignment="Top" Height="36" Width="72" Click="buttonStep_Click"/>
         <Button x:Name="buttonReset" Content="Reset" HorizontalAlignment="Left" Margin="870,713,0,0" VerticalAlignment="Top" Height="36" Width="72" Click="buttonReset_Click"/>
         <Button x:Name="buttonTestCase" Content="Next Test" HorizontalAlignment="Left" Margin="1101,713,0,0" VerticalAlignment="Top" Height="36" Width="72" Click="buttonTestCase_Click"/>
-        <Button x:Name="buttonPlay" Content="&gt;&gt;" HorizontalAlignment="Left" Margin="947,649,0,0" VerticalAlignment="Top" Height="36" Width="72" Click="buttonPlay_Click"/>
-        <Button x:Name="buttonPlayFast" Content="&gt;&gt;&gt;" HorizontalAlignment="Left" Margin="1024,649,0,0" VerticalAlignment="Top" Height="36" Width="72" Click="buttonPlayFast_Click"/>
-        <Button x:Name="buttonPlayFull" Content="&gt;&gt;&gt;&gt;" HorizontalAlignment="Left" Margin="1101,649,0,0" VerticalAlignment="Top" Height="36" Width="72" Click="buttonPlayFull_Click"/>
+        <Button x:Name="buttonPlay" Content="&gt;&gt;" HorizontalAlignment="Left" Margin="1033,649,0,0" VerticalAlignment="Top" Height="36" Width="72" Click="buttonPlay_Click"/>
+        <Button x:Name="buttonPlayFast" Content="&gt;&gt;&gt;" HorizontalAlignment="Left" Margin="1110,649,0,0" VerticalAlignment="Top" Height="36" Width="72" Click="buttonPlayFast_Click"/>
+        <Button x:Name="buttonPlayFull" Content="&gt;&gt;&gt;&gt;" HorizontalAlignment="Left" Margin="1187,649,0,0" VerticalAlignment="Top" Height="36" Width="72" Click="buttonPlayFull_Click"/>
         <Button x:Name="buttonTestCasePrev" Content="Prev Test" HorizontalAlignment="Left" Margin="1024,713,0,0" VerticalAlignment="Top" Height="36" Width="72" Click="buttonTestCasePrev_Click"/>
         <Button x:Name="buttonStrings" Content="Strings" HorizontalAlignment="Left" Margin="790,16,0,0" VerticalAlignment="Top" Height="21" Width="72" Click="buttonStrings_Click"/>
         <Label x:Name="textValue" Content="Value: 0" HorizontalAlignment="Left" Margin="245,15,0,0" VerticalAlignment="Top" IsHitTestVisible="False" Height="27" Width="184" HorizontalContentAlignment="Right"/>
+        <Button x:Name="buttonStepOver" Content="&gt;&gt;]" HorizontalAlignment="Left" Margin="870,649,0,0" VerticalAlignment="Top" Height="36" Width="72" Click="buttonStepOver_Click"/>
+        <ComboBox x:Name="comboTest" HorizontalAlignment="Left" Margin="1182,713,0,0" VerticalAlignment="Top" Width="120" SelectionChanged="comboTest_SelectionChanged"/>
 
     </Grid>
 </Window>

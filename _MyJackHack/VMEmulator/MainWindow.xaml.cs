@@ -30,10 +30,8 @@ namespace VMEmulator
         MemoryStream Instructions = new MemoryStream();
         Compiler compiler;
 
-        int mTestCase = -1;
-        int mTestCases = 0;
         bool mStringsMode = false;
-        bool mJustCompiled = false;
+        int mFirstTestCase = -1;
 
         DispatcherTimer dispatchCompile;
         DispatcherTimer dispatchUpdate;
@@ -44,7 +42,31 @@ namespace VMEmulator
         {
             InitializeComponent();
 
-            TestCaseInit();
+            // Include the operating system class declarations
+            Assembly asm = Assembly.GetExecutingAssembly();
+            foreach (string osName in asm.GetManifestResourceNames())
+            {
+                if (!osName.Contains(".OSVM."))
+                    continue;
+
+                string[] parts = osName.Split(new char[3] { '/', '\\', '.' });
+                if (parts.Length >= 2)
+                {
+                    comboTest.Items.Add(parts[parts.Length - 2]);
+                }
+            }
+            comboTest.Items.Add("--------");
+            mFirstTestCase = comboTest.Items.Count;
+            foreach (string osName in asm.GetManifestResourceNames())
+            {
+                if (!osName.Contains(".TestCases."))
+                    continue;
+
+                string[] parts = osName.Split(new char[3] { '/', '\\', '.' });
+                if (parts.Length >= 2)
+                    comboTest.Items.Add(parts[parts.Length - 2]);
+            }
+
             TestCaseSet("Empty");
 
             Compile();
@@ -99,15 +121,40 @@ namespace VMEmulator
                 }
             }
         }
+        
+        private void comboTest_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (comboTest.SelectedIndex >= 0 && comboTest.SelectedIndex < comboTest.Items.Count )
+                TestCaseSet( comboTest.SelectedItem.ToString() );
+        }
 
         private void buttonStep_Click(object sender, RoutedEventArgs e)
         {
             if (!mVM.Running())
                 Reset();
 
+            if (mDebugger == null)
+                return;
+
             TimerUpdateSetup(-1);
             mVM.ExecuteThread(false);
-            mVM.ExecuteStep();
+            mDebugger.StepSingle(mVM);
+            UpdateForm();
+        }
+
+        private void buttonStepOver_Click(object sender, RoutedEventArgs e)
+        {
+            TimerUpdateSetup(-1);
+            mVM.ExecuteThread(false);
+
+            if (!mVM.Running())
+                Reset();
+
+            if (mDebugger == null)
+                return;
+
+            mDebugger.StepOver( mVM );
+
             UpdateForm();
         }
 
@@ -155,7 +202,7 @@ namespace VMEmulator
             TimerUpdateSetup(-1);
             mVM.ExecuteThread(false);
             mVM.Reset();
-            UpdateForm();
+            Compile();
         }
 
         public void TimerUpdateSetup(int msTickRate = 50, bool updateForm = true)
@@ -207,26 +254,18 @@ namespace VMEmulator
             Compile();
         }
 
-        public void TestCaseInit()
-        {
-            mTestCases = 0;
-
-            Assembly asm = Assembly.GetExecutingAssembly();
-            foreach (string osName in asm.GetManifestResourceNames())
-            {
-                if (!osName.Contains(".TestCases."))
-                    continue;
-                mTestCases++;
-            }
-        }
-
         public void TestCaseCycle( int offset )
         {
-            mTestCase = mTestCase + offset;
-            if (mTestCase > mTestCases - 1)
-                mTestCase = 0;
-            if (mTestCase < 0 )
-                mTestCase = mTestCases - 1;
+            if (comboTest.SelectedIndex == comboTest.Items.Count - 1 && offset > 0 )
+                comboTest.SelectedIndex = mFirstTestCase;
+            else if (comboTest.SelectedIndex == mFirstTestCase && offset < 0)
+                comboTest.SelectedIndex = comboTest.Items.Count - 1;
+            else 
+                comboTest.SelectedIndex += offset;
+
+            if (((string)comboTest.SelectedValue).Contains("---"))
+                TestCaseCycle(offset);
+
             TestCaseUpdate();
         }
 
@@ -234,67 +273,31 @@ namespace VMEmulator
         {
             Assembly asm = Assembly.GetExecutingAssembly();
 
-            int testCaseIndex = -1;
             foreach (string osName in asm.GetManifestResourceNames())
             {
-                if (!osName.Contains(".TestCases."))
+                if (!osName.Contains("." + comboTest.SelectedValue + "." ) )
                     continue;
 
-                testCaseIndex++;
-
-                if ( mTestCase == testCaseIndex )
+                Stream resourceStream = asm.GetManifestResourceStream(osName);
+                if (resourceStream != null)
                 {
-                    Stream resourceStream = asm.GetManifestResourceStream(osName);
-                    if (resourceStream != null)
-                    {
-                        StreamReader sRdr = new StreamReader(resourceStream);
-                        textCode.Text = sRdr.ReadToEnd();
-                        Compile();
-                        return;
-                    }
+                    StreamReader sRdr = new StreamReader(resourceStream);
+                    textCode.Text = sRdr.ReadToEnd();
+                    Compile();
+                    return;
                 }
             }
         }
 
         public void TestCaseSet( string subString )
         {
-            Assembly asm = Assembly.GetExecutingAssembly();
-
-            int testCaseIndex = -1;
-            foreach (string osName in asm.GetManifestResourceNames())
+            for (int i = 0; i < comboTest.Items.Count; i++)
             {
-                if (!osName.Contains(".TestCases."))
-                    continue;
-
-                testCaseIndex++;
-
-                if (osName.Contains(subString))
-                    break;
+                if ((string)comboTest.Items[i] == subString)
+                    comboTest.SelectedIndex = i;
             }
 
-            mTestCase = testCaseIndex;
             TestCaseUpdate();
-        }
-
-        public void Compile()
-        {
-            mVM.ExecuteThread(false);
-            TimerUpdateSetup(-1);
-            TimerCompileSetup(-1);
-
-            MemoryStream byteCode = new MemoryStream();
-
-            Instructions = new MemoryStream();
-
-            Writer writer = new Writer(Instructions);
-            Compile(writer);
-
-            ByteCode convert = new ByteCode();
-            convert.ConvertVMText(Instructions, byteCode, compiler);
-
-            mVM.ResetAll();
-            mVM.Load(byteCode);
-            UpdateForm();
         }
 
         public void UpdateForm()
@@ -307,15 +310,13 @@ namespace VMEmulator
             UpdateGlobals();
             UpdateHeap();
             UpdateErrors();
-
-            mJustCompiled = false;
         }
 
         public void UpdateCodeHighlight()
         {
             textCode.Focus();
 
-            if ( mVM.Running() && mVM.mCodeFrame > 0 )
+            if ( mVM.Running() )
             {
                 int selectStart = -1;
                 int selectLength = -1;
@@ -390,10 +391,28 @@ namespace VMEmulator
             string memStr = "";
             int start = (int)SegPointer.COUNT;
             int end = mVM.mMemory[(int)SegPointer.SP];
+            int codeLine = 0;
+            int codeChar = 0;
+            Debugger.DebugCommand cmd;
+            if (mDebugger.mCommandMap.TryGetValue(mVM.mCodeFrame, out cmd))
+            {
+                codeLine = cmd.mSourceLine;
+                codeChar = cmd.mSourceChar;
+            }
             for (int i = start; i < end; i++)
             {
+                string entry = "" + mVM.mMemory[i];
+                while (entry.Length < 4)
+                    entry = entry + " ";
+
                 if (i >= 0 && i < mVM.mMemory.Length)
-                    memStr = memStr + mVM.mMemory[i] + "\r\n";
+                    memStr = memStr + entry;
+
+                string stackVarName = mDebugger.GetStackSymbol(mVM, i, "", codeLine, codeChar);
+                if (stackVarName != "")
+                    memStr = memStr + " " + stackVarName;
+
+                memStr = memStr + "\r\n";
             }
 
             if (textStack != null)
@@ -409,14 +428,20 @@ namespace VMEmulator
             {
                 if (i >= 0 && i < mVM.mMemory.Length)
                 {
+                    string entry = "" + mVM.mMemory[i];
+                    while (entry.Length < 4)
+                        entry = entry + " ";
+
+                    memStr = memStr + entry;
+
                     if (mDebugger != null)
                     {
                         int offset = i - start;
-                        string varName = mDebugger.GetSegmentSymbol(SymbolTable.Kind.GLOBAL, offset, "", 0, 0 );
+                        string varName = mDebugger.GetSegmentSymbol( mVM, SymbolTable.Kind.GLOBAL, offset, "", 0, 0 );
                         if (varName != "")
-                            memStr = memStr + varName + " ";
+                            memStr = memStr + " " + varName;
                     }
-                    memStr = memStr + mVM.mMemory[i] + "\r\n";
+                    memStr = memStr + "\r\n";
                 }
             }
 
@@ -447,28 +472,32 @@ namespace VMEmulator
             if (mStringsMode)
             {
                 labelVM.Content = "String Table";
-                buttonStrings.Content = "Emulator Cmds";
+                buttonStrings.Content = "VM Cmds";
 
-                vmStr = vmStr + "Statics:\r\n";
-
-                foreach (int key in mVM.mStrings.Keys)
+                foreach (int key in mVM.mObjects.mObjects["string"].Keys)
                 {
+                    if ( vmStr == "" )
+                        vmStr = vmStr + "Statics:\r\n";
+
                     string idStr = "" + key;
-                    if (key == mVM.mStringsStatic)
+                    if (key == mVM.mStringsStatic + 1)
                     {
                         vmStr = vmStr + "\r\n";
                         vmStr = vmStr + "Modifiable:\r\n";
                     }
                     while (idStr.Length < 4)
                         idStr = " " + idStr;
-                    string lineStr = idStr + " \"" + mVM.mStrings[key].mString + "\"";
+                    string lineStr = idStr + " \"" + (string) mVM.mObjects.mObjects["string"][key].mObject + "\"";
                     lineStr = lineStr + "\r\n";
                     vmStr = vmStr + lineStr;
                 }
+
+                if (vmStr == "")
+                    vmStr = "[No strings in use]";
             }
             else
             {
-                labelVM.Content = "Emulator Commands";
+                labelVM.Content = "VM Commands";
                 buttonStrings.Content = "Strings";
                 int codeFrame = 0;
                 Instructions.Seek(0, SeekOrigin.Begin);
@@ -478,16 +507,17 @@ namespace VMEmulator
                     string lineStr = vmreader.ReadLine();
                     string[] elements = ByteCode.CommandElements(lineStr);
 
-                    lineStr = " " + lineStr;
+                    if (elements[0] != "label" && codeFrame == mVM.mCodeFrame)
+                    {
+                        lineStr = ">" + lineStr;
+                    }
+                    else
+                    {
+                        lineStr = " " + lineStr;
+                    }
 
                     if (elements[0] != "label")
-                    {
-                        if ( codeFrame == mVM.mCodeFrame )
-                            lineStr = ">" + lineStr;
-
-                        if (elements[0] != "label")
-                            codeFrame++;
-                    }
+                        codeFrame++;
 
                     lineStr = lineStr + "\r\n";
 
@@ -541,6 +571,31 @@ namespace VMEmulator
                 textErrors.Text = errors;
         }
 
+        public void Compile()
+        {
+            mVM.ExecuteThread(false);
+            TimerUpdateSetup(-1);
+            TimerCompileSetup(-1);
+
+            MemoryStream byteCode = new MemoryStream();
+
+            Instructions = new MemoryStream();
+
+            Writer writer = new Writer(Instructions);
+            Compile(writer);
+
+            ByteCode convert = new ByteCode();
+            convert.ConvertVMText(Instructions, byteCode, compiler);
+
+            // Setup the VM so that it uses fake heap memory for emulated objects like strings or other game objects
+            mVM.ResetAll();
+            mVM.OptionSet(Emulator.Option.FAKE_HEAP_OBJECTS, true);
+            mVM.mObjects.RegisterType("string", 2);
+
+            mVM.Load(byteCode);
+            UpdateForm();
+        }
+
         public void Compile(IWriter writer)
         {
             string code = textCode.Text;
@@ -556,6 +611,9 @@ namespace VMEmulator
             foreach (string osName in asm.GetManifestResourceNames())
             {
                 if (!osName.Contains(".OSVM."))
+                    continue;
+
+                if (osName.Contains((string)comboTest.SelectedItem))
                     continue;
 
                 Stream resourceStream = asm.GetManifestResourceStream(osName);
@@ -575,8 +633,6 @@ namespace VMEmulator
             mDebugger = new Debugger();
             compiler = new Compiler(tokenizers, writer, mDebugger);
             compiler.Compile();
-
-            mJustCompiled = true;
         }
     }
 }

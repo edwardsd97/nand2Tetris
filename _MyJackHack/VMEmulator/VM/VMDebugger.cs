@@ -16,12 +16,14 @@ namespace VM
         public List<DebugSymbolsPush> mScopeStack = new List<DebugSymbolsPush>();
         public bool mAddedCode; // when true code is being compiled that is not part of source code
 
+        int mDisableCount;
+
         public class DebugSymbolMap
         {
             // One of these per source file
             // Provide a line number and this will generate a SymbolTable by walking from the first line pushing and popping scope
             // Essentially a recording of symbol scopes while compiling the file
-            public Dictionary<uint, SymbolTable.SymbolScope> mScopes = new Dictionary<uint, SymbolTable.SymbolScope>();
+            public Dictionary<uint, List<SymbolTable.SymbolScope>> mScopes = new Dictionary<uint, List<SymbolTable.SymbolScope>>();
             public Dictionary<int, int> mLineChars = new Dictionary<int, int>();
             public SymbolTable.SymbolScope mGlobals;
 
@@ -34,6 +36,7 @@ namespace VM
             {
                 SymbolTable result = new SymbolTable();
                 SymbolTable.SymbolScope scope;
+                List<SymbolTable.SymbolScope> scopeList;
 
                 result.ScopePush( mGlobals );
 
@@ -41,17 +44,21 @@ namespace VM
                 for (int i = 1; i <= lineNum; i++)
                 {
                     int lineChars;
-                    if (mLineChars.TryGetValue(lineNum, out lineChars))
+                    if (mLineChars.TryGetValue(i, out lineChars))
                     {
                         for (int c = 0; c <= lineChars; c++)
                         {
                             uint key = ScopeMarkerKey(i, c);
-                            if (mScopes.TryGetValue(key, out scope))
+                            if (mScopes.TryGetValue(key, out scopeList))
                             {
-                                if (scope != null)
-                                    result.ScopePush(scope);
-                                else
-                                    result.ScopePop();
+                                for (int s = 0; s < scopeList.Count; s++)
+                                {
+                                    scope = scopeList[s];
+                                    if (scope != null)
+                                        result.ScopePush(scope);
+                                    else
+                                        result.ScopePop();
+                                }
                             }
                         }
                     }
@@ -74,8 +81,9 @@ namespace VM
                     mLineChars.Add(lineNum, charNum);
 
                 uint key = ScopeMarkerKey(lineNum, charNum);
-                if( !mScopes.ContainsKey(key) )
-                    mScopes.Add(key, scope);
+                if (!mScopes.ContainsKey(key))
+                    mScopes.Add(key, new List<SymbolTable.SymbolScope>());
+                mScopes[key].Add(scope);
             }
         }
 
@@ -121,12 +129,73 @@ namespace VM
             }
         }
 
-        public void SetMaxLineChar(int lineNum, int charNum)
+        public int StepSingle(Emulator vm)
         {
-
+            vm.ExecuteStep();
+            return 1;
         }
 
-        public string GetSegmentSymbol(SymbolTable.Kind kind, int offset, string source, int lineNum, int charNum )
+        public int StepOver(Emulator vm)
+        {
+            if (!mCommandMap.ContainsKey(vm.mCodeFrame))
+                return 0;
+
+            int startLine = mCommandMap[vm.mCodeFrame].mSourceLine;
+            int steps = 0;
+            while (steps < 1000 && vm.Running() && startLine == mCommandMap[vm.mCodeFrame].mSourceLine)
+            {
+                vm.ExecuteStep();
+                steps++;
+            }
+
+            return steps;
+        }
+
+        public void Disable()
+        {
+            mDisableCount++;
+        }
+
+        public void Enable()
+        {
+            mDisableCount--;
+        }
+
+        public string GetStackSymbol(Emulator vm, int sp, string source, int lineNum, int charNum )
+        {
+            string result = "";
+
+            SymbolTable table = GetSymbolTable(source, lineNum, charNum);
+            if (table != null && table.mScopes.Count > 0 )
+            {
+                int argPointer = vm.mMemory[(int)SegPointer.ARG];
+                int localPointer = vm.mMemory[(int)SegPointer.LOCAL];
+
+                foreach (SymbolTable.SymbolScope scope in table.mScopes)
+                {
+                    foreach (SymbolTable.Symbol symb in scope.mSymbols.Values)
+                    {
+                        if (argPointer != 0 && symb.mKind == SymbolTable.Kind.ARG)
+                        {
+                            int argOffset = 0;
+                            if (symb.mScope.mFunctionType == Token.Keyword.METHOD)
+                                argOffset = 1;
+                            if (sp >= argPointer && ( symb.mOffset + argOffset ) == (sp - argPointer ) )
+                                return symb.mVarName;
+                        }
+                        else if (localPointer != 0 && symb.mKind == SymbolTable.Kind.VAR)
+                        {
+                            if (sp >= localPointer && symb.mOffset == sp - localPointer)
+                                return symb.mVarName;
+                        }
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        public string GetSegmentSymbol( Emulator vm, SymbolTable.Kind kind, int offset, string source, int lineNum, int charNum )
         {
             string result = "";
 
@@ -141,7 +210,16 @@ namespace VM
 
         public bool GetSymbolValue(Emulator vm, string source, int lineNum, int charNum, string varName, out int value)
         {
+            int pThis = vm.mMemory[(int)SegPointer.THIS];
+
             value = 0;
+
+            if ( varName == "this" )
+            {
+                // special case
+                value = pThis;
+                return true;
+            }
 
             SymbolTable table = GetSymbolTable(source, lineNum, charNum );
             if (table != null)
@@ -150,10 +228,14 @@ namespace VM
 
                 if (symbol != null)
                 {
+                    int argOffset = 0;
+                    if (symbol.mScope.mFunctionType == Token.Keyword.METHOD)
+                        argOffset = 1;
+
                     switch (symbol.mKind)
                     {
                         case SymbolTable.Kind.ARG:
-                            value = vm.mMemory[vm.mMemory[(int)SegPointer.ARG] + symbol.mOffset];
+                            value = vm.mMemory[vm.mMemory[(int)SegPointer.ARG] + symbol.mOffset + argOffset];
                             break;
                         case SymbolTable.Kind.GLOBAL:
                             value = vm.mMemory[vm.mMemory[(int)SegPointer.GLOBAL] + symbol.mOffset];
@@ -162,7 +244,6 @@ namespace VM
                             value = vm.mMemory[vm.mMemory[(int)SegPointer.LOCAL] + symbol.mOffset];
                             break;
                         case SymbolTable.Kind.FIELD:
-                            int pThis = vm.mMemory[(int)SegPointer.THIS];
                             if ( pThis != 0 )
                                 value = vm.mMemory[pThis + symbol.mOffset];
                             break;
@@ -189,6 +270,9 @@ namespace VM
 
         public void WriteCommand( string vmTextLine )
         {
+            if (mDisableCount > 0)
+                return;
+
             if (mTokens == null || vmTextLine.StartsWith( "label" ) )
                 return;
 
@@ -204,6 +288,9 @@ namespace VM
 
         public void ScopePush(SymbolTable.SymbolScope scope, Token tknSource)
         {
+            if (mDisableCount > 0)
+                return;
+
             if (tknSource == null)
                 mGlobals = scope;
             else
@@ -212,6 +299,9 @@ namespace VM
 
         public void ScopePop(SymbolTable.SymbolScope scope, Token tknSource)
         {
+            if (mDisableCount > 0)
+                return;
+
             if ( tknSource != null )
             {
                 DebugSymbolMap map;
