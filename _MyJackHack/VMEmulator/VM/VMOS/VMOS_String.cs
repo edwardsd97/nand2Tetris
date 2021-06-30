@@ -64,7 +64,8 @@ namespace VM
             if (src != null && src.mObject != null)
             {
                 obj = vm.mObjects.Alloc("string", (string)src.mObject, ((string)src.mObject).ToCharArray() );
-                strId = obj.mId;
+                if ( obj != null )
+                    strId = obj.mId;
             }
 
             if (vm.OptionGet(Emulator.Option.FAKE_HEAP_OBJECTS) && obj != null)

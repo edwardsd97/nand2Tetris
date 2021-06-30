@@ -1,5 +1,5 @@
 ﻿using System;
-using System.IO;
+using System.Text;
 using System.Collections.Generic;
 
 namespace VM
@@ -67,10 +67,7 @@ namespace VM
 
         public EmulatedObject Alloc(string type, object value, char[] overrideFakeData)
         {
-            byte[] bytes = new byte[overrideFakeData.Length];
-            for (int i = 0; i < bytes.Length; i++)
-                bytes[i] = (byte)overrideFakeData[i];
-            return Alloc(type, value, bytes);
+            return Alloc( type, value, Encoding.ASCII.GetBytes( overrideFakeData ) );
         }
 
         public EmulatedObject Alloc(string type, object value, byte[] overrideFakeData = null)
@@ -93,7 +90,14 @@ namespace VM
                 }
 
                 if (fakeHeapObjects)
+                {
                     heapAddress = mVM.mHeap.Alloc(virtualSize + 1);
+                    if (heapAddress == 0)
+                    {
+                        mVM.Error("Out of heap memory");
+                        return null;
+                    }
+                }
 
                 if (heapAddress > 0 || !fakeHeapObjects)
                 {
