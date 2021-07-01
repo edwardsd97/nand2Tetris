@@ -1813,7 +1813,7 @@ namespace VM
 
             if ( OptionGet(Option.OP_EXP) )
             {
-                stackPush = ExpressionTopResolveConstant(stack);
+                stackPush = ExpressionTopResolveConstant(stack, out opPopped );
             }
 
             if ( stackPush.GetType() == typeof(string) )
@@ -1856,11 +1856,13 @@ namespace VM
             return opPopped;
         }
 
-        protected object ExpressionTopResolveConstant(List<object> stack)
+        protected object ExpressionTopResolveConstant(List<object> stack, out object opPopped )
         {
             WriterStream a = null;
             WriterStream b = null;
             char op = ' ';
+
+            opPopped = null;
 
             if (stack.Count >= 3 && stack[stack.Count - 3].GetType() == typeof(WriterStream))
             {
@@ -1879,11 +1881,11 @@ namespace VM
 
             if (a != null && b != null && op != ' ')
             {
-                bool isConstantA;
-                bool isConstantB;
+                bool isConstantA, isConstantB;
+                int aVal, bVal;
 
-                int aVal = ExpressionTopResolveConstantStream(a, out isConstantA);
-                int bVal = ExpressionTopResolveConstantStream(b, out isConstantB);
+                isConstantA = a.IsConstant(out aVal);
+                isConstantB = b.IsConstant(out bVal);
 
                 if (isConstantA && isConstantB)
                 {
@@ -1904,50 +1906,13 @@ namespace VM
                     mWriter.OutputPop();
                     result.Seek(0, SeekOrigin.Begin);
 
+                    opPopped = op;
+
                     return result;
                 }
             }
 
             return expTerminalStack;
-        }
-
-        protected int ExpressionTopResolveConstantStream(WriterStream stream, out bool isConstant)
-        {
-            int value = 0;
-            isConstant = false;
-            int commands = 0;
-
-            /*
-              A constant command can only consist of either
-              push constant N
-              or
-              push constant N
-              neg
-             */
-
-            stream.Seek(0, SeekOrigin.Begin);
-
-            StreamReader rdr = new StreamReader(stream);
-            while (!rdr.EndOfStream)
-            {
-                string[] parts = rdr.ReadLine().Split(new char[2] { ' ', '\t' } );
-                if (parts.Length >= 2 && parts[0] == "push" && parts[1] == "constant")
-                {
-                    value = int.Parse(parts[2]);
-                    isConstant = true;
-                }
-                if (parts.Length > 0 && parts[0] == "neg" && commands == 1 )
-                {
-                    value = -value;
-                    commands--;
-                }
-                commands++;
-            }
-
-            if (commands > 1)
-                isConstant = false;
-
-            return value;
         }
 
         protected void ExpressionResolvePrecedence(List<object> expressionTerms)
@@ -1962,6 +1927,22 @@ namespace VM
             // 5: x + y * 5
             // 7: x + y * 5 - 6 = 9
             // etc...
+
+            bool allConst = true;
+            if (OptionGet(Option.OP_EXP))
+            {
+                foreach (object obj in expressionTerms)
+                {
+                    if (obj.GetType() == typeof(WriterStream))
+                    {
+                        if (!((WriterStream)obj).IsConstant())
+                        {
+                            allConst = false;
+                            break;
+                        }
+                    }
+                }
+            }
 
             if (expressionTerms.Count == 1)
             {
@@ -1983,9 +1964,13 @@ namespace VM
                     a = ExpressionTopOp(stack);
 
                     if (a == null && b == null)
+                    {
+                        if ( stack.Count == 1 && stack[0].GetType() == typeof(WriterStream) )
+                            mWriter.WriteStream((WriterStream)stack[0]);
                         return;
+                    }
 
-                    if (a == null && b.GetType() == typeof(WriterStream) )
+                    if (a == null && b.GetType() == typeof(WriterStream) && !allConst )
                     {
                         mWriter.WriteStream((WriterStream)b);
                         ip++;

@@ -20,12 +20,13 @@ Compiler
 [x] switch: fixed so that it is no longer using temp - stores the compiled code for the expression and keeps repeating it when comparing
 [x] switch: fixed debugger tracking so that line number matching works
 [x] optimize expression compiler to convert constants into a single push constant (resolve the expression during compile time) make this an option
-[ ] optimize expression compiler further - still not reducing all constants into a single push constant N
+[x] optimize expression compiler further - still not reducing all constants into a single push constant N
+[ ] switch: case values should be required to be constants
+[ ] switch: optimize with a jump table when appropriate (low priority)
 [ ] allow array class object method calls: e.g. objectArray[3].myMethod();
 [ ] add support for two character operators like == != ++ etc
 [ ] Option.FUNCTION and Option.CLASS support working
 [ ] add class inheritance? - requires virtual objects to have a function table pointer built in
-[ ] optimize switch statements with a jump table when appropriate (low priority)
 
 Emulator
 ------------------------------

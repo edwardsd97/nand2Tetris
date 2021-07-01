@@ -34,6 +34,71 @@ namespace VM
         public Tokenizer mTokens;
         public List<Tokenizer.State> mTokenStates = new List<Tokenizer.State>();
 
+        // cached info so that it does not need to repeatedly parse the same stream
+        protected int mConstant;
+        protected bool mIsConstant;
+        protected long mConstantCache = -1;
+
+        public bool IsConstant()
+        {
+            int dontCare;
+            return IsConstant(out dontCare);
+        }
+
+        public bool IsConstant( out int value )
+        {
+            if ( mConstantCache == Position )
+            {
+                value = mConstant;
+                return mIsConstant;
+            }
+
+            mConstantCache = Position;
+            Seek(0, SeekOrigin.Begin);
+            mConstant = 0;
+            bool isConstant = false;
+            int commands = 0;
+
+            /*
+              A constant command can only consist of
+
+              push constant N
+            
+               or
+             
+              push constant N
+              neg
+            
+             */
+
+            StreamReader rdr = new StreamReader(this);
+            while (!rdr.EndOfStream && commands < 3 )
+            {
+                string[] parts = rdr.ReadLine().Split(new char[2] { ' ', '\t' });
+                if (parts.Length >= 2 && parts[0] == "push" && parts[1] == "constant")
+                {
+                    mConstant = int.Parse(parts[2]);
+                    isConstant = true;
+                }
+                if (parts.Length > 0 && parts[0] == "neg" && commands == 1)
+                {
+                    mConstant = -mConstant;
+                    commands--;
+                }
+                commands++;
+            }
+
+            if (commands > 2)
+                isConstant = false;
+
+            Seek(mConstantCache, SeekOrigin.Begin);
+
+            mIsConstant = isConstant;
+            value = mConstant;
+
+            return mIsConstant;
+        }
+
         public WriterStream(Tokenizer tokens)
         {
             mTokens = tokens;
