@@ -590,7 +590,7 @@ namespace VM
                             else if (Token.IsNumber(mTokenStr[0]))
                             {
                                 token.type = Token.Type.INT_CONST;
-                                token.intVal = ByteCode.IntParse(mTokenStr);
+                                token.intVal = Converter.IntParse(mTokenStr);
                             }
                             else
                             {

@@ -1,0 +1,32 @@
+/*
+  Switch: switch statement test
+*/
+
+function void main()
+{
+   int x;
+
+   for ( int i = 0; i < 5; i = i + 1 )
+   {
+      switch( i )
+      {
+         default:
+         case 0:
+            x = 1;
+            break;
+
+         case 1:
+            x = 2;
+
+         case 2:
+            x = 3;
+            break;
+
+         case 3:
+            x = 4;
+            break;
+      }
+   }
+
+   int y = x;
+}

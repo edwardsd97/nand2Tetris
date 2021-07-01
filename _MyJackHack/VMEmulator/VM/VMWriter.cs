@@ -16,16 +16,45 @@ namespace VM
         public void WriteFunction(string function, int argCount);
         public void WriteCall(string function, int argCount);
         public void WriteReturn();
-        public void WriteStream(Stream stream);
+        public void WriteStream(WriterStream stream);
 
         public void Enable();
         public void Disable();
         public bool IsEnabled();
 
-        public void OutputPush(Stream stream);
+        public void OutputPush(WriterStream stream);
         public void OutputPop();
 
         public void SetDebugger(Debugger debugger);
+    }
+
+    // WriterStream: A MemoryStream that works together with WriterStreamWriter to track the current token as each line is written
+    public class WriterStream : MemoryStream
+    {
+        public Tokenizer mTokens;
+        public List<Tokenizer.State> mTokenStates = new List<Tokenizer.State>();
+
+        public WriterStream(Tokenizer tokens)
+        {
+            mTokens = tokens;
+        }
+    }
+
+    public class WriterStreamWriter : StreamWriter
+    {
+        public long mLastStreamPos;
+
+        public WriterStreamWriter( WriterStream stream ) : base(stream)
+        {
+        }
+
+        public override void WriteLine( string line )
+        {
+            WriterStream stream = (WriterStream)BaseStream;
+            stream.mTokenStates.Add(stream.mTokens.StateGet());
+            mLastStreamPos = stream.Position;
+            base.WriteLine( line );
+        }
     }
 
     public class WriterBase
@@ -60,17 +89,26 @@ namespace VM
             }
         }
 
-        public virtual void WriteStream(Stream stream)
+        public virtual void WriteStream(WriterStream stream)
         {
+            Tokenizer.State tokenState = stream.mTokens.StateGet();
+
             StreamReader reader = new StreamReader(stream);
             stream.Seek(0, SeekOrigin.Begin);
+            int t = 0;
             while (!reader.EndOfStream)
             {
                 string line = reader.ReadLine();
                 mOutput[mOutput.Count - 1].WriteLine(line);
                 if (mOutput[mOutput.Count - 1] == mFile && mDebugger != null)
-                    mDebugger.WriteCommand(line );
+                {
+                    stream.mTokens.StateSet(stream.mTokenStates[t]);
+                    mDebugger.WriteCommand(line);
+                }
+                t++;
             }
+
+            stream.mTokens.StateSet( tokenState );
         }
 
         public void SetDebugger(Debugger debugger)
@@ -93,9 +131,9 @@ namespace VM
             return mEnabled;
         }
 
-        public void OutputPush(Stream stream)
+        public void OutputPush(WriterStream stream)
         {
-            mOutput.Add(new StreamWriter(stream));
+            mOutput.Add(new WriterStreamWriter(stream));
             mOutput[mOutput.Count - 1].AutoFlush = true;
         }
 

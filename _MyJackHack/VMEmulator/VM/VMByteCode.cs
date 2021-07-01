@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace VM
 {
-    class ByteCode
+    class Converter
     {
         const int BITS_COMMAND = 5;
         const int BITS_SEGMENT = 4;
@@ -24,7 +24,7 @@ namespace VM
         BuiltIn mLabelsBuiltIn = null;
         Stream mWriter = null;
 
-        public ByteCode(BuiltIn builtIns = null)
+        public Converter(BuiltIn builtIns = null)
         {
             if (builtIns == null)
                 builtIns = Emulator.DefaultBuiltIns();
@@ -55,7 +55,7 @@ namespace VM
         {
             int written = 0;
 
-            ByteCode.InitIfNeeded();
+            Converter.InitIfNeeded();
 
             StreamReader reader = new StreamReader(input);
             mWriter = output;

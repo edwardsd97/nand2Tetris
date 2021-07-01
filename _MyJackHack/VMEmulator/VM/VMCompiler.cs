@@ -102,42 +102,207 @@ namespace VM
             public SymbolTable.SymbolScope fields;
         };
 
-        public Compiler(Tokenizer tokens, IWriter writer, Debugger debug = null )
+        public Compiler(List<Tokenizer> files, Debugger debug = null)
         {
             OptionSetDefaults();
             mDebugger = debug;
             mTokensSet = new List<Tokenizer>();
-            mTokensSet.Add(tokens);
+            mTokensSet.AddRange(files);
+            ResetAll();
+        }
+
+        public Compiler(List<Tokenizer> files, IWriter writer, Debugger debug = null)
+        {
+            OptionSetDefaults();
+            mDebugger = debug;
+            mTokensSet = new List<Tokenizer>();
+            mTokensSet.AddRange(files);
             SetWriter(writer);
             ResetAll();
         }
 
-        public Compiler(Tokenizer tokens, Debugger debug = null)
+        public void Compile()
         {
-            OptionSetDefaults();
-            mDebugger = debug;
-            mTokensSet = new List<Tokenizer>();
-            mTokensSet.Add(tokens);
-            ResetAll();
+            mSymbolTable.ScopePush("global");
+
+            // Pre process the source code
+            foreach (Tokenizer tokens in mTokensSet)
+            {
+                SetCurrentTokens(tokens);
+                CompilePrePass();
+            }
+
+            bool calledMain = false;
+            bool calledHalt = false;
+
+            foreach (Tokenizer tokens in mTokensSet)
+            {
+                SetCurrentTokens(tokens);
+                mTokens.Reset();
+
+                Token token = null;
+
+                do
+                {
+                    mClassName = "";
+
+                    if (token == mTokens.Get())
+                    {
+                        Error("Invalid Syntax");
+                        break;
+                    }
+
+                    token = mTokens.Get();
+
+                    switch (token.keyword)
+                    {
+                        case Token.Keyword.CLASS:
+                            if (!calledMain)
+                                calledMain = MainCheck();
+                            CompileClass();
+                            break;
+
+                        case Token.Keyword.FUNCTION:
+                            if (!calledMain)
+                                calledMain = MainCheck();
+                            CompileSubroutineDec();
+                            break;
+
+                        default:
+                            if (CompileStatements() > 0)
+                            {
+                                calledMain = MainCheck();
+                                if (!calledMain)
+                                {
+                                    WriteHalt();
+                                    calledHalt = true;
+                                }
+                            }
+                            else if (mTokens.mTokens.Count > 0)
+                            {
+                                Error("Expected statement");
+                            }
+                            break;
+                    }
+
+                } while (mTokens.HasMoreTokens());
+            }
+
+            if (!calledHalt)
+            {
+                WriteHalt();
+                calledHalt = true;
+            }
+
+            mSymbolTable.ScopePop(mTokens.Get()); // "global"
         }
 
-        public Compiler(List<Tokenizer> tokens, Debugger debug = null)
+        public void CompilePrePass()
         {
-            OptionSetDefaults();
-            mDebugger = debug;
-            mTokensSet = new List<Tokenizer>();
-            mTokensSet.AddRange(tokens);
-            ResetAll();
-        }
+            mTokens.Reset();
 
-        public Compiler(List<Tokenizer> tokens, IWriter writer, Debugger debug = null)
-        {
-            OptionSetDefaults();
-            mDebugger = debug;
-            mTokensSet = new List<Tokenizer>();
-            mTokensSet.AddRange(tokens);
-            SetWriter(writer);
-            ResetAll();
+            mIgnoreErrors = true;
+
+            Token token = mTokens.Get();
+
+            mWriter.Disable();
+            if (mDebugger != null)
+                mDebugger.Disable();
+
+            // Find and register all classes and their member variables so that we know what types are valid
+            while (mTokens.HasMoreTokens())
+            {
+                if (token.keyword == Token.Keyword.CLASS)
+                {
+                    Token classToken = token;
+                    ValidateTokenAdvance(Token.Keyword.CLASS);
+                    ValidateTokenAdvance(Token.Type.IDENTIFIER, out mClassName);
+                    ValidateTokenAdvance('{');
+
+                    if (!mClasses.ContainsKey(mClassName))
+                    {
+                        ClassSpec classSpec = new ClassSpec();
+                        classSpec.name = mClassName;
+                        mClasses.Add(mClassName, classSpec);
+                    }
+
+                    mClasses[mClassName].fields = mSymbolTable.ScopePush("class", classToken);
+
+                    while (CompileClassVarDec())
+                    {
+                        // continue with classVarDec
+                    }
+
+                    mSymbolTable.ScopePop(mTokens.Get());
+
+                    mClassName = "";
+                }
+
+                token = mTokens.Advance();
+            }
+
+            mTokens.Reset();
+            mClassName = "";
+            token = mTokens.Get();
+            int classBracket = 0;
+
+            while (mTokens.HasMoreTokens())
+            {
+                if (token.type == Token.Type.STRING_CONST)
+                {
+                    if (!mStrings.ContainsKey(token.stringVal))
+                        mStrings.Add(token.stringVal, mStrings.Count);
+                }
+                else if (token.keyword == Token.Keyword.METHOD || token.keyword == Token.Keyword.FUNCTION || token.keyword == Token.Keyword.CONSTRUCTOR)
+                {
+                    // Register which functions are methods vs functions so that we now how to call them when they are encountered while compiling
+                    FuncSpec spec = new FuncSpec();
+                    spec.className = mClassName;
+                    spec.type = token.keyword;
+
+                    mTokens.Advance();
+                    spec.returnType = mTokens.Get();
+                    mTokens.Advance();
+                    ValidateTokenAdvance(Token.Type.IDENTIFIER, out spec.funcName);
+                    if (mClassName == "" && token.keyword != Token.Keyword.FUNCTION)
+                    {
+                        Error("method or constructor outside of a class '" + spec.funcName + "'");
+                    }
+                    ValidateTokenAdvance('(');
+                    spec.parmTypes = CompileParameterList(false);
+
+                    string funcName = FunctionName(spec.className, spec.funcName);
+                    if (!mFunctions.ContainsKey(funcName))
+                        mFunctions.Add(funcName, spec);
+                    else
+                        Error("Function redefinition " + funcName, true);
+                }
+                else if (token.keyword == Token.Keyword.CLASS)
+                {
+                    ValidateTokenAdvance(Token.Keyword.CLASS);
+                    ValidateTokenAdvance(Token.Type.IDENTIFIER, out mClassName);
+                    ValidateToken('{');
+                    classBracket = 1; 
+                }
+                else if ( mClassName != "" && token.symbol == '{' )
+                {
+                    classBracket++;
+                }
+                else if ( mClassName != "" && token.symbol == '}')
+                {
+                    classBracket--;
+                    if (classBracket == 0)
+                        mClassName = "";
+                }
+
+                token = mTokens.Advance();
+            }
+
+            mTokens.Reset();
+            mWriter.Enable();
+            mIgnoreErrors = false;
+            if (mDebugger != null)
+                mDebugger.Enable();
         }
 
         public void OptionSetDefaults()
@@ -199,109 +364,6 @@ namespace VM
                 mDebugger.mTokens = tokens;
         }
 
-        public void CompilePrePass(Tokenizer tokenizer)
-        {
-            Tokenizer tokensPrev = mTokens;
-            SetCurrentTokens( tokenizer );
-
-            mTokens.Reset();
-
-            mIgnoreErrors = true;
-
-            Token token = mTokens.Get();
-
-            mWriter.Disable();
-            if (mDebugger != null)
-                mDebugger.Disable();
-
-            // Find and register all classes and their member variables so that we know what types are valid
-            while (mTokens.HasMoreTokens())
-            {
-                if (token.keyword == Token.Keyword.CLASS)
-                {
-                    Token classToken = token;
-                    ValidateTokenAdvance(Token.Keyword.CLASS);
-                    ValidateTokenAdvance(Token.Type.IDENTIFIER, out mClassName);
-                    ValidateTokenAdvance('{');
-
-                    if (!mClasses.ContainsKey(mClassName))
-                    {
-                        ClassSpec classSpec = new ClassSpec();
-                        classSpec.name = mClassName;
-                        mClasses.Add(mClassName, classSpec);
-                    }
-
-                    mClasses[mClassName].fields = mSymbolTable.ScopePush("class", classToken);
-
-                    while (CompileClassVarDec())
-                    {
-                        // continue with classVarDec
-                    }
-
-                    mSymbolTable.ScopePop(mTokens.Get());
-
-                    mClassName = "";
-                }
-
-                token = mTokens.Advance();
-            }
-
-            mIgnoreErrors = false;
-
-            mTokens.Reset();
-            mClassName = "";
-            token = mTokens.Get();
-
-            while (mTokens.HasMoreTokens())
-            {
-                if (token.type == Token.Type.STRING_CONST)
-                {
-                    if (!mStrings.ContainsKey(token.stringVal))
-                        mStrings.Add(token.stringVal, mStrings.Count);
-                }
-                else if (token.keyword == Token.Keyword.METHOD || token.keyword == Token.Keyword.FUNCTION || token.keyword == Token.Keyword.CONSTRUCTOR)
-                {
-                    // Register which functions are methods vs functions so that we now how to call them when they are encountered while compiling
-                    FuncSpec spec = new FuncSpec();
-                    spec.className = mClassName;
-                    spec.type = token.keyword;
-
-                    mTokens.Advance();
-                    spec.returnType = mTokens.Get();
-                    mTokens.Advance();
-                    ValidateTokenAdvance(Token.Type.IDENTIFIER, out spec.funcName);
-                    if (mClassName == "" && token.keyword != Token.Keyword.FUNCTION)
-                    {
-                        Error("method or constructor outside of a class '" + spec.funcName + "'");
-                    }
-                    ValidateTokenAdvance('(');
-                    spec.parmTypes = CompileParameterList(false);
-
-                    string funcName = FunctionName(spec.className, spec.funcName);
-                    if (!mFunctions.ContainsKey(funcName))
-                        mFunctions.Add(funcName, spec);
-                    else
-                        Error("Function redefinition " + funcName, true);
-                }
-                else if (token.keyword == Token.Keyword.CLASS)
-                {
-                    ValidateTokenAdvance(Token.Keyword.CLASS);
-                    ValidateTokenAdvance(Token.Type.IDENTIFIER, out mClassName);
-                }
-
-                token = mTokens.Advance();
-            }
-
-            mTokens.Reset();
-
-            SetCurrentTokens( tokensPrev );
-
-            mWriter.Enable();
-            mIgnoreErrors = false;
-            if (mDebugger != null)
-                mDebugger.Enable();
-        }
-
         public void Warning(string msg = "", bool forceWarning = false)
         {
             if (!mIgnoreErrors || forceWarning)
@@ -354,13 +416,29 @@ namespace VM
             return false;
         }
 
+        public Token ValidateToken(object tokenCheck)
+        {
+            string dontCare = "";
+            return ValidateTokenInternal(tokenCheck, out dontCare, false );
+        }
+
+        public Token ValidateToken(object tokenCheck, out string tokenString)
+        {
+            return ValidateTokenInternal(tokenCheck, out tokenString, false);
+        }
+
         public Token ValidateTokenAdvance(object tokenCheck)
         {
             string dontCare = "";
-            return ValidateTokenAdvance(tokenCheck, out dontCare);
+            return ValidateTokenInternal(tokenCheck, out dontCare, true );
         }
 
         public Token ValidateTokenAdvance(object tokenCheck, out string tokenString)
+        {
+            return ValidateTokenInternal(tokenCheck, out tokenString, true);
+        }
+
+        protected Token ValidateTokenInternal(object tokenCheck, out string tokenString, bool advance )
         {
             Token token = mTokens.Get();
 
@@ -386,7 +464,8 @@ namespace VM
             if (error != null)
                 Error(error);
 
-            mTokens.Advance();
+            if ( advance )
+                mTokens.Advance();
 
             return mTokens.Get();
         }
@@ -427,10 +506,6 @@ namespace VM
                 {
                     if (mDebugger != null)
                         mDebugger.mAddedCode = true;
-                    if (func.parmTypes.Count > 0)
-                        Warning("parameters for function main() will be passed 0");
-                    for (int i = 0; i < func.parmTypes.Count; i++)
-                        mWriter.WritePush(Segment.CONST, 0);
                     WriteCall(funcName, func.parmTypes.Count);
                     mWriter.WritePop(Segment.TEMP, 0);
                     WriteCall("Sys.halt", 0);
@@ -470,82 +545,6 @@ namespace VM
             }
             if (mDebugger != null)
                 mDebugger.mAddedCode = false;
-        }
-
-        public void Compile()
-        {
-            mSymbolTable.ScopePush("global");
-
-            // Pre process the source code
-            foreach (Tokenizer tokens in mTokensSet)
-            {
-                SetCurrentTokens( tokens );
-                CompilePrePass( tokens );
-            }
-
-            bool calledMain = false;
-            bool calledHalt = false;
-
-            foreach (Tokenizer tokens in mTokensSet)
-            {
-                SetCurrentTokens( tokens );
-                mTokens.Reset();
-
-                Token token = null;
-
-                do
-                {
-                    mClassName = "";
-
-                    if (token == mTokens.Get())
-                    {
-                        Error("Invalid Syntax");
-                        break;
-                    }
-
-                    token = mTokens.Get();
-
-                    switch (token.keyword)
-                    {
-                        case Token.Keyword.CLASS:
-                            if (!calledMain)
-                                calledMain = MainCheck();
-                            CompileClass();
-                            break;
-
-                        case Token.Keyword.FUNCTION:
-                            if (!calledMain)
-                                calledMain = MainCheck();
-                            CompileSubroutineDec();
-                            break;
-
-                        default:
-                            if (CompileStatements() > 0)
-                            {
-                                calledMain = MainCheck();
-                                if ( !calledMain ) 
-                                {
-                                    WriteHalt();
-                                    calledHalt = true;
-                                }
-                            }
-                            else if (mTokens.mTokens.Count > 0)
-                            {
-                                Error("Expected statement");
-                            }
-                            break;
-                    }
-
-                } while (mTokens.HasMoreTokens());
-            }
-
-            if ( !calledHalt )
-            {
-                WriteHalt();
-                calledHalt = true;
-            }
-
-            mSymbolTable.ScopePop(mTokens.Get()); // "global"
         }
 
         public void CompileClass()
@@ -1404,7 +1403,10 @@ namespace VM
                 CompileStatementSingle(out returnCompiled);
             }
 
+            // Rollback and advance around goto so that goto is correctly marked as the right code line
+            mTokens.Rollback(1);
             mWriter.WriteGoto(labelExp);
+            mTokens.Advance();
 
             mWriter.WriteLabel(labelEnd);
 
@@ -1472,12 +1474,14 @@ namespace VM
                 CompileStatementSingle(out returnCompiled);
             }
 
+            // Rollback and advance around goto so that goto is correctly marked as the right code line
+            mTokens.Rollback(1);
             mWriter.WriteGoto(labelInc);
+            mTokens.Advance();
 
             mWriter.WriteLabel(labelEnd);
 
-            mTokens.Rollback(1);
-            mSymbolTable.ScopePop(mTokens.GetAndAdvance()); // "forStatement"
+            mSymbolTable.ScopePop(mTokens.Get()); // "forStatement"
         }
 
         public void CompileStatementSwitch()
@@ -1496,8 +1500,8 @@ namespace VM
 
             string labelEnd = NewFuncFlowLabel("SWITCH_END");
             List<string> caseLabels = new List<string>();
-            List<Stream> caseExpressions = new List<Stream>();
-            List<Stream> caseStatements = new List<Stream>();
+            List<WriterStream> caseExpressions = new List<WriterStream>();
+            List<WriterStream> caseStatements = new List<WriterStream>();
             int caseLabelIndex = -1;
             int defaultLabelIndex = -1;
 
@@ -1506,13 +1510,13 @@ namespace VM
             mSymbolTable.DefineContinueBreak(null, labelEnd);
 
             ValidateTokenAdvance('(');
+            WriterStream switchExpression = new WriterStream( mTokens );
+            mWriter.OutputPush(switchExpression);
             CompileExpression();
+            mWriter.OutputPop();
             ValidateTokenAdvance(')');
 
             ValidateTokenAdvance('{');
-
-            // Hold the switch input index in a temp register
-            mWriter.WritePop(Segment.TEMP, 0);
 
             ////////////////////////////////////////////////////////////////////////////////////////////////////////////
             // pre-compile to find out all the cases needed and generate code for each expression and statements body
@@ -1530,7 +1534,7 @@ namespace VM
 
                 // Compile case expression to a memory file
                 // FIXME: this should be evaluating the expression in the compiler and only using constant values
-                MemoryStream memFile = new MemoryStream();
+                WriterStream memFile = new WriterStream( mTokens );
                 mWriter.OutputPush(memFile);
 
                 if (!isDefault)
@@ -1554,7 +1558,7 @@ namespace VM
                 ValidateTokenAdvance(':');
 
                 // Compile case statements to a memory file
-                memFile = new MemoryStream();
+                memFile = new WriterStream( mTokens );
                 mWriter.OutputPush(memFile);
 
                 if (mTokens.Get().symbol == '{')
@@ -1584,16 +1588,23 @@ namespace VM
                 if (caseLabelIndex != defaultLabelIndex)
                 {
                     // switch( expression )
-                    mWriter.WritePush(Segment.TEMP, 0);
+                    mWriter.WriteStream(switchExpression);
 
                     // case expression:
                     mWriter.WriteStream(caseExpressions[caseLabelIndex]);
+
+                    // for debug line tracking
+                    Tokenizer.State prevState = mTokens.StateGet();
+                    if (caseExpressions[caseLabelIndex].mTokenStates.Count > 0 )
+                        mTokens.StateSet(caseExpressions[caseLabelIndex].mTokenStates[0]);
 
                     // is equal?
                     mWriter.WriteArithmetic(Command.EQ);
 
                     // then goto that case label
                     mWriter.WriteIfGoto(caseLabels[caseLabelIndex]);
+
+                    mTokens.StateSet(prevState);
                 }
             }
 
@@ -1705,7 +1716,7 @@ namespace VM
             }
 
             // Re-direct the Emulator Writer to write to a memory file to hold the output for each term
-            MemoryStream memFile = new MemoryStream();
+            WriterStream memFile = new WriterStream( mTokens );
             mWriter.OutputPush(memFile);
 
             bool compiledExpression = CompileTerm(constOnly);
@@ -1788,6 +1799,48 @@ namespace VM
             return a;
         }
 
+        protected object ExpressionTopResolve(List<object> stack)
+        {
+            object opPopped = null;
+            Tokenizer.State state = null; // used to keep the current token aligned with expression so debugger can build the line number map correctly
+
+            if (stack.Count >= 3 && stack[stack.Count - 3].GetType() == typeof(WriterStream))
+            {
+                WriterStream ws = (WriterStream) stack[stack.Count - 3];
+                if (state == null & ws.mTokenStates.Count > 0)
+                    state = ws.mTokenStates[0];
+                mWriter.WriteStream((WriterStream)stack[stack.Count - 3]);
+            }
+
+            if (stack.Count >= 1 && stack[stack.Count - 1].GetType() == typeof(WriterStream))
+            {
+                WriterStream ws = (WriterStream) stack[stack.Count - 1];
+                if (state == null & ws.mTokenStates.Count > 0)
+                    state = ws.mTokenStates[0];
+                mWriter.WriteStream((WriterStream)stack[stack.Count - 1]);
+            }
+
+            if (stack.Count >= 2 && stack[stack.Count - 2].GetType() == typeof(char))
+            {
+                Tokenizer.State prevState = mTokens.StateGet();
+                if ( state != null )
+                    mTokens.StateSet(state);
+                CompileOp((char)stack[stack.Count - 2]);
+                opPopped = stack[stack.Count - 2];
+                mTokens.StateSet(prevState);
+            }
+
+            for (int i = 0; i < 3; i++)
+            {
+                if (stack.Count > 0)
+                    stack.RemoveAt(stack.Count - 1);
+            }
+
+            stack.Add("stackValue"); // placeholder to write nothing when it is encountered
+
+            return opPopped;
+        }
+
         protected void ExpressionResolvePrecedence(List<object> expressionTerms)
         {
             // expressionTerms is a list of term? (op term)* that needs to be resolved with operator prededence
@@ -1803,7 +1856,7 @@ namespace VM
 
             if (expressionTerms.Count == 1)
             {
-                mWriter.WriteStream((Stream)expressionTerms[0]);
+                mWriter.WriteStream((WriterStream)expressionTerms[0]);
             }
             else if (expressionTerms.Count > 0)
             {
@@ -1823,9 +1876,9 @@ namespace VM
                     if (a == null && b == null)
                         return;
 
-                    if (a == null && b.GetType().IsSubclassOf(typeof(Stream)))
+                    if (a == null && b.GetType() == typeof(WriterStream) )
                     {
-                        mWriter.WriteStream((Stream)b);
+                        mWriter.WriteStream((WriterStream)b);
                         ip++;
                         continue;
                     }
@@ -1845,23 +1898,9 @@ namespace VM
                         // until the top stack terminal is related by < to the terminal most recently popped
                         do
                         {
-                            if (stack.Count >= 3 && stack[stack.Count - 3].GetType().IsSubclassOf(typeof(Stream)))
-                                mWriter.WriteStream((Stream)stack[stack.Count - 3]);
-                            if (stack.Count >= 1 && stack[stack.Count - 1].GetType().IsSubclassOf(typeof(Stream)))
-                                mWriter.WriteStream((Stream)stack[stack.Count - 1]);
-                            if (stack.Count >= 2 && stack[stack.Count - 2].GetType() == typeof(char))
-                            {
-                                CompileOp((char)stack[stack.Count - 2]);
-                                opPopped = stack[stack.Count - 2];
-                            }
-                            if (stack.Count > 0)
-                                stack.RemoveAt(stack.Count - 1);
-                            if (stack.Count > 0)
-                                stack.RemoveAt(stack.Count - 1);
-                            if (stack.Count > 0)
-                                stack.RemoveAt(stack.Count - 1);
-                            stack.Add("stackValue"); // placeholder to write nothing when it is encountered
-
+                            object op = ExpressionTopResolve(stack);
+                            if (op != null)
+                                opPopped = op;
                             a = ExpressionTopOp(stack);
 
                         } while (stack.Count >= 3 && ExpressionPrecCompare(a, opPopped) < 0);

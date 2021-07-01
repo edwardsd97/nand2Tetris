@@ -2,8 +2,8 @@
 Compiler
 ------------------------------
 [x] remove requirement for do and let
-[x] compiler: provide better error information and catch more errors like trying to call methods from a function
-[x] compiler: support static string allocation (uses String OS class extension to do so)
+[x] provide better error information and catch more errors like trying to call methods from a function
+[x] support static string allocation (uses String OS class extension to do so)
 [x] allow for single line if/while/else blocks without {}s
 [x] add support for 'for' loop statements
 [x] allow function variable declarations without "var"
@@ -16,13 +16,17 @@ Compiler
 [x] add support for switch (case/default/break) statements (non-optimized)
 [x] OS implement Memory.deFrag()
 [x] add support for characters in code: '-' for 45 for example
+[x] fixed global functions that follow a class being interpreted as being part of that class
+[x] switch: fixed so that it is no longer using temp - stores the compiled code for the expression and keeps repeating it when comparing
+[x] switch: fixed debugger tracking so that line number matching works
+[ ] optimize expression compiler to convert constants into a single push constant (resolve the expression during compile time) make this an option
+[ ] allow array class object method calls: e.g. objectArray[3].myMethod();
 [ ] add support for two character operators like == != ++ etc
 [ ] Option.FUNCTION and Option.CLASS support working
-[ ] add object inheritance - requires virtual objects to have a function table pointer built in
+[ ] add class inheritance? - requires virtual objects to have a function table pointer built in
 [ ] optimize switch statements with a jump table when appropriate (low priority)
-[ ] typeless variable declaration: "x = 5;" and it assumes you meant to define "int x = 5;"" - inherit type from right hand (dangerous for case typos)
 
-VM projects
+Emulator
 ------------------------------
 [x] implement a class that emulates the VM machine (32 bit) ( without keyboard input or display )
    (useful as a script language for any game with a sufficient game interface OS)
@@ -31,6 +35,11 @@ VM projects
 [x] allow multiple classes per file
 [x] make int type 32 bit
 [ ] add support for 32 bit float type
+
+VMEmulator Test app
+------------------------------
+[ ] Look at using SharpDevelop to build the code editor with - would be the developer tool for making a game with this ideally
+[ ] Fix not being easily able to stop execution threads (window doesnt seem to be picking up events while thread is running)
 
 Hardware projects
 ------------------------------
@@ -41,4 +50,4 @@ Hardware projects
 
 BUGS
 ------------------------------
-[ ] global functions that follow a class are interpreted as being part of that class
+[x] fixed heap free/defrag runs into an exception accessing defragged memory as a pointer

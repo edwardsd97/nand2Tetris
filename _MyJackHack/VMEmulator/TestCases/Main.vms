@@ -1,13 +1,15 @@
 /*
   Main: Main.main test
 
-  Should see this warning:
-  Parameters for function main() will be passed 0
+  Parameters for function main() can be provided from the
+   Emulator with emulator.SetParameters( x, y, z, ... ) 
+    before executing
+
 */
 
 int gGlobalValue = 1;
 
-function void main( int alwaysZero )
+function void main( int inputParam )
 {
     // never called as Main.main takes priority
     gGlobalValue = 3;
@@ -15,7 +17,7 @@ function void main( int alwaysZero )
 
 class Main
 {
-   function void main( int alwaysZero )
+   function void main( int inputParam )
    {
       gGlobalValue = 2;
    }

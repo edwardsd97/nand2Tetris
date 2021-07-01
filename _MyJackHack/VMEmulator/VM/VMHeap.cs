@@ -14,6 +14,7 @@ namespace VM
         public enum Option
         {
             DEBUG,   // Debug mode - Marks memory that was freed or defragged
+            DEFRAG,  // Defrag when freeing memory
 
             COUNT
         }
@@ -21,6 +22,7 @@ namespace VM
         public Heap(int[] memory, int start, int count)
         {
             OptionSet( Option.DEBUG, true );
+            OptionSet( Option.DEFRAG, true );
 
             mMemory = memory;
             mHeapCount = count;
@@ -112,7 +114,10 @@ namespace VM
                 }
             }
 
-            DeFrag();
+            if (OptionGet(Option.DEFRAG))
+            {
+                DeFrag();
+            }
         }
 
         public bool DeFrag()
@@ -120,12 +125,10 @@ namespace VM
             // mHeapFree[0]: next
             // mHeapFree[1]: size
 
-            int lasti = -1;
-
             for (int i = mHeapFree; i != 0; i = mMemory[i])
             {
                 int target = i + 2 + mMemory[i + 1];
-                int lastj = -1;
+                int jParent = -1;
 
                 for (int j = mHeapFree; j != 0; j = mMemory[j])
                 {
@@ -148,6 +151,10 @@ namespace VM
                         // Expand i's size to encompass block j
                         mMemory[i + 1] = mMemory[i + 1] + mMemory[j + 1] + 2;
 
+                        // If this free block was pointing to the target block, now this block points to the target block's next
+                        if (mMemory[i] == j)
+                            mMemory[i] = mMemory[j];
+
                         if (OptionGet(Option.DEBUG))
                         {
                             // Mark the memory as having been recovered from defrag for debugging purposes
@@ -157,10 +164,10 @@ namespace VM
                             }
                         }
 
-                        // point the parent link to j to i instead
-                        if (lastj >= 0)
+                        // then point the parent link to j to i instead
+                        if (jParent >= 0)
                         {
-                            mMemory[lastj] = i;
+                            mMemory[jParent] = i;
                         }
                         else if (mHeapFree == j)
                         {
@@ -170,10 +177,8 @@ namespace VM
                         break;
                     }
 
-                    lastj = j;
+                    jParent = j;
                 }
-
-                lasti = i;
             }
 
             return false;

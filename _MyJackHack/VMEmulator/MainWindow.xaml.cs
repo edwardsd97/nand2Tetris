@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -70,6 +71,12 @@ namespace VMEmulator
             TestCaseSet("Empty");
 
             Compile();
+        }
+
+        private void CheckBoxDebug_Checked(object sender, RoutedEventArgs e)
+        {
+            mVM.mHeap.OptionSet(Heap.Option.DEBUG, checkboxDebug.IsChecked == true );
+            UpdateForm();
         }
 
         private void buttonStrings_Click(object sender, RoutedEventArgs e)
@@ -177,7 +184,7 @@ namespace VMEmulator
         {
             if (!mVM.Running())
                 Reset();
-            mVM.ExecuteThread(true, 100000);
+            mVM.ExecuteThread(true, 100000, ThreadPriority.Lowest);
             TimerUpdateSetup(100);
         }
 
@@ -185,8 +192,8 @@ namespace VMEmulator
         {
             if (!mVM.Running())
                 Reset();
-            mVM.ExecuteThread(true, 15000);
-            TimerUpdateSetup(15);
+            mVM.ExecuteThread(true, 15000, ThreadPriority.Lowest);
+            TimerUpdateSetup(50);
         }
 
         private void buttonPlayFull_Click(object sender, RoutedEventArgs e)
@@ -194,7 +201,7 @@ namespace VMEmulator
             if (!mVM.Running())
                 Reset();
             mVM.ExecuteThread(true);
-            TimerUpdateSetup(50);
+            TimerUpdateSetup(100);
         }
 
         public void Reset()
@@ -215,7 +222,7 @@ namespace VMEmulator
 
             if (msTickRate >= 0)
             {
-                dispatchUpdate = new DispatcherTimer();
+                dispatchUpdate = new DispatcherTimer( DispatcherPriority.ContextIdle );
                 dispatchUpdate.Tick += TimerUpdateTick;
                 dispatchUpdate.Interval = new TimeSpan(0, 0, 0, 0, msTickRate);
                 dispatchUpdate.Start();
@@ -432,7 +439,7 @@ namespace VMEmulator
             {
                 if (i >= 0 && i < mVM.mMemory.Length)
                 {
-                    string entry = "" + mVM.mMemory[i];
+                    string entry = string.Format("{0:D2} ", i - start) + string.Format("{0,3:G} ", mVM.mMemory[i]);
                     while (entry.Length < 4)
                         entry = entry + " ";
 
@@ -443,7 +450,7 @@ namespace VMEmulator
                         int offset = i - start;
                         string varName = mDebugger.GetSegmentSymbol( mVM, SymbolTable.Kind.GLOBAL, offset, "", 0, 0 );
                         if (varName != "")
-                            memStr = memStr + " " + varName;
+                            memStr = memStr + varName;
                     }
                     memStr = memStr + "\r\n";
                 }
@@ -462,7 +469,8 @@ namespace VMEmulator
                 string hexStr = Convert.ToString(mVM.mMemory[i], 16);
                 while (hexStr.Length < 8)
                     hexStr = "0" + hexStr;
-                memStr = memStr + "0x" + hexStr.ToUpper() + "\r\n";
+                memStr = memStr + string.Format("{0:D3}", i);
+                memStr = memStr + " 0x" + hexStr.ToUpper() + "\r\n";
             }
 
             if (textHeap != null)
@@ -508,19 +516,29 @@ namespace VMEmulator
                 StreamReader vmreader = new StreamReader(Instructions);
                 while (!vmreader.EndOfStream)
                 {
-                    string lineStr = vmreader.ReadLine();
-                    string[] elements = ByteCode.CommandElements(lineStr);
+                    string lineStr = "";
+                    string commandStr = vmreader.ReadLine();
+                    string[] elements = Converter.CommandElements(commandStr);
+                    bool isLabel = (elements[0] == "label" || (elements.Length > 1 && elements[1] == "label"));
 
-                    if (elements[0] != "label" && codeFrame == mVM.mCodeFrame)
+                    if (checkboxDebug.IsChecked == true && mDebugger != null )
                     {
-                        lineStr = ">" + lineStr;
+                        if (mDebugger.mCommandMap.ContainsKey(codeFrame) && !isLabel )
+                            lineStr = string.Format("{0,4:G} ", mDebugger.mCommandMap[codeFrame].mSourceLine);
+                        else
+                            lineStr = "     ";
+                    }
+
+                    if ( !isLabel && codeFrame == mVM.mCodeFrame)
+                    {
+                        lineStr = lineStr + ">" + commandStr;
                     }
                     else
                     {
-                        lineStr = " " + lineStr;
+                        lineStr = lineStr + " " + commandStr;
                     }
 
-                    if (elements[0] != "label")
+                    if (!isLabel )
                         codeFrame++;
 
                     lineStr = lineStr + "\r\n";
@@ -539,7 +557,7 @@ namespace VMEmulator
 
             for ( int i = 0; i < mVM.mCode.Length; i++ )
             {
-                int command = ByteCode.Translate( mVM.mCode[i] );
+                int command = Converter.Translate( mVM.mCode[i] );
                 string hexStr = Convert.ToString(command, 16);
                 while (hexStr.Length < 8)
                     hexStr = "0" + hexStr;
@@ -588,12 +606,11 @@ namespace VMEmulator
             Writer writer = new Writer(Instructions);
             Compile(writer);
 
-            ByteCode convert = new ByteCode();
+            Converter convert = new Converter();
             convert.ConvertVMText(Instructions, byteCode, compiler);
 
             // Setup the VM so that it uses fake heap memory for emulated objects like strings or other game objects
             mVM.ResetAll();
-            mVM.OptionSet(Emulator.Option.HEAP_OBJECTS, true);
             mVM.mObjects.RegisterType("string", 2);
 
             mVM.Load(byteCode);

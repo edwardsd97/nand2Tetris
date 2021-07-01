@@ -34,6 +34,7 @@
     <None Remove="TestCases\Main.vms" />
     <None Remove="TestCases\Strings.jack" />
     <None Remove="TestCases\Strings.vms" />
+    <None Remove="TestCases\Switch.vms" />
   </ItemGroup>
 
   <ItemGroup>
@@ -51,6 +52,7 @@
     <EmbeddedResource Include="TestCases\Heap.vms" />
     <EmbeddedResource Include="TestCases\Main.vms" />
     <EmbeddedResource Include="TestCases\Strings.vms" />
+    <EmbeddedResource Include="TestCases\Switch.vms" />
   </ItemGroup>
 
 </Project>

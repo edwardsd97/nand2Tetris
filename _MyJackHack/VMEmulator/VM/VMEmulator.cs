@@ -9,7 +9,8 @@ namespace VM
 
     public class Emulator
     {
-        public Instruction[] mCode;   // Loaded array of Emulator commands
+        public int[] mParameters;   // parameters passed to main() if it exists
+        public Instruction[] mCode; // Loaded array of Emulator commands
         public int mCodeFrame;      // Current (next) execution point
 
         public int[] mMemory;
@@ -89,6 +90,7 @@ namespace VM
         public void ResetAll()
         {
             Reset();
+            mParameters = null;
             mObjects = new EmulatedObjects(this);
             mStringsStatic = 0;
             mOptions = 0;
@@ -155,7 +157,7 @@ namespace VM
             while (code.Position < code.Length)
             {
                 StreamExtensions.Read(code, out commandInt);
-                Instruction cmd = ByteCode.Translate(commandInt);
+                Instruction cmd = Converter.Translate(commandInt);
                 if (cmd.mCommand == Command.STATIC_STRING)
                 {
                     // static string 
@@ -200,6 +202,15 @@ namespace VM
             return !(Halted() || Finished());
         }
 
+        public void SetParameters(params int[] parms)
+        {
+            mParameters = new int[parms.Length];
+            for ( int i = 0; i < parms.Length; i++ )
+            {
+                mParameters[i] = parms[i];
+            }
+        }
+
         public bool ExecuteThread(bool enabled, long tickRateMicroSeconds = -1, ThreadPriority threadPriority = ThreadPriority.Normal )
         {
             if (mExecuteThreadRateMicro != 0)
@@ -236,7 +247,6 @@ namespace VM
 
                 if (!ExecuteStep())
                 {
-                    timer.Stop();
                     break;
                 }
 
@@ -245,8 +255,12 @@ namespace VM
                     while ( ( timer.ElapsedMicroseconds < mExecuteThreadRateMicro ) && !mExecuteThreadStop )
                     {
                         // wait
-                        if ( timer.ElapsedMicroseconds >= 1000 )
-                            Thread.Sleep( (int) ( timer.ElapsedMicroseconds / 1000 ));
+                        long timeMicroToWait = mExecuteThreadRateMicro - timer.ElapsedMicroseconds;
+                        if (timeMicroToWait >= 1000)
+                        {
+                            int suspendMs = (int)(timeMicroToWait / 1000);
+                            Thread.Sleep( suspendMs );
+                        }
                     }
                 }
 
@@ -261,6 +275,19 @@ namespace VM
         {
             if (!Running())
                 return false;
+
+            // If the first instruction is calling a function we need to make sure we push the number of parameters needed for it even if they were not provided
+            if ( mCodeFrame == 0 && mCode[mCodeFrame].mCommand == Command.CALL )
+            {
+                int parmCount = (int) mCode[mCodeFrame].mSegment;
+                for (int i = 0; i < parmCount; i++)
+                {
+                    if (mParameters != null && mParameters.Length > i )
+                        StackPush(mParameters[i]);
+                    else
+                        StackPush(0);
+                }
+            }
 
             try
             {
