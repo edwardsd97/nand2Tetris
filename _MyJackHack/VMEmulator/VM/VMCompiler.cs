@@ -74,6 +74,8 @@ namespace VM
 
         public List<string> mErrors = new List<string>();
 
+        protected const string expTerminalStack = "stackValue";
+
         public enum Option
         {
             // options
@@ -1807,7 +1809,7 @@ namespace VM
         {
             object opPopped = null;
             Tokenizer.State state = null; // used to keep the current token aligned with expression so debugger can build the line number map correctly
-            object stackPush = "stackValue"; // placeholder to write nothing when it is encountered
+            object stackPush = expTerminalStack; // placeholder to write nothing when it is encountered
 
             if ( OptionGet(Option.OP_EXP) )
             {
@@ -1889,12 +1891,24 @@ namespace VM
                     WriterStream result = new WriterStream( a.mTokens );
                     result.mTokenStates.Add(a.mTokenStates[0]);
                     mWriter.OutputPush(result);
-                    mWriter.WritePush(Segment.CONST, value);
+                    if (value < 0)
+                    {
+                        mWriter.WritePush(Segment.CONST, -value);
+                        mWriter.WriteArithmetic(Command.NEG);
+                    }
+                    else
+                    {
+                        mWriter.WritePush(Segment.CONST, value);
+                    }
+
                     mWriter.OutputPop();
+                    result.Seek(0, SeekOrigin.Begin);
+
+                    return result;
                 }
             }
 
-            return false;
+            return expTerminalStack;
         }
 
         protected int ExpressionTopResolveConstantStream(WriterStream stream, out bool isConstant)
@@ -1910,6 +1924,8 @@ namespace VM
               push constant N
               neg
              */
+
+            stream.Seek(0, SeekOrigin.Begin);
 
             StreamReader rdr = new StreamReader(stream);
             while (!rdr.EndOfStream)
