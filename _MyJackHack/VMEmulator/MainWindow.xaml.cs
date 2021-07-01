@@ -79,6 +79,11 @@ namespace VMEmulator
             UpdateForm();
         }
 
+        private void CheckBoxOpExp_Checked(object sender, RoutedEventArgs e)
+        {
+            Compile();
+        }
+
         private void buttonStrings_Click(object sender, RoutedEventArgs e)
         {
             mStringsMode = !mStringsMode;
@@ -653,6 +658,7 @@ namespace VMEmulator
 
             mDebugger = new Debugger();
             compiler = new Compiler(tokenizers, writer, mDebugger);
+            compiler.OptionSet(Compiler.Option.OP_EXP, checkboxOpExp.IsChecked == true);
             compiler.Compile();
         }
     }

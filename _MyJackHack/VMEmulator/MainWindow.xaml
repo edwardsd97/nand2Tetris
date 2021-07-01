@@ -34,6 +34,7 @@
         <Button x:Name="buttonStepOver" Content="&gt;&gt;]" HorizontalAlignment="Left" Margin="870,649,0,0" VerticalAlignment="Top" Height="36" Width="72" Click="buttonStepOver_Click"/>
         <ComboBox x:Name="comboTest" HorizontalAlignment="Left" Margin="1182,713,0,0" VerticalAlignment="Top" Width="120" SelectionChanged="comboTest_SelectionChanged"/>
         <CheckBox x:Name="checkboxDebug" Content="Debug" HorizontalAlignment="Left" Margin="1246,740,0,0" VerticalAlignment="Top" Checked="CheckBoxDebug_Checked" Unchecked="CheckBoxDebug_Checked" HorizontalContentAlignment="Right"/>
+        <CheckBox x:Name="checkboxOpExp" Content="Op Exp" HorizontalAlignment="Left" Margin="1182,740,0,0" VerticalAlignment="Top" Checked="CheckBoxOpExp_Checked" Unchecked="CheckBoxOpExp_Checked" HorizontalContentAlignment="Right"/>
 
     </Grid>
 </Window>

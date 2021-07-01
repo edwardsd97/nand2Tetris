@@ -76,11 +76,14 @@ namespace VM
 
         public enum Option
         {
+            // options
             FUNCTION,   // Supports functions
             CLASS,      // Supports classes
+            OP_EXP,     // Optimize expressions into a single constant when possible
 
-            FUNC_HALT,  // Function to call to halt
-            FUNC_ALLOC, // Function to call to alloc heap memory
+            // strings
+            FUNC_HALT,  // Function to call for halt
+            FUNC_ALLOC, // Function to call for alloc heap memory
 
             COUNT
         }
@@ -309,6 +312,7 @@ namespace VM
         {
             OptionSet(Option.CLASS, true);
             OptionSet(Option.FUNCTION, true);
+            OptionSet(Option.OP_EXP, true);
 
             OptionSet(Option.FUNC_HALT, "Sys.halt");
             OptionSet(Option.FUNC_ALLOC, "Memory.alloc" );
@@ -1803,31 +1807,40 @@ namespace VM
         {
             object opPopped = null;
             Tokenizer.State state = null; // used to keep the current token aligned with expression so debugger can build the line number map correctly
+            object stackPush = "stackValue"; // placeholder to write nothing when it is encountered
 
-            if (stack.Count >= 3 && stack[stack.Count - 3].GetType() == typeof(WriterStream))
+            if ( OptionGet(Option.OP_EXP) )
             {
-                WriterStream ws = (WriterStream) stack[stack.Count - 3];
-                if (state == null & ws.mTokenStates.Count > 0)
-                    state = ws.mTokenStates[0];
-                mWriter.WriteStream((WriterStream)stack[stack.Count - 3]);
+                stackPush = ExpressionTopResolveConstant(stack);
             }
 
-            if (stack.Count >= 1 && stack[stack.Count - 1].GetType() == typeof(WriterStream))
-            {
-                WriterStream ws = (WriterStream) stack[stack.Count - 1];
-                if (state == null & ws.mTokenStates.Count > 0)
-                    state = ws.mTokenStates[0];
-                mWriter.WriteStream((WriterStream)stack[stack.Count - 1]);
-            }
+            if ( stackPush.GetType() == typeof(string) )
+            { 
+                if (stack.Count >= 3 && stack[stack.Count - 3].GetType() == typeof(WriterStream))
+                {
+                    WriterStream ws = (WriterStream)stack[stack.Count - 3];
+                    if (state == null & ws.mTokenStates.Count > 0)
+                        state = ws.mTokenStates[0];
+                    mWriter.WriteStream((WriterStream)stack[stack.Count - 3]);
+                }
 
-            if (stack.Count >= 2 && stack[stack.Count - 2].GetType() == typeof(char))
-            {
-                Tokenizer.State prevState = mTokens.StateGet();
-                if ( state != null )
-                    mTokens.StateSet(state);
-                CompileOp((char)stack[stack.Count - 2]);
-                opPopped = stack[stack.Count - 2];
-                mTokens.StateSet(prevState);
+                if (stack.Count >= 1 && stack[stack.Count - 1].GetType() == typeof(WriterStream))
+                {
+                    WriterStream ws = (WriterStream)stack[stack.Count - 1];
+                    if (state == null & ws.mTokenStates.Count > 0)
+                        state = ws.mTokenStates[0];
+                    mWriter.WriteStream((WriterStream)stack[stack.Count - 1]);
+                }
+
+                if (stack.Count >= 2 && stack[stack.Count - 2].GetType() == typeof(char))
+                {
+                    Tokenizer.State prevState = mTokens.StateGet();
+                    if (state != null)
+                        mTokens.StateSet(state);
+                    CompileOp((char)stack[stack.Count - 2]);
+                    opPopped = stack[stack.Count - 2];
+                    mTokens.StateSet(prevState);
+                }
             }
 
             for (int i = 0; i < 3; i++)
@@ -1836,9 +1849,89 @@ namespace VM
                     stack.RemoveAt(stack.Count - 1);
             }
 
-            stack.Add("stackValue"); // placeholder to write nothing when it is encountered
+            stack.Add(stackPush);
 
             return opPopped;
+        }
+
+        protected object ExpressionTopResolveConstant(List<object> stack)
+        {
+            WriterStream a = null;
+            WriterStream b = null;
+            char op = ' ';
+
+            if (stack.Count >= 3 && stack[stack.Count - 3].GetType() == typeof(WriterStream))
+            {
+                a = (WriterStream)stack[stack.Count - 3];
+            }
+
+            if (stack.Count >= 1 && stack[stack.Count - 1].GetType() == typeof(WriterStream))
+            {
+                b = (WriterStream)stack[stack.Count - 1];
+            }
+
+            if (stack.Count >= 2 && stack[stack.Count - 2].GetType() == typeof(char))
+            {
+                op = (char)stack[stack.Count - 2];
+            }
+
+            if (a != null && b != null && op != ' ')
+            {
+                bool isConstantA;
+                bool isConstantB;
+
+                int aVal = ExpressionTopResolveConstantStream(a, out isConstantA);
+                int bVal = ExpressionTopResolveConstantStream(b, out isConstantB);
+
+                if (isConstantA && isConstantB)
+                {
+                    int value = CompileOp(op, aVal, bVal);
+                    WriterStream result = new WriterStream( a.mTokens );
+                    result.mTokenStates.Add(a.mTokenStates[0]);
+                    mWriter.OutputPush(result);
+                    mWriter.WritePush(Segment.CONST, value);
+                    mWriter.OutputPop();
+                }
+            }
+
+            return false;
+        }
+
+        protected int ExpressionTopResolveConstantStream(WriterStream stream, out bool isConstant)
+        {
+            int value = 0;
+            isConstant = false;
+            int commands = 0;
+
+            /*
+              A constant command can only consist of either
+              push constant N
+              or
+              push constant N
+              neg
+             */
+
+            StreamReader rdr = new StreamReader(stream);
+            while (!rdr.EndOfStream)
+            {
+                string[] parts = rdr.ReadLine().Split(new char[2] { ' ', '\t' } );
+                if (parts.Length >= 2 && parts[0] == "push" && parts[1] == "constant")
+                {
+                    value = int.Parse(parts[2]);
+                    isConstant = true;
+                }
+                if (parts.Length > 0 && parts[0] == "neg" && commands == 1 )
+                {
+                    value = -value;
+                    commands--;
+                }
+                commands++;
+            }
+
+            if (commands > 1)
+                isConstant = false;
+
+            return value;
         }
 
         protected void ExpressionResolvePrecedence(List<object> expressionTerms)
@@ -1925,6 +2018,27 @@ namespace VM
                 case '<': mWriter.WriteArithmetic(Command.LT); break;
                 case '>': mWriter.WriteArithmetic(Command.GT); break;
                 case '=': mWriter.WriteArithmetic(Command.EQ); break;
+                default: Error("operator not recognized '" + op + "'"); break;
+            }
+        }
+
+        public int CompileOp(char op, int a, int b)
+        {
+            switch (op)
+            {
+                // op: '~' | '*' | '/' | '%' | '+' | '-' | '<' | '>' | '=' | '&' | '|'
+                case '+': return a + b; 
+                case '-': return a - b; 
+                case '*': return a * b; 
+                case '/': return a / b; 
+                case '^': return a ^ b; 
+                case '%': return a % b; 
+                case '|': return a | b; 
+                case '&': return a & b; 
+                case '<': return (a < b) ? -1 : 0; 
+                case '>': return (a > b) ? -1 : 0; 
+                case '=': return (a == b) ? -1 : 0;
+                default: Error("operator not recognized '" + op + "'"); return 0;
             }
         }
 
