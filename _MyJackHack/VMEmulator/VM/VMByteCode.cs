@@ -102,7 +102,12 @@ namespace VM
                             }
                             break;
 
-                        case Command.FUNCTION:
+						case Command.POP_GOTO:
+							WritePopJumpCommand(command);
+							written++;
+                            break;
+
+						case Command.FUNCTION:
                         case Command.CALL:
                             if (mLabels.ContainsKey(commandElems[1]))
                             {
@@ -190,7 +195,8 @@ namespace VM
             mStringToCommand.Add("label", Command.LABEL);
             mStringToCommand.Add("goto", Command.GOTO);
             mStringToCommand.Add("if-goto", Command.IF_GOTO);
-            mStringToCommand.Add("return", Command.RETURN);
+			mStringToCommand.Add("pop-goto", Command.POP_GOTO);
+			mStringToCommand.Add("return", Command.RETURN);
             mStringToCommand.Add("add", Command.ADD);
             mStringToCommand.Add("sub", Command.SUB);
             mStringToCommand.Add("mul", Command.MUL);
@@ -256,7 +262,12 @@ namespace VM
             Write(unchecked((int)MASK_PUSH_CONST) | CommandMask(command) | IndexMask(labelOffset));
         }
 
-        public void WriteFunctionOrCall(Command command, int labelOffset, int argCount)
+        public void WritePopJumpCommand(Command command)
+        {
+			Write(unchecked((int)MASK_PUSH_CONST) | CommandMask(command) );
+		}
+
+		public void WriteFunctionOrCall(Command command, int labelOffset, int argCount)
         {
             Write(unchecked((int)MASK_PUSH_CONST) | CommandMask(command) | SegmentMask((Segment)argCount) | IndexMask(labelOffset));
         }

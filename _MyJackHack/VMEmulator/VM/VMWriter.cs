@@ -13,7 +13,8 @@ namespace VM
         public void WriteLabel(string label);
         public void WriteGoto(string label);
         public void WriteIfGoto(string label);
-        public void WriteFunction(string function, int argCount);
+		public void WritePopGoto();
+		public void WriteFunction(string function, int argCount);
         public void WriteCall(string function, int argCount);
         public void WriteReturn();
         public void WriteStream(WriterStream stream);
@@ -295,7 +296,13 @@ namespace VM
             WriteLine("if-goto " + label);
         }
 
-        public void WriteFunction(string function, int argCount)
+		public void WritePopGoto()
+		{
+			// pop-goto
+			WriteLine("pop-goto");
+		}
+
+		public void WriteFunction(string function, int argCount)
         {
             // function function argCount
             WriteLine("function " + function + " " + argCount);

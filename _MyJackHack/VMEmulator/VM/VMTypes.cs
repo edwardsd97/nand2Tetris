@@ -11,7 +11,7 @@ namespace VM
 
     public enum Command : byte
     {
-        PUSH, POP, FUNCTION, CALL, LABEL, GOTO, IF_GOTO, RETURN,
+        PUSH, POP, FUNCTION, CALL, LABEL, GOTO, IF_GOTO, POP_GOTO, RETURN,
         ADD, SUB, NEG, EQ, LT, GT, AND, LAND, OR, XOR, LOR, NOT, LNOT, MUL, DIV, MOD,
         STATIC_STRING, // used for loading only
         INVALID

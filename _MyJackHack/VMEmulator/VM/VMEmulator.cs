@@ -316,7 +316,11 @@ namespace VM
                             DoIfGoto(cmd.mIndex);
                             break;
 
-                        case Command.FUNCTION:
+						case Command.POP_GOTO:
+							DoPopGoto();
+							break;
+
+						case Command.FUNCTION:
                             DoFunction(cmd.mSegment);
                             break;
 
@@ -440,7 +444,19 @@ namespace VM
             return false;
         }
 
-        protected void DoFunction(Segment segment)
+		protected bool DoPopGoto()
+		{
+			int value = StackPop();
+            if (value >= 0 && value < mCode.Length)
+            {
+                mCodeFrame = value;
+                return true;
+            }
+            Error("Next command outside code segment: " + value + " not in [0," + (mCode.Length - 1) + "]");
+			return false;
+		}
+
+		protected void DoFunction(Segment segment)
         {
             int args = (int)segment;
             for (int i = 0; i < args; i++)

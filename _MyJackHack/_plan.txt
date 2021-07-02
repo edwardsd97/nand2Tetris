@@ -51,7 +51,8 @@ Hardware projects
   - Use VHDL / Verilog to rewrite the HDL programs from N2T1
   - Commit these programs to FPGA board (~$100)
   - Or use a free FPGA emulator software
+  - OR... build a big breadboard of transistors lol
 
 BUGS
 ------------------------------
-[x] fixed heap free/defrag runs into an exception accessing defragged memory as a pointer
+[x] fixed heap free/defrag hitting an exception accessing defragged memory as a pointer
