@@ -1,0 +1,50 @@
+/*
+ ArrayObjects:
+
+ Uses array of objects and calls object methods using array
+
+ NOTE: Array objects are typeless and hold a pointer to anything or a value
+       In order to use arrays of objects the function name must be unique to that object
+       or it must be called with the full Class.Function syntax.
+       a[0].classAMethod() works because classAMethod() is unique to class A
+       a[0].A.dispose() requires the A because dispose() is not unique to class A
+
+*/
+
+Array a = Array.new(3);
+Array b = Array.new(3);
+
+a[0] = A.new();
+a[1] = A.new();
+a[2] = A.new();
+
+b[0] = a[0].classAMethod();
+b[1] = a[1].classAMethod();
+b[2] = a[2].classAMethod();
+
+a[0].A.dispose();
+a[1].A.dispose();
+a[2].A.dispose();
+
+a.dispose();
+a = null;
+
+b.dispose();
+b = null;
+
+class A
+{
+    constructor A new()
+    {
+    }
+
+    method int classAMethod()
+    {
+       return 5;
+    }
+
+    method void dispose()
+    {
+      Memory.free( this );
+    } 
+}

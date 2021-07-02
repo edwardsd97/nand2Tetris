@@ -21,7 +21,7 @@ namespace VM
 
         public Heap(int[] memory, int start, int count)
         {
-            OptionSet( Option.DEBUG, true );
+            OptionSet( Option.DEBUG, false );
             OptionSet( Option.DEFRAG, true );
 
             mMemory = memory;

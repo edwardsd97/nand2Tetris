@@ -339,6 +339,12 @@ namespace VMEmulator
                 Debugger.DebugCommand dbgCmd;
                 if (mDebugger.mCommandMap.TryGetValue(mVM.mCodeFrame, out dbgCmd))
                 {
+                    if ( dbgCmd.mSourceLine == -1 )
+                    {
+                        textCode.Select(0, 0);
+                        return;
+                    }
+
                     int line = 1;
                     int c = 0;
                     string text = textCode.Text;
@@ -617,6 +623,7 @@ namespace VMEmulator
             // Setup the VM so that it uses fake heap memory for emulated objects like strings or other game objects
             mVM.ResetAll();
             mVM.mObjects.RegisterType("string", 2);
+            mVM.mHeap.OptionSet(Heap.Option.DEBUG, checkboxDebug.IsChecked == true);
 
             mVM.Load(byteCode);
             UpdateForm();

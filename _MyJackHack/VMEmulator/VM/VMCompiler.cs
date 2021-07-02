@@ -287,13 +287,13 @@ namespace VM
                     ValidateTokenAdvance(Token.Keyword.CLASS);
                     ValidateTokenAdvance(Token.Type.IDENTIFIER, out mClassName);
                     ValidateToken('{');
-                    classBracket = 1; 
+                    classBracket = 1;
                 }
-                else if ( mClassName != "" && token.symbol == '{' )
+                else if (mClassName != "" && token.symbol == '{')
                 {
                     classBracket++;
                 }
-                else if ( mClassName != "" && token.symbol == '}')
+                else if (mClassName != "" && token.symbol == '}')
                 {
                     classBracket--;
                     if (classBracket == 0)
@@ -317,7 +317,7 @@ namespace VM
             OptionSet(Option.OP_EXP, true);
 
             OptionSet(Option.FUNC_HALT, "Sys.halt");
-            OptionSet(Option.FUNC_ALLOC, "Memory.alloc" );
+            OptionSet(Option.FUNC_ALLOC, "Memory.alloc");
         }
 
         public void OptionSet(Option op, bool enabled)
@@ -331,10 +331,10 @@ namespace VM
         public void OptionSet(Option op, string strOption)
         {
             OptionSet(op, true);
-            if (mOptionStrings.ContainsKey((int)op) )
+            if (mOptionStrings.ContainsKey((int)op))
                 mOptionStrings[(int)op] = strOption;
             else
-                mOptionStrings.Add( (int)op, strOption );
+                mOptionStrings.Add((int)op, strOption);
         }
 
         public bool OptionGet(Option op)
@@ -360,7 +360,7 @@ namespace VM
         public void SetWriter(IWriter writer)
         {
             mWriter = writer;
-            mWriter.SetDebugger( mDebugger );
+            mWriter.SetDebugger(mDebugger);
         }
 
         public void SetCurrentTokens(Tokenizer tokens)
@@ -425,7 +425,7 @@ namespace VM
         public Token ValidateToken(object tokenCheck)
         {
             string dontCare = "";
-            return ValidateTokenInternal(tokenCheck, out dontCare, false );
+            return ValidateTokenInternal(tokenCheck, out dontCare, false);
         }
 
         public Token ValidateToken(object tokenCheck, out string tokenString)
@@ -436,7 +436,7 @@ namespace VM
         public Token ValidateTokenAdvance(object tokenCheck)
         {
             string dontCare = "";
-            return ValidateTokenInternal(tokenCheck, out dontCare, true );
+            return ValidateTokenInternal(tokenCheck, out dontCare, true);
         }
 
         public Token ValidateTokenAdvance(object tokenCheck, out string tokenString)
@@ -444,7 +444,7 @@ namespace VM
             return ValidateTokenInternal(tokenCheck, out tokenString, true);
         }
 
-        protected Token ValidateTokenInternal(object tokenCheck, out string tokenString, bool advance )
+        protected Token ValidateTokenInternal(object tokenCheck, out string tokenString, bool advance)
         {
             Token token = mTokens.Get();
 
@@ -470,7 +470,7 @@ namespace VM
             if (error != null)
                 Error(error);
 
-            if ( advance )
+            if (advance)
                 mTokens.Advance();
 
             return mTokens.Get();
@@ -504,7 +504,7 @@ namespace VM
         }
 
         public bool MainCheck(string funcName)
-        {            
+        {
             if (mFunctions.ContainsKey(funcName))
             {
                 FuncSpec func = mFunctions[funcName];
@@ -540,7 +540,7 @@ namespace VM
             string haltFunc = OptionGetString(Option.FUNC_HALT);
             if (mDebugger != null)
                 mDebugger.mAddedCode = true;
-            if ( haltFunc != null && OptionGet( Option.FUNC_HALT ) && mFunctions.ContainsKey(haltFunc))
+            if (haltFunc != null && OptionGet(Option.FUNC_HALT) && mFunctions.ContainsKey(haltFunc))
             {
                 WriteCall(haltFunc, 0);
             }
@@ -576,7 +576,7 @@ namespace VM
 
             ValidateTokenAdvance('}');
 
-            mSymbolTable.ScopePop( mTokens.Get() );
+            mSymbolTable.ScopePop(mTokens.Get());
 
             mClassName = "";
         }
@@ -616,7 +616,7 @@ namespace VM
                 {
                     ValidateTokenAdvance('=');
 
-                    if (!CompileExpression()) // push value onto stack
+                    if (CompileExpression() == null) // push value onto stack
                         Error("Expected expression after =");
 
                     if (ValidateSymbol(varName))
@@ -781,7 +781,7 @@ namespace VM
                             // Alloc "this" ( and it is pushed onto the stack )
                             mWriter.WritePush(Segment.CONST, mSymbolTable.KindSize(SymbolTable.Kind.FIELD));
                             string memAllocFunc = OptionGetString(Option.FUNC_ALLOC);
-                            if ( memAllocFunc != null )
+                            if (memAllocFunc != null)
                                 WriteCall(memAllocFunc, 1);
                         }
 
@@ -830,7 +830,7 @@ namespace VM
                     ValidateTokenAdvance('}');
                 }
 
-                mSymbolTable.ScopePop( mTokens.Get() ); // "function"
+                mSymbolTable.ScopePop(mTokens.Get()); // "function"
 
                 mFuncName = null;
 
@@ -842,22 +842,63 @@ namespace VM
             return false;
         }
 
-        public void CompileSubroutineCall()
+        public void CompileClassMethodCall( string knownClassName = null )
+        {
+            string subroutineName = null;
+            string className = knownClassName;
+
+            ValidateTokenAdvance('.');
+            ValidateTokenAdvance(Token.Type.IDENTIFIER, out subroutineName);
+            if (mTokens.Get().symbol == '.')
+            {
+                className = subroutineName;
+                ValidateTokenAdvance('.');
+                ValidateTokenAdvance(Token.Type.IDENTIFIER, out subroutineName);
+            }
+
+            if (className == null)
+            {
+                // As this is a typeless language we have no idea what kind of object this is. We need to look up all known classes with a method
+                //  of the given name. If there are more than one its an error unfortunately.
+                foreach (FuncSpec spec in mFunctions.Values)
+                {
+                    if (spec.type != Token.Keyword.METHOD)
+                        continue;
+
+                    if (spec.funcName == subroutineName)
+                    {
+                        if (className != null)
+                            Error("Unable to resolve which '" + subroutineName + "' method is intended from array reference");
+                        className = spec.className;
+                    }
+                }
+            }
+
+            if (className != null && subroutineName != null)
+            {
+                CompileSubroutineCall(className, subroutineName);
+            }
+        }
+
+        public void CompileSubroutineCall( string knownObjectName = null, string knownFunctionName = null )
         {
             // subroutineCall: subroutineName '(' expressionList ') | ( className | varName ) '.' subroutineName '(' expressionList ')
             // expressionList: ( expression (',' expression)* )?
 
-            string subroutineName = null;
-            string objectName = null;
+            string subroutineName = knownFunctionName;
+            string objectName = knownObjectName;
             int argCount = 0;
             FuncSpec funcSpec = null;
 
-            ValidateTokenAdvance(Token.Type.IDENTIFIER, out subroutineName);
-            if (mTokens.Get().symbol == '.')
+            if (subroutineName == null)
             {
-                objectName = subroutineName;
-                mTokens.Advance();
                 ValidateTokenAdvance(Token.Type.IDENTIFIER, out subroutineName);
+                if (mTokens.Get().symbol == '.')
+                {
+                    objectName = subroutineName;
+                    mTokens.Advance();
+                    ValidateTokenAdvance(Token.Type.IDENTIFIER, out subroutineName);
+                }
             }
 
             ValidateTokenAdvance('(');
@@ -876,7 +917,19 @@ namespace VM
                 mWriter.WritePush(Segment.POINTER, 0); // this
                 argCount = argCount + 1;
             }
-            else if (mSymbolTable.Exists(objectName) && mFunctions.ContainsKey(FunctionName(mSymbolTable.TypeOf(objectName), subroutineName)))
+            else if ( knownObjectName != null && mFunctions.ContainsKey(FunctionName(objectName, subroutineName)) )
+            {
+                funcSpec = mFunctions[FunctionName(objectName, subroutineName)];
+
+                if (funcSpec.type != Token.Keyword.METHOD)
+                {
+                    Error("Calling function as a method '" + FunctionName(objectName, subroutineName) + "' (use " + mSymbolTable.TypeOf(objectName) + "." + subroutineName + ")");
+                }
+
+                // pointer to object already pushed by calling function
+                argCount = argCount + 1;
+            }
+            else if ( mSymbolTable.Exists(objectName) && mFunctions.ContainsKey(FunctionName(mSymbolTable.TypeOf(objectName), subroutineName)))
             {
                 funcSpec = mFunctions[FunctionName(mSymbolTable.TypeOf(objectName), subroutineName)];
 
@@ -1046,9 +1099,17 @@ namespace VM
                         CompileVarDec(eatSemiColon);
                         return true;
                     }
-                    else if (token.type == Token.Type.IDENTIFIER && (tokenNext.symbol == '=' || tokenNext.symbol == '['))
+                    else if (token.type == Token.Type.IDENTIFIER && tokenNext.symbol == '=' )
                     {
                         CompileStatementLet(false, eatSemiColon);
+                        return true;
+                    }
+                    else if (token.type == Token.Type.IDENTIFIER && tokenNext.symbol == '[' )
+                    {
+                        if ( mTokens.ReadAheadSymbolCheck( 1, '[', ']', '.' ) )
+                            CompileStatementDo(false, eatSemiColon, true );
+                        else
+                            CompileStatementLet(false, eatSemiColon);
                         return true;
                     }
                     else if (token.type == Token.Type.IDENTIFIER && tokenNext.symbol == '.' && tokenNextNext.type == Token.Type.IDENTIFIER && (tokenNextNextNext.symbol == '=' || tokenNextNextNext.symbol == '['))
@@ -1126,10 +1187,10 @@ namespace VM
             mWriter.WriteArithmetic(Command.ADD);
         }
 
-        public void CompileArrayValue()
+        public void CompileArrayValue( string varNameKnown = null )
         {
             // Push the array indexed address onto stack
-            CompileArrayAddress();
+            CompileArrayAddress( varNameKnown );
 
             // set THAT and push THAT[0]
             mWriter.WritePop(Segment.POINTER, 1);
@@ -1218,7 +1279,7 @@ namespace VM
 
             ValidateTokenAdvance('=');
 
-            if (!CompileExpression()) // push value onto stack
+            if ( CompileExpression() == null ) // push value onto stack
                 Error("Expected expression after =");
 
             if (isArray)
@@ -1241,7 +1302,7 @@ namespace VM
                 ValidateTokenAdvance(';');
         }
 
-        public void CompileStatementDo(bool eatKeyword = true, bool eatSemiColon = true)
+        public void CompileStatementDo(bool eatKeyword = true, bool eatSemiColon = true, bool objectArrayMethod = false )
         {
             // doStatement: 'do' subroutineCall ';'
 
@@ -1250,7 +1311,15 @@ namespace VM
                 ValidateTokenAdvance(Token.Keyword.DO);
             }
 
-            CompileSubroutineCall();
+            if (objectArrayMethod)
+            {
+                CompileArrayValue();
+                CompileClassMethodCall();
+            }
+            else
+            {
+                CompileSubroutineCall();
+            }
 
             mWriter.WritePop(Segment.TEMP, 0); // ignore return value
 
@@ -1516,10 +1585,7 @@ namespace VM
             mSymbolTable.DefineContinueBreak(null, labelEnd);
 
             ValidateTokenAdvance('(');
-            WriterStream switchExpression = new WriterStream( mTokens );
-            mWriter.OutputPush(switchExpression);
-            CompileExpression();
-            mWriter.OutputPop();
+            WriterStream switchExpression = CompileExpression();
             ValidateTokenAdvance(')');
 
             ValidateTokenAdvance('{');
@@ -1541,12 +1607,13 @@ namespace VM
                 // Compile case expression to a memory file
                 // FIXME: this should be evaluating the expression in the compiler and only using constant values
                 WriterStream memFile = new WriterStream( mTokens );
-                mWriter.OutputPush(memFile);
 
                 if (!isDefault)
                 {
                     // compile expression made up of only constants
-                    CompileExpression(null, true);
+                    memFile = CompileExpression(null, true);
+                    if( memFile == null )
+                        memFile = new WriterStream(mTokens);
                 }
                 else if (isDefault && defaultLabelIndex >= 0)
                 {
@@ -1556,8 +1623,6 @@ namespace VM
                 {
                     defaultLabelIndex = caseLabelIndex;
                 }
-
-                mWriter.OutputPop();
 
                 caseExpressions.Add(memFile);
 
@@ -1707,7 +1772,7 @@ namespace VM
             }
         }
 
-        public bool CompileExpression(List<object> expressionTerms = null, bool constOnly = false)
+        public WriterStream CompileExpression(List<object> expressionTerms = null, bool constOnly = false)
         {
             // Grammar:
             // ---------
@@ -1742,8 +1807,8 @@ namespace VM
                     expressionTerms.Add(token.symbol);
 
                     mTokens.Advance();
-                    bool nextTerm = CompileExpression(expressionTerms, constOnly);
-                    if (!nextTerm)
+                    WriterStream nextTerm = CompileExpression(expressionTerms, constOnly);
+                    if ( nextTerm == null )
                     {
                         Error("Expected expression after " + symbol);
                     }
@@ -1755,7 +1820,12 @@ namespace VM
                 ExpressionResolvePrecedence(expressionTerms);
             }
 
-            return compiledExpression;
+            if (compiledExpression)
+            {
+                return memFile;
+            }
+
+            return null;
         }
 
         protected int ExpressionPrecCompare(object a, object b)
@@ -2084,7 +2154,7 @@ namespace VM
             {
                 // expressionParenth: '(' expression ')
                 ValidateTokenAdvance('(');
-                if (!CompileExpression())
+                if ( CompileExpression() == null )
                     Error("Expected expression after (");
                 ValidateTokenAdvance(')');
                 return true;
@@ -2162,6 +2232,11 @@ namespace VM
                 // arrayValue: varName ('.' varName)? '[' expression ']'
                 ValidateConstTerm("array value", constOnly);
                 CompileArrayValue();
+
+                // See if an object array value is being used to call a class method
+                if (mTokens.Get().symbol == '.')
+                    CompileClassMethodCall();
+
                 return true;
             }
             else if (token.type == Token.Type.IDENTIFIER && mSymbolTable.Exists(token.identifier))
@@ -2214,7 +2289,7 @@ namespace VM
             {
                 stillGoing = false;
 
-                if (CompileExpression())
+                if (CompileExpression() != null )
                 {
                     stillGoing = true;
                     expressions++;

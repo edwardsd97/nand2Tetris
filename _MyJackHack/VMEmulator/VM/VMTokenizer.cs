@@ -344,6 +344,39 @@ namespace VM
             Reset();
         }
 
+        public bool ReadAheadSymbolCheck(int skipStart, char incSymbol, char decSymbol, char matchAtZeroSymbol )
+        {
+            int count = 0;
+            bool result = false;
+            State state = StateGet();
+            
+            Advance(skipStart);
+            
+            while ( HasMoreTokens() )
+            {
+                Token token = Get();
+
+                if (token.symbol == incSymbol)
+                    count++;
+                else if (token.symbol == decSymbol)
+                    count--;
+
+                Advance();
+
+                if (count == 0)
+                {
+                    token = Get();
+                    if (token.symbol == matchAtZeroSymbol)
+                        result = true;
+                    break;
+                }
+            }
+            
+            StateSet(state);
+
+            return result;
+        }
+
         public State StateGet()
         {
             return new State(mTokenCurrent);
@@ -437,6 +470,19 @@ namespace VM
         {
             Token result = Advance();
             Rollback(count);
+            return result;
+        }
+
+        public Token Advance( int count )
+        {
+            int advanced = 0;
+            Token result = null;
+
+            while (advanced++ < count)
+            {
+                result = Advance();
+            }
+
             return result;
         }
 

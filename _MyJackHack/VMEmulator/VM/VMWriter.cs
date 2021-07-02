@@ -39,13 +39,13 @@ namespace VM
         protected bool mIsConstant;
         protected long mConstantCache = -1;
 
-        public bool IsConstant()
+        public bool IsConstant( bool allowMultipleConstants = false )
         {
             int dontCare;
-            return IsConstant(out dontCare);
+            return IsConstant(out dontCare, allowMultipleConstants );
         }
 
-        public bool IsConstant( out int value )
+        public bool IsConstant( out int value, bool allowMultipleConstants = false )
         {
             if ( mConstantCache == Position )
             {
@@ -72,7 +72,7 @@ namespace VM
              */
 
             StreamReader rdr = new StreamReader(this);
-            while (!rdr.EndOfStream && commands < 3 )
+            while (!rdr.EndOfStream && ( commands < 3 || allowMultipleConstants ) )
             {
                 string[] parts = rdr.ReadLine().Split(new char[2] { ' ', '\t' });
                 if (parts.Length >= 2 && parts[0] == "push" && parts[1] == "constant")

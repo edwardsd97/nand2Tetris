@@ -21,9 +21,11 @@ Compiler
 [x] switch: fixed debugger tracking so that line number matching works
 [x] optimize expression compiler to convert constants into a single push constant (resolve the expression during compile time) make this an option
 [x] optimize expression compiler further - still not reducing all constants into a single push constant N
-[ ] switch: case values should be required to be constants
+[x] switch: case values should be required to be constants
+[x] allow array class object method calls: e.g. objectArray[3].myMethod();
+[ ] class: add default constructor if one is not defined for any class with fields
+[ ] class: add default dispose method if one is not defined for any class with fields
 [ ] switch: optimize with a jump table when appropriate (low priority)
-[ ] allow array class object method calls: e.g. objectArray[3].myMethod();
 [ ] add support for two character operators like == != ++ etc
 [ ] Option.FUNCTION and Option.CLASS support working
 [ ] add class inheritance? - requires virtual objects to have a function table pointer built in
