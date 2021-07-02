@@ -35,7 +35,10 @@ namespace VM
 
         protected int mOptions;
 
-        public enum Option
+		public const int TRUE = -1;
+		public const int FALSE = 0;
+
+		public enum Option
         {
             HEAP_OBJECTS,   // EmulatedObject instances use the VM heap to store the id with optional "virtual" memory attached
 
@@ -452,7 +455,7 @@ namespace VM
                 mCodeFrame = value;
                 return true;
             }
-            Error("Next command outside code segment: " + value + " not in [0," + (mCode.Length - 1) + "]");
+            Error("Cannot set next command outside code segment: " + value + " not in [0," + (mCode.Length - 1) + "]");
 			return false;
 		}
 
@@ -485,7 +488,7 @@ namespace VM
                     Error("Built in function not found");
                 }
 
-                // Make sure we keep the stack correct even if function did not 
+                // Make sure we keep the stack correct even if built in function did not 
                 for (int i = 0; i < args - mStackPoppedCount; i++)
                     StackPop();
                 if (mStackPushedCount == 0)
@@ -586,13 +589,13 @@ namespace VM
                 case Command.DIV: result = x / y; break;
                 case Command.MOD: result = x % y; break;
                 case Command.AND: result = x & y; break;
-                case Command.LAND: result = ((x != 0) && (y != 0)) ? -1 : 0; break;
-                case Command.EQ: result = (x == y) ? -1 : 0; break;
-                case Command.GT: result = (x > y) ? -1 : 0; break;
-                case Command.LT: result = (x < y) ? -1 : 0; break;
+                case Command.LAND: result = ((x != 0) && (y != 0)) ? Emulator.TRUE : Emulator.FALSE; break;
+                case Command.EQ: result = (x == y) ? Emulator.TRUE : Emulator.FALSE; break;
+                case Command.GT: result = (x > y) ? Emulator.TRUE : Emulator.FALSE; break;
+                case Command.LT: result = (x < y) ? Emulator.TRUE : Emulator.FALSE; break;
                 case Command.OR: result = x | y; break;
                 case Command.XOR: result = x ^ y; break;
-                case Command.LOR: result = ((x != 0) || (y != 0)) ? -1 : 0; break;
+                case Command.LOR: result = ((x != 0) || (y != 0)) ? Emulator.TRUE : Emulator.FALSE; break;
             }
 
             StackPush(result);
@@ -607,7 +610,7 @@ namespace VM
             {
                 case Command.NEG: result = -x; break;
                 case Command.NOT: result = ~x; break;
-                case Command.LNOT: result = (x == 0) ? -1 : 0; break;
+                case Command.LNOT: result = (x == 0) ? Emulator.TRUE : Emulator.FALSE; break;
             }
 
             StackPush(result);

@@ -229,9 +229,10 @@ namespace VM
                     value = pThis;
                     return true;
                 case Token.Keyword.FALSE:
+                    value = Emulator.FALSE;
                     return true;
                 case Token.Keyword.TRUE:
-                    value = -1;
+                    value = Emulator.TRUE;
                     return true;
             }
 

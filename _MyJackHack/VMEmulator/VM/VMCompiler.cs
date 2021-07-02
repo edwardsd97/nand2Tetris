@@ -2180,9 +2180,9 @@ namespace VM
                 case '%': return a % b; 
                 case '|': return a | b; 
                 case '&': return a & b; 
-                case '<': return (a < b) ? -1 : 0; 
-                case '>': return (a > b) ? -1 : 0; 
-                case '=': return (a == b) ? -1 : 0;
+                case '<': return (a < b) ? Emulator.TRUE : Emulator.FALSE; 
+                case '>': return (a > b) ? Emulator.TRUE : Emulator.FALSE; 
+                case '=': return (a == b) ? Emulator.TRUE : Emulator.FALSE;
                 default: Error("operator not recognized '" + op + "'"); return 0;
             }
         }
