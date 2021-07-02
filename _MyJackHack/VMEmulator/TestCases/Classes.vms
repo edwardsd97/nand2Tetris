@@ -4,9 +4,13 @@
 
 ClassA a = ClassA.new();
 ClassB b = ClassB.new();
+ClassC c = ClassC.new();
 
 a.mMember = a.mMember + 1;
 b.mMember = b.mMember + 1;
+c.mCMemberA = c.mCMemberB + 1;
+
+c.dispose();
 
 class ClassA
 {
@@ -52,4 +56,16 @@ class ClassB
    {
       Memory.free(this);
    }
+}
+
+class ClassC
+{
+   int mCMemberA;
+   int mCMemberB;
+
+   // Classes with fields that do not have a new() and 
+   //   dispose() will automatically included them as
+   //
+   // constructor ClassC new();
+   // method void dispose();
 }

@@ -79,13 +79,15 @@ namespace VM
         public enum Option
         {
             // options
-            FUNCTION,   // Supports functions
-            CLASS,      // Supports classes
-            OP_EXP,     // Optimize expressions into a single constant when possible
+            FUNCTION,           // Supports functions
+            CLASS,              // Supports classes
+            CLASS_AUTO_CONSTR,  // Classes with fields automatically include constructor "new" and "dispose" method if not already defined
+            OP_EXP,             // Optimize expressions into a single constant when possible
 
             // strings
             FUNC_HALT,  // Function to call for halt
             FUNC_ALLOC, // Function to call for alloc heap memory
+            FUNC_FREE,  // Function to call for free heap memory
 
             COUNT
         }
@@ -99,6 +101,11 @@ namespace VM
             public Token returnType;
             public bool referenced;
             public bool compiled;
+
+            public FuncSpec()
+            {
+                parmTypes = new List<Token>();
+            }
         };
 
         public class ClassSpec
@@ -124,6 +131,18 @@ namespace VM
             mTokensSet.AddRange(files);
             SetWriter(writer);
             ResetAll();
+        }
+
+        public void OptionSetDefaults()
+        {
+            OptionSet(Option.CLASS, true);
+            OptionSet(Option.CLASS_AUTO_CONSTR, true);
+            OptionSet(Option.FUNCTION, true);
+            OptionSet(Option.OP_EXP, true);
+
+            OptionSet(Option.FUNC_HALT, "Sys.halt");
+            OptionSet(Option.FUNC_ALLOC, "Memory.alloc");
+            OptionSet(Option.FUNC_FREE, "Memory.free");
         }
 
         public void Compile()
@@ -193,7 +212,43 @@ namespace VM
                 } while (mTokens.HasMoreTokens());
             }
 
-            if (!calledHalt)
+			// Compile constructor "new" and method "dispose" for any classes with fields that don't already have them
+			foreach (ClassSpec classSpec in mClasses.Values)
+			{
+				if (classSpec.fields.mSymbols.Count > 0)
+				{
+					string disposeStr = classSpec.name + ".dispose";
+					string newStr = classSpec.name + ".new";
+
+					if (mFunctions.ContainsKey(newStr) && OptionGet(Option.FUNC_ALLOC))
+					{
+						FuncSpec funcSpec = mFunctions[newStr];
+						if (funcSpec.returnType.lineNumber < -1 && funcSpec.type == Token.Keyword.CONSTRUCTOR)
+						{
+							funcSpec.returnType.lineNumber = -1;
+							mWriter.WriteFunction(newStr, 0);
+                            mWriter.WritePush(Segment.CONST, classSpec.fields.mSymbols.Count);
+                            mWriter.WriteCall(OptionGetString(Option.FUNC_ALLOC), 1);
+							mWriter.WriteReturn();
+						}
+					}
+
+					if (mFunctions.ContainsKey(disposeStr) && OptionGet(Option.FUNC_FREE))
+					{
+						FuncSpec funcSpec = mFunctions[disposeStr];
+						if (funcSpec.returnType.lineNumber < -1 && funcSpec.type == Token.Keyword.METHOD)
+						{
+							funcSpec.returnType.lineNumber = -1;
+							mWriter.WriteFunction(disposeStr, 0);
+							mWriter.WritePush(Segment.ARG, 0);
+							mWriter.WriteCall(OptionGetString(Option.FUNC_FREE), 1);
+							mWriter.WriteReturn();
+						}
+					}
+				}
+			}
+
+			if (!calledHalt)
             {
                 WriteHalt();
                 calledHalt = true;
@@ -247,6 +302,8 @@ namespace VM
             }
 
             mTokens.Reset();
+
+            // Pre compile all functions and string constants
             mClassName = "";
             token = mTokens.Get();
             int classBracket = 0;
@@ -303,21 +360,38 @@ namespace VM
                 token = mTokens.Advance();
             }
 
+            // Add constructor "new" and method "dispose" for any classes with fields that don't already have them
+            foreach (ClassSpec classSpec in mClasses.Values)
+            {
+                if (classSpec.fields.mSymbols.Count > 0)
+                {
+                    if (!mFunctions.ContainsKey(classSpec.name + ".new") && OptionGet(Option.FUNC_ALLOC))
+                    {
+                        FuncSpec funcSpec = new FuncSpec();
+                        funcSpec.type = Token.Keyword.CONSTRUCTOR;
+                        funcSpec.className = classSpec.name;
+                        funcSpec.funcName = "new";
+                        funcSpec.returnType = new Token( mTokens, -2, -2, Token.Type.IDENTIFIER, classSpec.name );
+                        mFunctions.Add(funcSpec.className + "." + funcSpec.funcName, funcSpec );
+                    }
+
+                    if (!mFunctions.ContainsKey(classSpec.name + ".dispose") && OptionGet(Option.FUNC_FREE) )
+                    {
+                        FuncSpec funcSpec = new FuncSpec();
+                        funcSpec.type = Token.Keyword.METHOD;
+                        funcSpec.className = classSpec.name;
+                        funcSpec.funcName = "dispose";
+                        funcSpec.returnType = new Token(mTokens, -2, -2, Token.Type.IDENTIFIER, classSpec.name);
+                        mFunctions.Add(funcSpec.className + "." + funcSpec.funcName, funcSpec);
+                    }
+                }
+            }
+
             mTokens.Reset();
             mWriter.Enable();
             mIgnoreErrors = false;
             if (mDebugger != null)
                 mDebugger.Enable();
-        }
-
-        public void OptionSetDefaults()
-        {
-            OptionSet(Option.CLASS, true);
-            OptionSet(Option.FUNCTION, true);
-            OptionSet(Option.OP_EXP, true);
-
-            OptionSet(Option.FUNC_HALT, "Sys.halt");
-            OptionSet(Option.FUNC_ALLOC, "Memory.alloc");
         }
 
         public void OptionSet(Option op, bool enabled)

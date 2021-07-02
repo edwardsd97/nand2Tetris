@@ -230,12 +230,24 @@ namespace VM
         public int lineCharacter;
         public Tokenizer tokenizer;
 
-        public Token( Tokenizer parent, int lineNum, int lineChar, Type typeIn = Type.NONE)
+        public Token(Tokenizer parent, int lineNum, int lineChar, Type typeIn = Type.NONE, object value = null)
         {
             tokenizer = parent;
             lineNumber = lineNum;
             lineCharacter = lineChar;
             type = typeIn;
+
+            if( value != null )
+            {
+                switch (type)
+                {
+                    case Type.IDENTIFIER: identifier = (string)value; break;
+                    case Type.INT_CONST: intVal = (int)value; break;
+                    case Type.KEYWORD: keyword = (Keyword)value; break;
+                    case Type.STRING_CONST: stringVal = (string)value; break;
+                    case Type.SYMBOL: symbol = (char)value; break;
+                }
+            }
         }
 
         public string GetXMLString()
